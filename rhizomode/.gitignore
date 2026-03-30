@@ -102,4 +102,6 @@ InitTestScene*.unity*
 /[Ll]ibrary/BurstCache/
 /[Ll]ibrary/PackageCache/
 /[Ll]ibrary/ArtifactDB
+/Packages/nuget-packages/InstalledPackages*
+
 
