@@ -1,0 +1,22 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(grep -E \"^[^/]*/\\(Runtime|Editor|Tests\\)$\")",
+      "Bash(find /c/Users/kiuog/Documents/rhizomode -maxdepth 2 -type f \\\\\\(-name *.md -o -name .cursorrules -o -name *.yml -o -name *.yaml \\\\\\))",
+      "Bash(xargs -I {} basename {})",
+      "Bash(grep -v \"\\\\.meta$\")",
+      "Bash(find C:/Users/kiuog/Documents/rhizomode/rhizomode -name *.dll -path *R3* -o -name R3.dll)",
+      "Bash(find C:/Users/kiuog/Documents/rhizomode/rhizomode -name *.asmdef -type f)",
+      "Bash(xargs grep:*)",
+      "Bash(find C:/Users/kiuog/Documents/rhizomode/rhizomode/Assets -name *.cs -type f)",
+      "Bash(xargs cat:*)",
+      "Bash(xargs strings:*)",
+      "Bash(find C:/Users/kiuog/Documents/rhizomode/rhizomode/Library/PackageCache/com.cysharp.r3@7000cb682993 -type f -name *.cs)",
+      "Bash(grep -r Subject C:/Users/kiuog/Documents/rhizomode/rhizomode/Library/PackageCache/com.cysharp.r3@7000cb682993 --include=*.cs)",
+      "mcp__UnityMCP__read_console",
+      "mcp__UnityMCP__refresh_unity",
+      "mcp__UnityMCP__run_tests",
+      "mcp__UnityMCP__get_test_job"
+    ]
+  }
+}
