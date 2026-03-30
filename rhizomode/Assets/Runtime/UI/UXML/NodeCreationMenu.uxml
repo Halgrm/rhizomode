@@ -1,0 +1,7 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements">
+    <ui:VisualElement name="menu-root" class="creation-menu">
+        <ui:Label name="menu-title" class="menu-title" text="Create Node" />
+        <ui:VisualElement name="category-list" class="category-list" />
+        <ui:VisualElement name="node-list" class="node-list" />
+    </ui:VisualElement>
+</ui:UXML>

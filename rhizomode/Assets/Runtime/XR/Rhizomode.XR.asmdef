@@ -1,0 +1,21 @@
+{
+    "name": "Rhizomode.XR",
+    "rootNamespace": "Rhizomode.XR",
+    "references": [
+        "Rhizomode.Core",
+        "Rhizomode.UI",
+        "R3.Unity",
+        "Unity.InputSystem",
+        "Unity.XR.Interaction.Toolkit",
+        "Unity.XR.CoreUtils"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

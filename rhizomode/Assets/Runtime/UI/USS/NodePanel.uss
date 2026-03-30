@@ -1,0 +1,94 @@
+.node-panel {
+    width: 100%;
+    height: 100%;
+    border-radius: 8px;
+    background-color: rgba(30, 30, 30, 0.92);
+}
+
+.node-header {
+    height: 48px;
+    border-top-left-radius: 8px;
+    border-top-right-radius: 8px;
+    padding: 8px 12px;
+    justify-content: center;
+    background-color: rgb(80, 80, 80);
+}
+
+.node-title {
+    color: white;
+    font-size: 22px;
+    -unity-font-style: bold;
+}
+
+.port-container {
+    flex-direction: row;
+    justify-content: space-between;
+    padding: 8px;
+    flex-grow: 1;
+}
+
+.input-ports {
+    flex-direction: column;
+    align-items: flex-start;
+}
+
+.output-ports {
+    flex-direction: column;
+    align-items: flex-end;
+}
+
+.port-row {
+    flex-direction: row;
+    align-items: center;
+    margin: 4px 0;
+}
+
+.output-ports .port-row {
+    flex-direction: row-reverse;
+}
+
+.port-dot {
+    width: 24px;
+    height: 24px;
+    border-radius: 12px;
+    background-color: rgb(200, 200, 200);
+    flex-shrink: 0;
+}
+
+.port-dot--float {
+    background-color: rgb(160, 210, 240);
+}
+
+.port-dot--color {
+    background-color: rgb(240, 200, 100);
+}
+
+.port-dot--bool {
+    background-color: rgb(240, 140, 140);
+}
+
+.port-label {
+    color: rgb(200, 200, 200);
+    font-size: 16px;
+    margin: 0 6px;
+}
+
+.node-header--input {
+    background-color: rgb(51, 102, 230);
+}
+
+.node-header--math {
+    background-color: rgb(51, 191, 77);
+}
+
+.node-header--module {
+    background-color: rgb(153, 77, 204);
+}
+
+.node-header--time {
+    background-color: rgb(204, 179, 51);
+}
+
+.node-header--utility {
+    background-color: rgb(128, 128, 128);
+}

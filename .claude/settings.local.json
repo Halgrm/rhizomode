@@ -16,7 +16,12 @@
       "mcp__UnityMCP__read_console",
       "mcp__UnityMCP__refresh_unity",
       "mcp__UnityMCP__run_tests",
-      "mcp__UnityMCP__get_test_job"
+      "mcp__UnityMCP__get_test_job",
+      "Bash(grep -E \"\\\\.\\(asset|yaml\\)$\")",
+      "Bash(grep -r \"XR\\\\|openxr\\\\|interaction.toolkit\" C:UserskiuogDocumentsrhizomoderhizomodeProjectSettings*.asset)",
+      "Bash(find C:UserskiuogDocumentsrhizomoderhizomodeLibraryPackageCache -type f -name *R3*XRInteractionToolkit*)",
+      "Bash(find C:UserskiuogDocumentsrhizomoderhizomodeLibraryPackageCache -type d -name *r3*)",
+      "Bash(find C:UserskiuogDocumentsrhizomoderhizomodeLibraryPackageCache -type f -name *UIBuilder*)"
     ]
   }
 }
