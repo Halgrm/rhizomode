@@ -12,10 +12,11 @@ namespace Rhizomode.XR
     /// コントローラー入力を読み取り、R3 Observableとして公開する。
     /// IControllerInputを実装し、UI層への入力配信を担う。
     /// </summary>
-    public class ControllerInputRouter : MonoBehaviour, IControllerInput
+    public class ControllerInputRouter : MonoBehaviour, IControllerInput, IRayProvider
     {
         [SerializeField] private InputActionAsset? inputActions;
         [SerializeField] private Transform? headTransform;
+        [SerializeField] private Transform? rightControllerTransform;
 
         private InputAction? _selectAction;
         private InputAction? _grabAction;
@@ -48,6 +49,10 @@ namespace Rhizomode.XR
         public Vector3 HeadPosition => headTransform != null ? headTransform.position : Vector3.zero;
         public Quaternion HeadRotation => headTransform != null ? headTransform.rotation : Quaternion.identity;
         public Vector3 HeadForward => headTransform != null ? headTransform.forward : Vector3.forward;
+
+        // IRayProvider
+        public Vector3 RayOrigin => rightControllerTransform != null ? rightControllerTransform.position : Vector3.zero;
+        public Vector3 RayDirection => rightControllerTransform != null ? rightControllerTransform.forward : Vector3.forward;
 
         private void OnEnable()
         {

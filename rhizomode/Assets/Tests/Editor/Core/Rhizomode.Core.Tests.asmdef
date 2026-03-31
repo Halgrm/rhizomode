@@ -3,6 +3,7 @@
     "rootNamespace": "Rhizomode.Core.Tests",
     "references": [
         "Rhizomode.Core",
+        "Rhizomode.UI",
         "R3.Unity"
     ],
     "includePlatforms": [

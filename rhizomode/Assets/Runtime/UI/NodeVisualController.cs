@@ -69,6 +69,22 @@ namespace Rhizomode.UI
             return PanelToWorldPosition(panelCenter);
         }
 
+        /// <summary>
+        /// 指定ポートのスナップターゲットハイライトを設定する。
+        /// </summary>
+        public void SetPortHighlight(string portName, bool highlight)
+        {
+            if (!_portElements.TryGetValue(portName, out var element)) return;
+
+            var dot = element.Q("port-dot");
+            if (dot == null) return;
+
+            if (highlight)
+                dot.AddToClassList("port-dot--snap-target");
+            else
+                dot.RemoveFromClassList("port-dot--snap-target");
+        }
+
         private void LateUpdate()
         {
             // ノード位置をTransformと同期（グラブ移動対応）

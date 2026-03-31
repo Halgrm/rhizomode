@@ -15,6 +15,11 @@ namespace Rhizomode.XR
         [SerializeField] private NodeCreationMenuController? menuController;
         [SerializeField] private ControllerInputRouter? controllerInput;
         [SerializeField] private NodeCreationHandler? creationHandler;
+        [SerializeField] private EdgeVisualManager? edgeVisualManager;
+        [SerializeField] private EdgeDragHandler? edgeDragHandler;
+        [SerializeField] private EdgeCutHandler? edgeCutHandler;
+        [SerializeField] private NodeDeleteHandler? nodeDeleteHandler;
+        [SerializeField] private NodeGrabHandler? nodeGrabHandler;
 
         private NodeTypeRegistry? _typeRegistry;
 
@@ -74,6 +79,49 @@ namespace Rhizomode.XR
             if (graphContext != null)
             {
                 RegisterGraphContextFactories();
+            }
+
+            InitializeInteractionHandlers();
+        }
+
+        private void InitializeInteractionHandlers()
+        {
+            if (controllerInput == null) return;
+
+            IRayProvider rayProvider = controllerInput;
+
+            if (edgeVisualManager != null && visualManager != null)
+            {
+                edgeVisualManager.Initialize(visualManager);
+            }
+
+            if (edgeDragHandler != null && visualManager != null &&
+                graphContext != null && edgeVisualManager != null)
+            {
+                edgeDragHandler.Initialize(
+                    rayProvider, controllerInput, visualManager,
+                    graphContext, edgeVisualManager);
+            }
+
+            if (edgeCutHandler != null && edgeVisualManager != null && graphContext != null)
+            {
+                edgeCutHandler.Initialize(
+                    controllerInput, rayProvider,
+                    edgeVisualManager, graphContext);
+            }
+
+            if (nodeDeleteHandler != null && visualManager != null &&
+                graphContext != null && edgeVisualManager != null)
+            {
+                nodeDeleteHandler.Initialize(
+                    controllerInput, rayProvider, visualManager,
+                    graphContext, edgeVisualManager);
+            }
+
+            if (nodeGrabHandler != null && visualManager != null)
+            {
+                nodeGrabHandler.Initialize(
+                    controllerInput, rayProvider, visualManager);
             }
         }
 

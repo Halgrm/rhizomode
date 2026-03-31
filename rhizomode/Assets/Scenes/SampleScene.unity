@@ -130,6 +130,8 @@ GameObject:
   - component: {fileID: 239156528}
   - component: {fileID: 239156527}
   - component: {fileID: 239156526}
+  - component: {fileID: 239156530}
+  - component: {fileID: 239156529}
   m_Layer: 0
   m_Name: Game Manager
   m_TagString: Untagged
@@ -179,6 +181,30 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &239156529
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 239156525}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c31c174c3c7c1dc459ef4b8a1ead6689, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Rhizomode.UI::Rhizomode.UI.EdgeDragHandler
+--- !u!114 &239156530
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 239156525}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 717f73d54939c514c8490d0c38eb865e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Rhizomode.UI::Rhizomode.UI.EdgeVisualManager
 --- !u!1 &324904023
 GameObject:
   m_ObjectHideFlags: 0
@@ -713,6 +739,15 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 1717954561962503725, guid: f6336ac4ac8b4d34bc5072418cdc62a0, type: 3}
       insertIndex: -1
       addedObject: {fileID: 1213701928}
+    - targetCorrespondingSourceObject: {fileID: 1717954561962503725, guid: f6336ac4ac8b4d34bc5072418cdc62a0, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1213701931}
+    - targetCorrespondingSourceObject: {fileID: 1717954561962503725, guid: f6336ac4ac8b4d34bc5072418cdc62a0, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1213701930}
+    - targetCorrespondingSourceObject: {fileID: 1717954561962503725, guid: f6336ac4ac8b4d34bc5072418cdc62a0, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1213701929}
   m_SourcePrefab: {fileID: 100100000, guid: f6336ac4ac8b4d34bc5072418cdc62a0, type: 3}
 --- !u!1 &1213701920 stripped
 GameObject:
@@ -768,6 +803,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Rhizomode.XR::Rhizomode.XR.ControllerInputRouter
   inputActions: {fileID: -944628639613478452, guid: d3843dee0031751428d98d1f485fd490, type: 3}
   headTransform: {fileID: 1213701921}
+  rightControllerTransform: {fileID: 1213701923}
 --- !u!114 &1213701927
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -800,6 +836,47 @@ MonoBehaviour:
   menuController: {fileID: 907711489}
   controllerInput: {fileID: 1213701926}
   creationHandler: {fileID: 1213701925}
+  edgeVisualManager: {fileID: 239156530}
+  edgeDragHandler: {fileID: 239156529}
+  edgeCutHandler: {fileID: 1213701931}
+  nodeDeleteHandler: {fileID: 1213701930}
+  nodeGrabHandler: {fileID: 1213701929}
+--- !u!114 &1213701929
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1213701920}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8745eeb66e8db0e41adaf827a0230060, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Rhizomode.XR::Rhizomode.XR.NodeGrabHandler
+--- !u!114 &1213701930
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1213701920}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3904b856e61fcf74a93142791c863080, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Rhizomode.XR::Rhizomode.XR.NodeDeleteHandler
+--- !u!114 &1213701931
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1213701920}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 01f8e9543c4523a46948e7b8eb5d5c22, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Rhizomode.XR::Rhizomode.XR.EdgeCutHandler
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
