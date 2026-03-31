@@ -51,6 +51,7 @@ namespace Rhizomode.XR
 
         private void ToggleMenu()
         {
+            Debug.Log($"[NodeCreationHandler] ToggleMenu called. controllerInput={_controllerInput != null}, menuController={menuController != null}");
             if (_controllerInput == null || menuController == null) return;
 
             if (menuController.IsVisible)
@@ -86,13 +87,19 @@ namespace Rhizomode.XR
                 var nodeId = Guid.NewGuid().ToString();
                 var node = factory(nodeId);
 
-                // メニュー位置の少し右にスポーン
-                var spawnPos = _controllerInput.HeadPosition
-                    + _controllerInput.HeadForward * NodeSpawnOffsetFromMenu;
+                // メニュー位置の少し前方にスポーン
+                var headPos = _controllerInput.HeadPosition;
+                var spawnPos = headPos + _controllerInput.HeadForward * NodeSpawnOffsetFromMenu;
                 node.Position = spawnPos;
 
                 graphContext.Context.RegisterNode(node);
-                visualManager.CreateNodeVisual(node, spawnPos);
+                var visual = visualManager.CreateNodeVisual(node, spawnPos);
+
+                // プレイヤーに向ける（Quadの-Z面が表）
+                if (visual != null)
+                {
+                    visual.transform.rotation = Quaternion.LookRotation(spawnPos - headPos);
+                }
             }
             catch (Exception e)
             {
