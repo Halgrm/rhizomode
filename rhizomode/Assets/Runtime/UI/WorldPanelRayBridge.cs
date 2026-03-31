@@ -7,15 +7,19 @@ using UnityEngine.UIElements;
 namespace Rhizomode.UI
 {
     /// <summary>
-    /// 外部レイキャストのヒット情報をUIToolkitパネルのポインターイベントに変換する。
-    /// WorldPanelHostと組み合わせて使用。XR層から呼び出される。
+    /// 外部レイキャストのヒット情報をUIToolkitパネルの操作に変換する。
+    /// WorldPanelHostと組み合わせて使用。XR層のUIRaycastDriverから呼び出される。
+    /// Panel.Pick()でヒット要素を特定し、ボタンクリック等を直接実行する。
     /// </summary>
     [RequireComponent(typeof(WorldPanelHost))]
     public class WorldPanelRayBridge : MonoBehaviour
     {
+        private const string HoverClass = "hover";
+
         private WorldPanelHost? _panelHost;
         private bool _isHovering;
         private Vector2 _lastPanelPosition;
+        private VisualElement? _hoveredElement;
 
         /// <summary>現在ホバー中かどうか。</summary>
         public bool IsHovering => _isHovering;
@@ -26,7 +30,7 @@ namespace Rhizomode.UI
         }
 
         /// <summary>
-        /// レイがパネルに当たった時に呼ぶ。ポインター移動イベントを注入する。
+        /// レイがパネルに当たった時に呼ぶ。ホバー対象を更新する。
         /// </summary>
         public void NotifyHover(RaycastHit hit)
         {
@@ -35,7 +39,8 @@ namespace Rhizomode.UI
             _lastPanelPosition = _panelHost.RayHitToPanelPosition(hit);
             _isHovering = true;
 
-            SendPointerEvent<PointerMoveEvent>(_lastPanelPosition);
+            var picked = _panelHost.Root.panel?.Pick(_lastPanelPosition);
+            UpdateHoveredElement(picked);
         }
 
         /// <summary>
@@ -45,19 +50,35 @@ namespace Rhizomode.UI
         {
             if (!_isHovering) return;
             _isHovering = false;
-
-            SendPointerEvent<PointerLeaveEvent>(_lastPanelPosition);
+            UpdateHoveredElement(null);
         }
 
         /// <summary>
         /// パネル上でトリガーが押された時に呼ぶ。
+        /// PickされたButton要素があればクリックイベントを発火する。
         /// </summary>
         public void NotifyPointerDown(RaycastHit hit)
         {
             if (_panelHost?.Root == null) return;
 
             _lastPanelPosition = _panelHost.RayHitToPanelPosition(hit);
-            SendPointerEvent<PointerDownEvent>(_lastPanelPosition);
+            var picked = _panelHost.Root.panel?.Pick(_lastPanelPosition);
+
+            // Button要素を探して直接クリック
+            var button = FindParentButton(picked);
+            if (button != null)
+            {
+                try
+                {
+                    using var clickEvt = ClickEvent.GetPooled();
+                    clickEvt.target = button;
+                    button.SendEvent(clickEvt);
+                }
+                catch (Exception e)
+                {
+                    Debug.LogWarning($"[WorldPanelRayBridge] Click dispatch failed: {e.Message}");
+                }
+            }
         }
 
         /// <summary>
@@ -65,28 +86,28 @@ namespace Rhizomode.UI
         /// </summary>
         public void NotifyPointerUp()
         {
-            if (_panelHost?.Root == null) return;
-
-            SendPointerEvent<PointerUpEvent>(_lastPanelPosition);
+            // ClickEventはPointerDownで発火済み
         }
 
-        private void SendPointerEvent<T>(Vector2 panelPosition) where T : PointerEventBase<T>, new()
+        private void UpdateHoveredElement(VisualElement? newElement)
         {
-            var root = _panelHost?.Root;
-            if (root?.panel == null) return;
+            if (_hoveredElement == newElement) return;
 
-            try
+            _hoveredElement?.RemoveFromClassList(HoverClass);
+            _hoveredElement = newElement;
+            _hoveredElement?.AddToClassList(HoverClass);
+        }
+
+        private static Button? FindParentButton(VisualElement? element)
+        {
+            var current = element;
+            while (current != null)
             {
-                using var evt = PointerEventBase<T>.GetPooled();
-                evt.target = root;
-                // パネルローカル座標を設定
-                // UIToolkitのイベントシステムに座標を伝える
-                root.panel.visualTree.SendEvent(evt);
+                if (current is Button button)
+                    return button;
+                current = current.parent;
             }
-            catch (Exception e)
-            {
-                Debug.LogWarning($"[WorldPanelRayBridge] Event dispatch failed: {e.Message}");
-            }
+            return null;
         }
     }
 }

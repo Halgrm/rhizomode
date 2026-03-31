@@ -20,6 +20,7 @@ namespace Rhizomode.XR
         [SerializeField] private EdgeCutHandler? edgeCutHandler;
         [SerializeField] private NodeDeleteHandler? nodeDeleteHandler;
         [SerializeField] private NodeGrabHandler? nodeGrabHandler;
+        [SerializeField] private UIRaycastDriver? uiRaycastDriver;
 
         private NodeTypeRegistry? _typeRegistry;
 
@@ -122,6 +123,11 @@ namespace Rhizomode.XR
             {
                 nodeGrabHandler.Initialize(
                     controllerInput, rayProvider, visualManager);
+            }
+
+            if (uiRaycastDriver != null)
+            {
+                uiRaycastDriver.Initialize(rayProvider, controllerInput);
             }
         }
 
