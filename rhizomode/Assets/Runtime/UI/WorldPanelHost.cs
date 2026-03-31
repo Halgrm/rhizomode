@@ -48,11 +48,17 @@ namespace Rhizomode.UI
         /// <summary>パネルのテクスチャ高さ（ピクセル）。</summary>
         public int TextureHeight => _renderTexture?.height ?? DefaultTextureHeight;
 
+        /// <summary>初期化済みかどうか。</summary>
+        public bool IsInitialized => _uiDocument != null;
+
         /// <summary>
         /// パネルを初期化し、RenderTexture・UIDocument・Quadを構成する。
+        /// 二重呼び出しは無視される。
         /// </summary>
         public void Initialize(VisualTreeAsset uxml, StyleSheet? styleSheet = null, int textureWidth = DefaultTextureWidth, int textureHeight = DefaultTextureHeight)
         {
+            if (IsInitialized) return;
+
             CreateRenderTexture(textureWidth, textureHeight);
             CreatePanelSettings();
             CreateUIDocument(uxml, styleSheet);

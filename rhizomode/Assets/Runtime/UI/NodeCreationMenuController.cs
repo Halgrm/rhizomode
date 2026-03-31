@@ -37,7 +37,8 @@ namespace Rhizomode.UI
         private void Awake()
         {
             _panelHost = GetComponent<WorldPanelHost>();
-            gameObject.SetActive(false);
+            // 初期状態は非表示（GameObjectは残す、MeshRendererを無効化）
+            SetVisualActive(false);
         }
 
         /// <summary>
@@ -55,25 +56,20 @@ namespace Rhizomode.UI
         {
             if (menuUxml == null || _panelHost == null) return;
 
-            // 頭の前方にメニューを配置
-            var spawnPos = headPosition + headForward * MenuSpawnDistance;
-            transform.position = spawnPos;
-            // メニューをプレイヤーに向ける
-            transform.rotation = Quaternion.LookRotation(transform.position - headPosition);
-
-            if (!IsVisible)
+            // 初回のみ初期化
+            if (!_panelHost.IsInitialized)
             {
-                gameObject.SetActive(true);
+                _panelHost.Initialize(menuUxml, menuStyleSheet, MenuTextureWidth, MenuTextureHeight);
                 _panelHost.Resize(MenuWorldWidth, MenuWorldHeight);
-
-                if (_panelHost.Root == null)
-                {
-                    _panelHost.Initialize(menuUxml, menuStyleSheet, MenuTextureWidth, MenuTextureHeight);
-                }
-
                 CacheElements();
             }
 
+            // 頭の前方にメニューを配置
+            var spawnPos = headPosition + headForward * MenuSpawnDistance;
+            transform.position = spawnPos;
+            transform.rotation = Quaternion.LookRotation(transform.position - headPosition);
+
+            SetVisualActive(true);
             ShowCategories();
             IsVisible = true;
         }
@@ -84,7 +80,18 @@ namespace Rhizomode.UI
             if (!IsVisible) return;
 
             IsVisible = false;
-            gameObject.SetActive(false);
+            SetVisualActive(false);
+        }
+
+        private void SetVisualActive(bool active)
+        {
+            var meshRenderer = GetComponent<MeshRenderer>();
+            if (meshRenderer != null)
+                meshRenderer.enabled = active;
+
+            var collider = GetComponent<MeshCollider>();
+            if (collider != null)
+                collider.enabled = active;
         }
 
         private void CacheElements()
