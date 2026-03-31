@@ -20,6 +20,13 @@ namespace Rhizomode.UI
         [SerializeField] private float worldWidth = 0.20f;
         [SerializeField] private float worldHeight = 0.12f;
 
+        /// <summary>PanelSettingsテンプレートを外部から設定する（ランタイム生成時用）。</summary>
+        public PanelSettings? PanelSettingsTemplate
+        {
+            get => panelSettingsTemplate;
+            set => panelSettingsTemplate = value;
+        }
+
         private UIDocument? _uiDocument;
         private RenderTexture? _renderTexture;
         private PanelSettings? _panelSettings;
@@ -87,8 +94,15 @@ namespace Rhizomode.UI
 
         private void CreatePanelSettings()
         {
-            // PanelSettingsをランタイム生成
-            _panelSettings = ScriptableObject.CreateInstance<PanelSettings>();
+            // テンプレートからクローンしてテーマを継承、なければ新規生成
+            if (panelSettingsTemplate != null)
+            {
+                _panelSettings = Instantiate(panelSettingsTemplate);
+            }
+            else
+            {
+                _panelSettings = ScriptableObject.CreateInstance<PanelSettings>();
+            }
             _panelSettings.targetTexture = _renderTexture;
             _panelSettings.clearColor = true;
             _panelSettings.scaleMode = PanelScaleMode.ConstantPixelSize;

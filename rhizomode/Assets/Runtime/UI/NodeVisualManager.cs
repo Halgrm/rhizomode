@@ -20,6 +20,7 @@ namespace Rhizomode.UI
         [SerializeField] private VisualTreeAsset? nodeUxml;
         [SerializeField] private VisualTreeAsset? portUxml;
         [SerializeField] private StyleSheet? nodeStyleSheet;
+        [SerializeField] private PanelSettings? panelSettingsTemplate;
 
         private readonly Dictionary<string, NodeVisualController> _visuals = new();
         private NodeTypeRegistry? _typeRegistry;
@@ -120,14 +121,13 @@ namespace Rhizomode.UI
             go.AddComponent<MeshCollider>();
 
             var panelHost = go.AddComponent<WorldPanelHost>();
-            var controller = go.AddComponent<NodeVisualController>();
-
-            // portUxmlをSerializeFieldで設定できないため、直接参照
-            if (portUxml != null)
+            if (panelSettingsTemplate != null)
             {
-                // NodeVisualControllerのportUxmlはSerializeFieldなので、
-                // ランタイム生成時はリフレクション回避のためfallbackを使用
+                panelHost.PanelSettingsTemplate = panelSettingsTemplate;
             }
+
+            go.AddComponent<WorldPanelRayBridge>();
+            go.AddComponent<NodeVisualController>();
 
             return go;
         }

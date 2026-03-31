@@ -65,6 +65,17 @@
                 },
                 {
                     "name": "",
+                    "id": "b1b2c3d4-0001-0001-0001-000000000006",
+                    "path": "<Mouse>/leftButton",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "Keyboard",
+                    "action": "Select",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
                     "id": "b1b2c3d4-0001-0001-0001-000000000002",
                     "path": "<XRController>{RightHand}/gripPressed",
                     "interactions": "",
@@ -81,6 +92,17 @@
                     "interactions": "",
                     "processors": "",
                     "groups": "XR",
+                    "action": "DeleteNode",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "b1b2c3d4-0001-0001-0001-000000000007",
+                    "path": "<Keyboard>/delete",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "Keyboard",
                     "action": "DeleteNode",
                     "isComposite": false,
                     "isPartOfComposite": false
@@ -146,6 +168,17 @@
                 },
                 {
                     "name": "",
+                    "id": "b1b2c3d4-0001-0001-0002-000000000003",
+                    "path": "<Keyboard>/x",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "Keyboard",
+                    "action": "OpenMenu",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
                     "id": "b1b2c3d4-0001-0001-0002-000000000002",
                     "path": "<XRController>{LeftHand}/thumbstick",
                     "interactions": "",
@@ -165,7 +198,23 @@
             "devices": [
                 {
                     "devicePath": "<XRController>",
-                    "isOptional": false,
+                    "isOptional": true,
+                    "isOR": false
+                }
+            ]
+        },
+        {
+            "name": "Keyboard",
+            "bindingGroup": "Keyboard",
+            "devices": [
+                {
+                    "devicePath": "<Keyboard>",
+                    "isOptional": true,
+                    "isOR": false
+                },
+                {
+                    "devicePath": "<Mouse>",
+                    "isOptional": true,
                     "isOR": false
                 }
             ]
