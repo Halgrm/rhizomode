@@ -1,7 +1,8 @@
 #nullable enable
 
 using R3;
-using Rhizomode.Core;
+using Rhizomode.SharedKernel;
+using Rhizomode.Graph.Model;
 using UnityEngine;
 
 namespace Rhizomode.Nodes.Input
@@ -37,7 +38,7 @@ namespace Rhizomode.Nodes.Input
             _beatInterval = 60f / DefaultBPM;
         }
 
-        public override void Setup(GraphContext context)
+        public override void Setup(GraphState context)
         {
             // トリガー入力の立ち上がりでBPM更新
             AddSubscription(

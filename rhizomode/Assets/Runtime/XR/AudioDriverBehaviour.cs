@@ -2,7 +2,8 @@
 
 using System.Collections.Generic;
 using Rhizomode.Audio;
-using Rhizomode.Core;
+using Rhizomode.SharedKernel;
+using Rhizomode.Graph.Model;
 using Rhizomode.Nodes.Input;
 using Rhizomode.Nodes.Utility;
 using Rhizomode.UI;

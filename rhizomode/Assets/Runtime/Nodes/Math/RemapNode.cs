@@ -1,7 +1,8 @@
 #nullable enable
 
 using R3;
-using Rhizomode.Core;
+using Rhizomode.SharedKernel;
+using Rhizomode.Graph.Model;
 using UnityEngine;
 
 namespace Rhizomode.Nodes.Math
@@ -29,7 +30,7 @@ namespace Rhizomode.Nodes.Math
             _resultOut = RegisterOutput<float>("Result", ParamType.Float);
         }
 
-        public override void Setup(GraphContext context)
+        public override void Setup(GraphState context)
         {
             AddSubscription(
                 context.GetInputObservable<float>(this, "Input")

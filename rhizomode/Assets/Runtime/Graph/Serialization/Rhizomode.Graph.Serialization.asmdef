@@ -1,0 +1,17 @@
+{
+    "name": "Rhizomode.Graph.Serialization",
+    "rootNamespace": "Rhizomode.Graph.Serialization",
+    "references": [
+        "Rhizomode.SharedKernel",
+        "Rhizomode.Graph.Snapshot"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

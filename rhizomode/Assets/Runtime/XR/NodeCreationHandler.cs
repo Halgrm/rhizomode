@@ -3,7 +3,8 @@
 using System;
 using System.Collections.Generic;
 using R3;
-using Rhizomode.Core;
+using Rhizomode.SharedKernel;
+using Rhizomode.Graph.Model;
 using Rhizomode.UI;
 using UnityEngine;
 

@@ -3,7 +3,9 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using Rhizomode.Core;
+using Rhizomode.SharedKernel;
+using Rhizomode.Graph.Model;
+using Rhizomode.Graph.Serialization;
 using UnityEngine;
 
 namespace Rhizomode.UI
@@ -34,7 +36,7 @@ namespace Rhizomode.UI
         /// <summary>
         /// 現在のグラフ全体をプリセットとして保存する。
         /// </summary>
-        public void SavePreset(GraphContext context, string presetName)
+        public void SavePreset(GraphState context, string presetName)
         {
             try
             {
@@ -67,7 +69,7 @@ namespace Rhizomode.UI
         /// プリセットを読み込んで既存グラフに統合する。
         /// </summary>
         /// <returns>追加されたノードIDのリスト。失敗時は空リスト。</returns>
-        public List<string> LoadPreset(GraphContext context, string filename, Vector3 spawnOffset)
+        public List<string> LoadPreset(GraphState context, string filename, Vector3 spawnOffset)
         {
             try
             {

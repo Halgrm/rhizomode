@@ -2,7 +2,9 @@
     "name": "Rhizomode.Catalog",
     "rootNamespace": "Rhizomode.Catalog",
     "references": [
-        "Rhizomode.Core"
+        "Rhizomode.SharedKernel",
+        "Rhizomode.Graph.Model",
+        "Rhizomode.Graph.Serialization"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

@@ -2,7 +2,9 @@
     "name": "Rhizomode.UI",
     "rootNamespace": "Rhizomode.UI",
     "references": [
-        "Rhizomode.Core",
+        "Rhizomode.SharedKernel",
+        "Rhizomode.Graph.Model",
+        "Rhizomode.Graph.Serialization",
         "Rhizomode.Cameras",
         "Unity.Cinemachine",
         "R3.Unity",

@@ -2,7 +2,9 @@
 
 using System;
 using R3;
-using Rhizomode.Core;
+using Rhizomode.SharedKernel;
+using Rhizomode.Graph.Model;
+using Rhizomode.Graph.Serialization;
 using UnityEngine;
 
 namespace Rhizomode.Nodes.Utility
@@ -29,7 +31,7 @@ namespace Rhizomode.Nodes.Utility
             RegisterOutput<float>("Scale", ParamType.Float);
         }
 
-        public override void Setup(GraphContext context)
+        public override void Setup(GraphState context)
         {
             // Proxy注入はSetup後にGameBootstrapから行われる。
             // BindProxyObservablesで購読を開始する。
@@ -41,7 +43,7 @@ namespace Rhizomode.Nodes.Utility
         /// Observable経由で受け取る。
         /// </summary>
         public void BindProxyObservables(
-            GraphContext context,
+            GraphState context,
             Observable<Vector3> position,
             Observable<float> scale)
         {

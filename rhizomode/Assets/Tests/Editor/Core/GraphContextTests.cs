@@ -3,7 +3,8 @@
 using System;
 using NUnit.Framework;
 using R3;
-using Rhizomode.Core;
+using Rhizomode.SharedKernel;
+using Rhizomode.Graph.Model;
 using UnityEngine;
 
 namespace Rhizomode.Core.Tests
@@ -19,7 +20,7 @@ namespace Rhizomode.Core.Tests
             RegisterOutput<float>("Output", ParamType.Float);
         }
 
-        public override void Setup(GraphContext context)
+        public override void Setup(GraphState context)
         {
             var input = context.GetInputObservable<float>(this, "Input");
             AddSubscription(input.Subscribe(v => context.SetOutput(this, "Output", v)));
@@ -36,7 +37,7 @@ namespace Rhizomode.Core.Tests
             RegisterOutput<float>("Value", ParamType.Float);
         }
 
-        public override void Setup(GraphContext context) { }
+        public override void Setup(GraphState context) { }
     }
 
     /// <summary>
@@ -49,7 +50,7 @@ namespace Rhizomode.Core.Tests
             RegisterInput<float>("Value", ParamType.Float);
         }
 
-        public override void Setup(GraphContext context) { }
+        public override void Setup(GraphState context) { }
     }
 
     /// <summary>
@@ -62,7 +63,7 @@ namespace Rhizomode.Core.Tests
             RegisterOutput<Color>("Value", ParamType.Color);
         }
 
-        public override void Setup(GraphContext context) { }
+        public override void Setup(GraphState context) { }
     }
 
     public class GraphContextTests
@@ -70,7 +71,7 @@ namespace Rhizomode.Core.Tests
         [Test]
         public void RegisterNode_AddsToContext()
         {
-            using var context = new GraphContext();
+            using var context = new GraphState();
             var node = new SourceNode("n1");
             context.RegisterNode(node);
 
@@ -80,7 +81,7 @@ namespace Rhizomode.Core.Tests
         [Test]
         public void RemoveNode_RemovesFromContext()
         {
-            using var context = new GraphContext();
+            using var context = new GraphState();
             var node = new SourceNode("n1");
             context.RegisterNode(node);
             context.RemoveNode("n1");
@@ -91,7 +92,7 @@ namespace Rhizomode.Core.Tests
         [Test]
         public void TryConnect_SameType_ReturnsTrue()
         {
-            using var context = new GraphContext();
+            using var context = new GraphState();
             context.RegisterNode(new SourceNode("n1"));
             context.RegisterNode(new SinkNode("n2"));
 
@@ -104,7 +105,7 @@ namespace Rhizomode.Core.Tests
         [Test]
         public void TryConnect_TypeMismatch_ReturnsFalse()
         {
-            using var context = new GraphContext();
+            using var context = new GraphState();
             context.RegisterNode(new ColorSourceNode("n1"));
             context.RegisterNode(new SinkNode("n2"));
 
@@ -117,7 +118,7 @@ namespace Rhizomode.Core.Tests
         [Test]
         public void TryConnect_InvalidPort_ReturnsFalse()
         {
-            using var context = new GraphContext();
+            using var context = new GraphState();
             context.RegisterNode(new SourceNode("n1"));
             context.RegisterNode(new SinkNode("n2"));
 
@@ -129,7 +130,7 @@ namespace Rhizomode.Core.Tests
         [Test]
         public void TryConnect_InvalidNode_ReturnsFalse()
         {
-            using var context = new GraphContext();
+            using var context = new GraphState();
             context.RegisterNode(new SourceNode("n1"));
 
             bool result = context.TryConnect("n1", "Value", "n99", "Value");
@@ -140,7 +141,7 @@ namespace Rhizomode.Core.Tests
         [Test]
         public void SignalFlow_EndToEnd()
         {
-            using var context = new GraphContext();
+            using var context = new GraphState();
             var source = new SourceNode("n1");
             var sink = new SinkNode("n2");
 
@@ -161,7 +162,7 @@ namespace Rhizomode.Core.Tests
         [Test]
         public void SignalFlow_ThroughPassthroughNode()
         {
-            using var context = new GraphContext();
+            using var context = new GraphState();
             var source = new SourceNode("n1");
             var passthrough = new PassthroughNode("n2");
             var sink = new SinkNode("n3");
@@ -185,7 +186,7 @@ namespace Rhizomode.Core.Tests
         [Test]
         public void Disconnect_StopsPropagation()
         {
-            using var context = new GraphContext();
+            using var context = new GraphState();
             var source = new SourceNode("n1");
             var sink = new SinkNode("n2");
 
@@ -209,7 +210,7 @@ namespace Rhizomode.Core.Tests
         [Test]
         public void RemoveNode_DisconnectsAllEdges()
         {
-            using var context = new GraphContext();
+            using var context = new GraphState();
             var source = new SourceNode("n1");
             var sink = new SinkNode("n2");
 
@@ -227,7 +228,7 @@ namespace Rhizomode.Core.Tests
         [Test]
         public void Clear_RemovesEverything()
         {
-            using var context = new GraphContext();
+            using var context = new GraphState();
             context.RegisterNode(new SourceNode("n1"));
             context.RegisterNode(new SinkNode("n2"));
             context.TryConnect("n1", "Value", "n2", "Value");

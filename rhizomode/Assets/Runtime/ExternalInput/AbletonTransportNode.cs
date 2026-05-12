@@ -2,7 +2,8 @@
 
 using System;
 using R3;
-using Rhizomode.Core;
+using Rhizomode.SharedKernel;
+using Rhizomode.Graph.Model;
 using UnityEngine;
 
 namespace Rhizomode.ExternalInput
@@ -22,7 +23,7 @@ namespace Rhizomode.ExternalInput
             _songTimeOut = RegisterOutput<float>("SongTime", ParamType.Float);
         }
 
-        public override void Setup(GraphContext context)
+        public override void Setup(GraphState context)
         {
             var link = AbletonLink.Instance;
             if (link == null)

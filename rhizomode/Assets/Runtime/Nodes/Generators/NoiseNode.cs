@@ -2,7 +2,9 @@
 
 using System;
 using R3;
-using Rhizomode.Core;
+using Rhizomode.SharedKernel;
+using Rhizomode.Graph.Model;
+using Rhizomode.Graph.Serialization;
 using UnityEngine;
 
 namespace Rhizomode.Nodes.Generators
@@ -33,7 +35,7 @@ namespace Rhizomode.Nodes.Generators
             _seed = UnityEngine.Random.Range(0f, 10000f);
         }
 
-        public override void Setup(GraphContext context)
+        public override void Setup(GraphState context)
         {
             AddSubscription(
                 context.GetInputObservable<float>(this, "Speed")

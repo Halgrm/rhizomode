@@ -1,7 +1,8 @@
 #nullable enable
 
 using System.Collections.Generic;
-using Rhizomode.Core;
+using Rhizomode.SharedKernel;
+using Rhizomode.Graph.Model;
 using UnityEngine;
 
 namespace Rhizomode.UI
@@ -197,7 +198,7 @@ namespace Rhizomode.UI
         /// <summary>
         /// GraphContextの全エッジからエッジビジュアルを再構築する。グラフロード後に使用。
         /// </summary>
-        public void RebuildAllEdgeVisuals(GraphContext context)
+        public void RebuildAllEdgeVisuals(GraphState context)
         {
             Clear();
 

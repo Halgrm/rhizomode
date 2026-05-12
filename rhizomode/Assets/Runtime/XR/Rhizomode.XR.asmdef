@@ -2,7 +2,9 @@
     "name": "Rhizomode.XR",
     "rootNamespace": "Rhizomode.XR",
     "references": [
-        "Rhizomode.Core",
+        "Rhizomode.SharedKernel",
+        "Rhizomode.Graph.Model",
+        "Rhizomode.Graph.Serialization",
         "Rhizomode.Nodes",
         "Rhizomode.Modules",
         "Rhizomode.UI",

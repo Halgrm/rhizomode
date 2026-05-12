@@ -2,7 +2,9 @@
     "name": "Rhizomode.ExternalInput",
     "rootNamespace": "Rhizomode.ExternalInput",
     "references": [
-        "Rhizomode.Core",
+        "Rhizomode.SharedKernel",
+        "Rhizomode.Graph.Model",
+        "Rhizomode.Graph.Serialization",
         "R3.Unity",
         "Unity.InputSystem",
         "GUID:6055be8ebefd69e48b49212b09b47b2f",

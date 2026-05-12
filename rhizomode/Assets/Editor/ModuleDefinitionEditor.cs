@@ -3,7 +3,8 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Text.RegularExpressions;
-using Rhizomode.Core;
+using Rhizomode.SharedKernel;
+using Rhizomode.Graph.Model;
 using Rhizomode.Modules;
 using UnityEditor;
 using UnityEngine;

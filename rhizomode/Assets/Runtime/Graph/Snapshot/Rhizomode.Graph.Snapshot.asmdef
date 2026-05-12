@@ -1,0 +1,16 @@
+{
+    "name": "Rhizomode.Graph.Snapshot",
+    "rootNamespace": "Rhizomode.Graph.Snapshot",
+    "references": [
+        "Rhizomode.SharedKernel"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

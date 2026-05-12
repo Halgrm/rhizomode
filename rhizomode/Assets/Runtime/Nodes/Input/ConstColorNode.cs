@@ -1,7 +1,9 @@
 #nullable enable
 
 using System;
-using Rhizomode.Core;
+using Rhizomode.SharedKernel;
+using Rhizomode.Graph.Model;
+using Rhizomode.Graph.Serialization;
 using UnityEngine;
 
 namespace Rhizomode.Nodes.Input
@@ -54,7 +56,7 @@ namespace Rhizomode.Nodes.Input
             }
         }
 
-        public override void Setup(GraphContext context)
+        public override void Setup(GraphState context)
         {
             // 初期値を発行
             _valueOut.Emit(_color);

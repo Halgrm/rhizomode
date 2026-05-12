@@ -2,7 +2,9 @@
     "name": "Rhizomode.Nodes",
     "rootNamespace": "Rhizomode.Nodes",
     "references": [
-        "Rhizomode.Core",
+        "Rhizomode.SharedKernel",
+        "Rhizomode.Graph.Model",
+        "Rhizomode.Graph.Serialization",
         "R3.Unity"
     ],
     "includePlatforms": [],

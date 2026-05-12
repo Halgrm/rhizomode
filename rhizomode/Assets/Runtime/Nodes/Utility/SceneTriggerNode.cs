@@ -2,7 +2,8 @@
 
 using System;
 using R3;
-using Rhizomode.Core;
+using Rhizomode.SharedKernel;
+using Rhizomode.Graph.Model;
 using UnityEngine;
 
 namespace Rhizomode.Nodes.Utility
@@ -35,7 +36,7 @@ namespace Rhizomode.Nodes.Utility
             RegisterInput<bool>("Trigger", ParamType.Bool);
         }
 
-        public override void Setup(GraphContext context)
+        public override void Setup(GraphState context)
         {
             AddSubscription(
                 context.GetInputObservable<bool>(this, "Trigger")

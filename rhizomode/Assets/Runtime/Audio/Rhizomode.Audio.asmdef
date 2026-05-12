@@ -2,7 +2,9 @@
     "name": "Rhizomode.Audio",
     "rootNamespace": "Rhizomode.Audio",
     "references": [
-        "Rhizomode.Core",
+        "Rhizomode.SharedKernel",
+        "Rhizomode.Graph.Model",
+        "Rhizomode.Graph.Serialization",
         "Lasp.Runtime"
     ],
     "includePlatforms": [],

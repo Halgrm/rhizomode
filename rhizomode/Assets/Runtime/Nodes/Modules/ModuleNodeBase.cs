@@ -3,7 +3,9 @@
 using System;
 using System.Collections.Generic;
 using R3;
-using Rhizomode.Core;
+using Rhizomode.SharedKernel;
+using Rhizomode.Graph.Model;
+using Rhizomode.Graph.Serialization;
 using UnityEngine;
 
 namespace Rhizomode.Nodes.Modules
@@ -79,7 +81,7 @@ namespace Rhizomode.Nodes.Modules
         }
 
         /// <inheritdoc />
-        public override void Setup(GraphContext context)
+        public override void Setup(GraphState context)
         {
             foreach (var param in _definition.parameters)
             {
@@ -92,7 +94,7 @@ namespace Rhizomode.Nodes.Modules
         /// <summary>
         /// events配列のBool入力を購読し、true時にモジュールへイベント転送する。
         /// </summary>
-        private void SubscribeEvents(GraphContext context)
+        private void SubscribeEvents(GraphState context)
         {
             foreach (var eventName in _definition.events)
             {
@@ -109,7 +111,7 @@ namespace Rhizomode.Nodes.Modules
         /// <summary>
         /// 各パラメータの入力ObservableをSubscribeし、モジュールへ値を転送する。
         /// </summary>
-        private void SubscribeParam(GraphContext context, ParamDefinition param)
+        private void SubscribeParam(GraphState context, ParamDefinition param)
         {
             // ローカル変数にキャプチャし、ラムダ内でparamを参照しない
             var paramName = param.name;

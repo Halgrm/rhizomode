@@ -1,0 +1,18 @@
+{
+    "name": "Rhizomode.Graph.CatalogBridge",
+    "rootNamespace": "Rhizomode.Graph.CatalogBridge",
+    "references": [
+        "Rhizomode.SharedKernel",
+        "Rhizomode.Graph.Model",
+        "Rhizomode.Graph.Serialization"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

@@ -1,0 +1,25 @@
+{
+    "name": "Rhizomode.Graph.Mutation",
+    "rootNamespace": "Rhizomode.Graph.Mutation",
+    "references": [
+        "Rhizomode.SharedKernel",
+        "Rhizomode.Graph.Model",
+        "Rhizomode.Graph.Serialization",
+        "Rhizomode.Graph.Events",
+        "Rhizomode.Graph.Snapshot",
+        "Rhizomode.Graph.Runtime",
+        "Rhizomode.Graph.CatalogBridge",
+        "R3.Unity"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": true,
+    "precompiledReferences": [
+        "R3.dll"
+    ],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

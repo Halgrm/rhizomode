@@ -1,6 +1,7 @@
 #nullable enable
 
-using Rhizomode.Core;
+using Rhizomode.SharedKernel;
+using Rhizomode.Graph.Model;
 
 namespace Rhizomode.Nodes.Input
 {
@@ -39,7 +40,7 @@ namespace Rhizomode.Nodes.Input
             return float.IsNaN(v) || float.IsInfinity(v) ? 0f : v;
         }
 
-        public override void Setup(GraphContext context)
+        public override void Setup(GraphState context)
         {
             // 外部駆動のみ — Observable チェーン不要
         }

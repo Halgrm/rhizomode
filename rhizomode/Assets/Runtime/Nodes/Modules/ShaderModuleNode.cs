@@ -1,6 +1,7 @@
 #nullable enable
 
-using Rhizomode.Core;
+using Rhizomode.SharedKernel;
+using Rhizomode.Graph.Model;
 
 namespace Rhizomode.Nodes.Modules
 {

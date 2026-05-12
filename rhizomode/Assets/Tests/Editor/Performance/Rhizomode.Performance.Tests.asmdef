@@ -2,7 +2,9 @@
     "name": "Rhizomode.Performance.Tests",
     "rootNamespace": "Rhizomode.Performance.Tests",
     "references": [
-        "Rhizomode.Core",
+        "Rhizomode.SharedKernel",
+        "Rhizomode.Graph.Model",
+        "Rhizomode.Graph.Serialization",
         "Rhizomode.Catalog",
         "Rhizomode.Bootstrap",
         "Rhizomode.Nodes",

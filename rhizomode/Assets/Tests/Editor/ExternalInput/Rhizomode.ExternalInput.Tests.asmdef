@@ -2,7 +2,9 @@
     "name": "Rhizomode.ExternalInput.Tests",
     "rootNamespace": "Rhizomode.ExternalInput.Tests",
     "references": [
-        "Rhizomode.Core",
+        "Rhizomode.SharedKernel",
+        "Rhizomode.Graph.Model",
+        "Rhizomode.Graph.Serialization",
         "Rhizomode.ExternalInput",
         "R3.Unity"
     ],

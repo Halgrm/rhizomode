@@ -2,7 +2,9 @@
     "name": "Rhizomode.Catalog.Tests",
     "rootNamespace": "Rhizomode.Catalog.Tests",
     "references": [
-        "Rhizomode.Core",
+        "Rhizomode.SharedKernel",
+        "Rhizomode.Graph.Model",
+        "Rhizomode.Graph.Serialization",
         "Rhizomode.Catalog"
     ],
     "includePlatforms": [

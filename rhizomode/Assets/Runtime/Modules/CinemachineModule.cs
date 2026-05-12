@@ -1,7 +1,8 @@
 #nullable enable
 
 using System.Collections.Generic;
-using Rhizomode.Core;
+using Rhizomode.SharedKernel;
+using Rhizomode.Graph.Model;
 using UnityEngine;
 
 #if UNITY_6000_0_OR_NEWER

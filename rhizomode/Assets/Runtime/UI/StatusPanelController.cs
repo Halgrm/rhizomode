@@ -2,7 +2,8 @@
 
 using System.Collections.Generic;
 using System.Text;
-using Rhizomode.Core;
+using Rhizomode.SharedKernel;
+using Rhizomode.Graph.Model;
 using UnityEngine;
 using UnityEngine.UIElements;
 
@@ -130,13 +131,13 @@ namespace Rhizomode.UI
             UpdateAudioDevice();
         }
 
-        private void UpdateNodeCount(GraphContext ctx)
+        private void UpdateNodeCount(GraphState ctx)
         {
             if (_nodeCountLabel != null)
                 _nodeCountLabel.text = $"Nodes: {ctx.Nodes.Count}";
         }
 
-        private void UpdateEdgeCount(GraphContext ctx)
+        private void UpdateEdgeCount(GraphState ctx)
         {
             if (_edgeCountLabel != null)
                 _edgeCountLabel.text = $"Edges: {ctx.Edges.Count}";
@@ -144,7 +145,7 @@ namespace Rhizomode.UI
 
         private readonly StringBuilder _moduleSb = new();
 
-        private void UpdateActiveModules(GraphContext ctx)
+        private void UpdateActiveModules(GraphState ctx)
         {
             if (_activeModulesLabel == null) return;
 

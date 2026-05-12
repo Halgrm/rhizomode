@@ -2,7 +2,8 @@
 
 using NUnit.Framework;
 using R3;
-using Rhizomode.Core;
+using Rhizomode.SharedKernel;
+using Rhizomode.Graph.Model;
 using UnityEngine;
 
 namespace Rhizomode.Core.Tests

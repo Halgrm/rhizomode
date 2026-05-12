@@ -1,7 +1,8 @@
 #nullable enable
 
 using R3;
-using Rhizomode.Core;
+using Rhizomode.SharedKernel;
+using Rhizomode.Graph.Model;
 using UnityEngine;
 
 namespace Rhizomode.Nodes.Time
@@ -18,7 +19,7 @@ namespace Rhizomode.Nodes.Time
             _timeOut = RegisterOutput<float>("Time", ParamType.Float);
         }
 
-        public override void Setup(GraphContext context)
+        public override void Setup(GraphState context)
         {
             AddSubscription(
                 Observable.EveryUpdate()

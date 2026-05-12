@@ -1,7 +1,8 @@
 #nullable enable
 
 using R3;
-using Rhizomode.Core;
+using Rhizomode.SharedKernel;
+using Rhizomode.Graph.Model;
 using UnityEngine;
 
 namespace Rhizomode.Nodes.Input
@@ -80,7 +81,7 @@ namespace Rhizomode.Nodes.Input
             }
         }
 
-        public override void Setup(GraphContext context)
+        public override void Setup(GraphState context)
         {
             // 毎フレームPhaseとBeatを発行
             AddSubscription(

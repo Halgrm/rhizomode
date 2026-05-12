@@ -2,7 +2,8 @@
 
 using System;
 using System.Collections.Generic;
-using Rhizomode.Core;
+using Rhizomode.SharedKernel;
+using Rhizomode.Graph.Model;
 using UnityEngine;
 using UnityEngine.UIElements;
 
@@ -162,7 +163,7 @@ namespace Rhizomode.UI
         /// <summary>
         /// 全ビジュアルを再構築する。グラフロード後にGraphContextの全ノードから再生成する。
         /// </summary>
-        public void RebuildAllVisuals(GraphContext context)
+        public void RebuildAllVisuals(GraphState context)
         {
             Clear();
 

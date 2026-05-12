@@ -2,16 +2,18 @@
 
 using NUnit.Framework;
 using R3;
-using Rhizomode.Core;
+using Rhizomode.SharedKernel;
+using Rhizomode.Graph.Model;
+using Rhizomode.Graph.Serialization;
 using UnityEngine;
 
 namespace Rhizomode.Core.Tests
 {
     public class SerializationTests
     {
-        private GraphContext CreateContextWithFactories()
+        private GraphState CreateContextWithFactories()
         {
-            var context = new GraphContext();
+            var context = new GraphState();
             context.RegisterNodeFactory("Source", id => new SourceNode(id));
             context.RegisterNodeFactory("Sink", id => new SinkNode(id));
             context.RegisterNodeFactory("Passthrough", id => new PassthroughNode(id));
@@ -21,7 +23,7 @@ namespace Rhizomode.Core.Tests
         [Test]
         public void Serialize_EmptyGraph_ReturnsValidData()
         {
-            using var context = new GraphContext();
+            using var context = new GraphState();
             var data = context.Serialize();
 
             Assert.AreEqual("1.0", data.version);
@@ -32,7 +34,7 @@ namespace Rhizomode.Core.Tests
         [Test]
         public void Serialize_PreservesNodes()
         {
-            using var context = new GraphContext();
+            using var context = new GraphState();
             context.RegisterNode(new SourceNode("n1") { Position = new Vector3(1, 2, 3) });
             context.RegisterNode(new SinkNode("n2") { Position = new Vector3(4, 5, 6) });
 
@@ -44,7 +46,7 @@ namespace Rhizomode.Core.Tests
         [Test]
         public void Serialize_PreservesEdges()
         {
-            using var context = new GraphContext();
+            using var context = new GraphState();
             context.RegisterNode(new SourceNode("n1"));
             context.RegisterNode(new SinkNode("n2"));
             context.TryConnect("n1", "Value", "n2", "Value");

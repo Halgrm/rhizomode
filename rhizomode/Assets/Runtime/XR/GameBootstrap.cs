@@ -6,7 +6,8 @@ using System.Threading.Tasks;
 using R3;
 using Rhizomode.Audio;
 using Rhizomode.Cameras;
-using Rhizomode.Core;
+using Rhizomode.SharedKernel;
+using Rhizomode.Graph.Model;
 using Rhizomode.ExternalInput;
 using Rhizomode.Modules;
 using Rhizomode.Nodes.Generators;
@@ -1131,7 +1132,7 @@ namespace Rhizomode.XR
         /// グラフロード後、ModuleNodeBaseのModule未設定ノードにPrefabを再生成・注入する。
         /// ファクトリ経由のCreateNodeでは注入済みだが、デシリアライズ復元時は未設定のため。
         /// </summary>
-        private void ReinjectModulesAfterLoad(GraphContext ctx)
+        private void ReinjectModulesAfterLoad(GraphState ctx)
         {
             foreach (var node in ctx.Nodes.Values)
             {

@@ -2,7 +2,8 @@
 
 using System.Linq;
 using NUnit.Framework;
-using Rhizomode.Core;
+using Rhizomode.SharedKernel;
+using Rhizomode.Graph.Model;
 using Rhizomode.Nodes.Modules;
 using UnityEngine;
 
@@ -48,7 +49,7 @@ namespace Rhizomode.Core.Tests
 
             var node = new ShaderModuleNode("test-2", def);
 
-            Assert.AreEqual("ShaderModule", node.NodeType);
+            Assert.AreEqual("Shader_TestShader", node.NodeType);
             Assert.AreEqual(-5f, node.Definition.parameters[0].minFloat);
             Assert.AreEqual(5f, node.Definition.parameters[0].maxFloat);
             Assert.AreEqual(1f, node.Definition.parameters[0].defaultFloat);

@@ -2,7 +2,9 @@
     "name": "Rhizomode.Modules",
     "rootNamespace": "Rhizomode.Modules",
     "references": [
-        "Rhizomode.Core",
+        "Rhizomode.SharedKernel",
+        "Rhizomode.Graph.Model",
+        "Rhizomode.Graph.Serialization",
         "Unity.VisualEffectGraph.Runtime",
         "Unity.Cinemachine"
     ],

@@ -1,7 +1,8 @@
 #nullable enable
 
 using R3;
-using Rhizomode.Core;
+using Rhizomode.SharedKernel;
+using Rhizomode.Graph.Model;
 using UnityEngine;
 
 namespace Rhizomode.Nodes.Utility
@@ -25,7 +26,7 @@ namespace Rhizomode.Nodes.Utility
             _aOut = RegisterOutput<float>("A", ParamType.Float);
         }
 
-        public override void Setup(GraphContext context)
+        public override void Setup(GraphState context)
         {
             AddSubscription(
                 context.GetInputObservable<Color>(this, "Color")

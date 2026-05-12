@@ -1,7 +1,8 @@
 #nullable enable
 
 using System;
-using Rhizomode.Core;
+using Rhizomode.SharedKernel;
+using Rhizomode.Graph.Model;
 using UnityEngine;
 
 namespace Rhizomode.Nodes.Utility
@@ -24,7 +25,7 @@ namespace Rhizomode.Nodes.Utility
             _levelOut = RegisterOutput<float>("Level", ParamType.Float);
         }
 
-        public override void Setup(GraphContext context)
+        public override void Setup(GraphState context)
         {
             _levelOut.Emit(0f);
         }

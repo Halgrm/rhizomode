@@ -2,7 +2,9 @@
 
 using System;
 using R3;
-using Rhizomode.Core;
+using Rhizomode.SharedKernel;
+using Rhizomode.Graph.Model;
+using Rhizomode.Graph.Serialization;
 using UnityEngine;
 
 namespace Rhizomode.Nodes.Utility
@@ -73,7 +75,7 @@ namespace Rhizomode.Nodes.Utility
             _baseScale = target.localScale;
         }
 
-        public override void Setup(GraphContext context)
+        public override void Setup(GraphState context)
         {
             if (_target == null) return;
 
@@ -177,7 +179,7 @@ namespace Rhizomode.Nodes.Utility
         /// <summary>
         /// 接続がないとき初期値を流すために、InputPortにOnNextで初期値を注入する。
         /// </summary>
-        private void SeedInput<T>(GraphContext context, string portName, T value)
+        private void SeedInput<T>(GraphState context, string portName, T value)
         {
             var port = GetInputPort(portName);
             port?.OnNext(value!);

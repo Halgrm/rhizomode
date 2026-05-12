@@ -2,7 +2,9 @@
 
 using System;
 using R3;
-using Rhizomode.Core;
+using Rhizomode.SharedKernel;
+using Rhizomode.Graph.Model;
+using Rhizomode.Graph.Serialization;
 using UnityEngine;
 
 namespace Rhizomode.Nodes.Utility
@@ -32,7 +34,7 @@ namespace Rhizomode.Nodes.Utility
             RegisterInput<bool>("Unload", ParamType.Bool);
         }
 
-        public override void Setup(GraphContext context)
+        public override void Setup(GraphState context)
         {
             // Index入力: 値が変わったらシーン切り替え
             AddSubscription(

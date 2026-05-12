@@ -1,6 +1,7 @@
 #nullable enable
 
-using Rhizomode.Core;
+using Rhizomode.SharedKernel;
+using Rhizomode.Graph.Model;
 using UnityEngine;
 
 namespace Rhizomode.UI
@@ -10,12 +11,12 @@ namespace Rhizomode.UI
     /// </summary>
     public class GraphContextBehaviour : MonoBehaviour
     {
-        private GraphContext? _context;
+        private GraphState? _context;
 
         /// <summary>
         /// GraphContextインスタンスへのアクセス。初回アクセス時に生成される。
         /// </summary>
-        public GraphContext Context => _context ??= new GraphContext();
+        public GraphState Context => _context ??= new GraphState();
 
         private void OnDestroy()
         {

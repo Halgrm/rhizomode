@@ -1,7 +1,8 @@
 #nullable enable
 
 using R3;
-using Rhizomode.Core;
+using Rhizomode.SharedKernel;
+using Rhizomode.Graph.Model;
 using UnityEngine;
 
 namespace Rhizomode.Nodes.Modules
@@ -23,7 +24,7 @@ namespace Rhizomode.Nodes.Modules
         }
 
         /// <inheritdoc />
-        public override void Setup(GraphContext context)
+        public override void Setup(GraphState context)
         {
             base.Setup(context);
 

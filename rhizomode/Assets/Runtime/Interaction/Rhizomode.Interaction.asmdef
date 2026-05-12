@@ -2,7 +2,9 @@
     "name": "Rhizomode.Interaction",
     "rootNamespace": "Rhizomode.Interaction",
     "references": [
-        "Rhizomode.Core",
+        "Rhizomode.SharedKernel",
+        "Rhizomode.Graph.Model",
+        "Rhizomode.Graph.Serialization",
         "R3.Unity",
         "Unity.InputSystem"
     ],

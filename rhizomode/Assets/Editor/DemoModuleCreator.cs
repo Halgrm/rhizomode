@@ -2,7 +2,8 @@
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.VFX;
-using Rhizomode.Core;
+using Rhizomode.SharedKernel;
+using Rhizomode.Graph.Model;
 using Rhizomode.Modules;
 using System.Collections.Generic;
 

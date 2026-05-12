@@ -4,7 +4,8 @@ using System;
 using System.Collections.Generic;
 using R3;
 using Rhizomode.Cameras;
-using Rhizomode.Core;
+using Rhizomode.SharedKernel;
+using Rhizomode.Graph.Model;
 using Unity.Cinemachine;
 using UnityEngine;
 using UnityEngine.UIElements;
@@ -75,7 +76,7 @@ namespace Rhizomode.UI
         }
 
         /// <summary>
-        /// GraphContext への参照を設定する。GameBootstrap から呼ぶ。
+        /// GraphState への参照を設定する。GameBootstrap から呼ぶ。
         /// </summary>
         public void Initialize(GraphContextBehaviour graphContext)
         {

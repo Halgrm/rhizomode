@@ -2,7 +2,9 @@
     "name": "Rhizomode.UI.Tests",
     "rootNamespace": "Rhizomode.UI.Tests",
     "references": [
-        "Rhizomode.Core",
+        "Rhizomode.SharedKernel",
+        "Rhizomode.Graph.Model",
+        "Rhizomode.Graph.Serialization",
         "Rhizomode.Catalog",
         "Rhizomode.UI",
         "R3.Unity"

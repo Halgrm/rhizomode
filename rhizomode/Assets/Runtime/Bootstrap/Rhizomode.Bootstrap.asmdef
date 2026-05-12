@@ -2,7 +2,9 @@
     "name": "Rhizomode.Bootstrap",
     "rootNamespace": "Rhizomode.Bootstrap",
     "references": [
-        "Rhizomode.Core",
+        "Rhizomode.SharedKernel",
+        "Rhizomode.Graph.Model",
+        "Rhizomode.Graph.Serialization",
         "Rhizomode.Catalog",
         "Rhizomode.Interaction",
         "Rhizomode.Nodes",

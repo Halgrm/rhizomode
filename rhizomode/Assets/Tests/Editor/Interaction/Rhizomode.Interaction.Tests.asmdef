@@ -2,7 +2,9 @@
     "name": "Rhizomode.Interaction.Tests",
     "rootNamespace": "Rhizomode.Interaction.Tests",
     "references": [
-        "Rhizomode.Core",
+        "Rhizomode.SharedKernel",
+        "Rhizomode.Graph.Model",
+        "Rhizomode.Graph.Serialization",
         "Rhizomode.Interaction"
     ],
     "includePlatforms": [

@@ -2,7 +2,9 @@
 
 using System;
 using R3;
-using Rhizomode.Core;
+using Rhizomode.SharedKernel;
+using Rhizomode.Graph.Model;
+using Rhizomode.Graph.Serialization;
 using UnityEngine;
 
 namespace Rhizomode.ExternalInput
@@ -34,7 +36,7 @@ namespace Rhizomode.ExternalInput
             _valueOut = RegisterOutput<float>("Value", ParamType.Float);
         }
 
-        public override void Setup(GraphContext context)
+        public override void Setup(GraphState context)
         {
             var server = OscServer.Instance;
             if (server == null)

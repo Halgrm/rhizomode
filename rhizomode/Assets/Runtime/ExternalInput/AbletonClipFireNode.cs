@@ -2,7 +2,9 @@
 
 using System;
 using R3;
-using Rhizomode.Core;
+using Rhizomode.SharedKernel;
+using Rhizomode.Graph.Model;
+using Rhizomode.Graph.Serialization;
 using UnityEngine;
 
 namespace Rhizomode.ExternalInput
@@ -44,7 +46,7 @@ namespace Rhizomode.ExternalInput
             _isPlayingOut = RegisterOutput<bool>("IsPlaying", ParamType.Bool);
         }
 
-        public override void Setup(GraphContext context)
+        public override void Setup(GraphState context)
         {
             var link = AbletonLink.Instance;
             if (link == null)

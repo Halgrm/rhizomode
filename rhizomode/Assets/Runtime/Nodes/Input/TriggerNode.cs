@@ -1,7 +1,8 @@
 #nullable enable
 
 using R3;
-using Rhizomode.Core;
+using Rhizomode.SharedKernel;
+using Rhizomode.Graph.Model;
 
 namespace Rhizomode.Nodes.Input
 {
@@ -28,7 +29,7 @@ namespace Rhizomode.Nodes.Input
             _fired = true;
         }
 
-        public override void Setup(GraphContext context)
+        public override void Setup(GraphState context)
         {
             AddSubscription(
                 Observable.EveryUpdate()
