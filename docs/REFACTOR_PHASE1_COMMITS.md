@@ -25,7 +25,7 @@ Plan v5.3 Phase 1 (asmdef 大改修、6 日、7 sub-step) の各 sub-step ごと
 | Sub-step | 内容 | 工数 | Commit hash | Player build | 完了日 |
 |---|---|---:|---|---|---|
 | 1A | SharedKernel + Graph 8 asmdef + Core 解体 | 1.5d | `014cf94c` | `[player-build: pass]` | 2026-05-13 |
-| 1B | NodeCatalog 2 分割 + Input.Contracts + Interaction.Contracts | 0.5d | - | - | - |
+| 1B | NodeCatalog 2 分割 + Input.Contracts + Interaction.Contracts | 0.5d | `dadff7e3` | (不要) | 2026-05-13 |
 | 1C | Audio / OscMidi / Ableton bounded context | 1d | - | (必須) | - |
 | 1D | Nodes 5 asmdef 分割 | 1d | - | - | - |
 | 1E | UI 3 分割 + Interaction.GraphAdapter + Cameras | 1d | - | - | - |
@@ -71,6 +71,34 @@ namespace + class rename:
 - ✅ `using Rhizomode.Core;` 残存 0 件
 - ✅ EditMode Test Runner 全件パス (1 件のテスト期待値修正含む: `ModuleNodeTests.cs:52`)
 - ✅ Standalone Player build 成功 (`Profiler connected on WindowsPlayer`)
+
+---
+
+## 1B 詳細 (2026-05-13 完了)
+
+**Commit**: `dadff7e3 refactor(phase-1b): NodeCatalog 2 分割 + Input.Contracts + Interaction.Contracts`
+
+新規 asmdef (4):
+- `Rhizomode.NodeCatalog.Contracts` (NodeCategory, NodeTypeInfo)
+- `Rhizomode.NodeCatalog.Runtime` (NodeTypeRegistry)
+- `Rhizomode.Input.Contracts` (IControllerInput 等 5 件)
+- `Rhizomode.Interaction.Contracts` (空 placeholder、Phase 5 で InteractionIntent)
+
+旧 Phase 0 雛形削除:
+- `rhizomode/Assets/Runtime/Catalog/` 全削除
+- `rhizomode/Assets/Runtime/Interaction/Rhizomode.Interaction.asmdef` + marker 削除
+
+ファイル移動 (8 .cs):
+- UI/{NodeCategory, NodeTypeInfo}.cs → NodeCatalog/Contracts/
+- UI/NodeTypeRegistry.cs → NodeCatalog/Runtime/
+- UI/I{ControllerInput, RayProvider, ControllerPose, LeftHandRay, LeftHandInput}.cs → Input/Contracts/
+
+namespace 変更 + 参照側更新 (5 既存 asmdef + UI/XR 配下の .cs 多数)。
+
+完了条件 (全達成):
+- ✅ Compile errors 0
+- ✅ EditMode Test Runner 全件パス (Reimport All 後、50+ tests)
+- (Player build は Phase 1B 不要)
 
 ---
 
