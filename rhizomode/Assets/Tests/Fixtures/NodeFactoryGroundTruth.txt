@@ -1,0 +1,89 @@
+# rhizomode NodeFactory Ground Truth
+#
+# Generated: 2026-05-12 (Phase 0 of Plan v5.3)
+# Source:
+#   - Assets/Runtime/XR/GameBootstrap.cs:118-158 (NodeFactoryMap, 38 entries)
+#   - Assets/Runtime/XR/GameBootstrap.cs:476-477 (RegisterSceneObjects, dynamic 1 entry)
+# Total: 39 typeName, 37 source files
+#
+# 用途: Phase 1 以降の各 sub-step 完了時に「ノード factory 件数・typeName が変わらない」
+#       回帰テスト用の正解データ。Phase 4 で [NodeType] 属性を全件付与した後、
+#       NodeTypeAttributeScanner の出力と本ファイルの diff が空であることを CI で検証する。
+#
+# 注意: 動的タイプ (VFX_*, Shader_*, Object3D_*) は ModuleDefinition / Object3DPrefabList
+#       から実行時に生成されるためここには含めない (それぞれ別の Catalog SO で管理)。
+#
+# Phase 1D 移送先 (asmdef):
+#   Nodes.Audio      (7 typeName, 7 files)
+#   Nodes.OscMidi    (2 typeName, 2 files)
+#   Nodes.Ableton    (4 typeName, 4 files)
+#   Nodes.Scene      (5 typeName, 3 files; SceneTriggerNode が 3 typeName を返すため)
+#   Nodes.Standard   (21 typeName, 21 files)
+
+# =========================================================
+# Nodes.Audio (7 typeName)
+# Files: AudioDeviceNode, AudioTriggerNode, AudioBandNode, BeatDetectorNode,
+#        TapTempoNode, AudioMonitorNode, SpectrumMonitorNode
+# =========================================================
+AudioDevice
+AudioTrigger
+AudioBand
+BeatDetector
+TapTempo
+AudioMonitor
+SpectrumMonitor
+
+# =========================================================
+# Nodes.OscMidi (2 typeName)
+# Files: OscReceiverNode, MidiCCNode
+# =========================================================
+OscReceiver
+MidiCC
+
+# =========================================================
+# Nodes.Ableton (4 typeName)
+# Files: AbletonTempoNode, AbletonTransportNode, AbletonTrackVolumeNode, AbletonClipFireNode
+# =========================================================
+AbletonTempo
+AbletonTransport
+AbletonTrackVolume
+AbletonClipFire
+
+# =========================================================
+# Nodes.Scene (5 typeName, 3 files)
+# Files: SceneSwitchNode, SceneObjectNode, SceneTriggerNode (3 typeName を返す)
+# =========================================================
+SceneSwitch
+SceneObject
+SceneDark
+SceneWhite
+SceneNature
+
+# =========================================================
+# Nodes.Standard (21 typeName)
+# Files: ConstFloatNode, ConstColorNode, MultiplyNode, SmoothNode, TimeNode,
+#        ThresholdNode, ToggleNode, FloatMonitorNode, BoolMonitorNode, ColorMonitorNode,
+#        LfoNode, NoiseNode, AddNode, RemapNode, DelayNode, TimerNode,
+#        ColorToFloatsNode, FloatsToColorNode, ColorToHSVNode, HSVToColorNode, TriggerNode
+# =========================================================
+ConstFloat
+ConstColor
+Multiply
+Smooth
+Time
+Threshold
+Toggle
+FloatMonitor
+BoolMonitor
+ColorMonitor
+LFO
+Noise
+Add
+Remap
+Delay
+Timer
+ColorToFloats
+FloatsToColor
+ColorToHSV
+HSVToColor
+Trigger
