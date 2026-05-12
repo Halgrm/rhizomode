@@ -1,6 +1,6 @@
 #nullable enable
 
-namespace Rhizomode.UI
+namespace Rhizomode.NodeCatalog.Contracts
 {
     /// <summary>
     /// ノードタイプのUI表示情報。ノード生成メニューとノード表示で使用。

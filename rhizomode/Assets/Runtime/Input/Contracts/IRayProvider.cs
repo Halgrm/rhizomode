@@ -2,7 +2,7 @@
 
 using UnityEngine;
 
-namespace Rhizomode.UI
+namespace Rhizomode.Input.Contracts
 {
     /// <summary>
     /// レイキャスト用のレイ情報を提供するインターフェース。

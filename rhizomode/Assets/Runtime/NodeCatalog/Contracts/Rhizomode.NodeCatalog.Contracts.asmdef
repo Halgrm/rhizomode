@@ -1,12 +1,8 @@
 {
-    "name": "Rhizomode.Interaction",
-    "rootNamespace": "Rhizomode.Interaction",
+    "name": "Rhizomode.NodeCatalog.Contracts",
+    "rootNamespace": "Rhizomode.NodeCatalog.Contracts",
     "references": [
-        "Rhizomode.SharedKernel",
-        "Rhizomode.Graph.Model",
-        "Rhizomode.Graph.Serialization",
-        "R3.Unity",
-        "Unity.InputSystem"
+        "Rhizomode.SharedKernel"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

@@ -3,7 +3,7 @@
 using R3;
 using UnityEngine;
 
-namespace Rhizomode.UI
+namespace Rhizomode.Input.Contracts
 {
     /// <summary>
     /// コントローラー入力のインターフェース。XR層が実装し、UI層が消費する。

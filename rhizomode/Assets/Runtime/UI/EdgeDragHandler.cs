@@ -7,6 +7,10 @@ using Rhizomode.SharedKernel;
 using Rhizomode.Graph.Model;
 using UnityEngine;
 
+using Rhizomode.NodeCatalog.Contracts;
+using Rhizomode.NodeCatalog.Runtime;
+using Rhizomode.Input.Contracts;
+
 namespace Rhizomode.UI
 {
     /// <summary>

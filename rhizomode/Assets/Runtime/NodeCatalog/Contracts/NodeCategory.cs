@@ -1,6 +1,6 @@
 #nullable enable
 
-namespace Rhizomode.UI
+namespace Rhizomode.NodeCatalog.Contracts
 {
     /// <summary>
     /// ノードカテゴリ。UIの色分けとメニュー構成に使用。

@@ -2,7 +2,7 @@
 
 using UnityEngine;
 
-namespace Rhizomode.UI
+namespace Rhizomode.Input.Contracts
 {
     /// <summary>
     /// コントローラーのフル姿勢（位置＋回転）を提供する。

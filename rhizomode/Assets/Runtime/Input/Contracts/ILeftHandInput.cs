@@ -2,7 +2,7 @@
 
 using R3;
 
-namespace Rhizomode.UI
+namespace Rhizomode.Input.Contracts
 {
     /// <summary>
     /// 左手コントローラーのトリガー・グリップ入力。

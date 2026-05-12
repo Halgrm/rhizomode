@@ -3,6 +3,9 @@
     "rootNamespace": "Rhizomode.UI",
     "references": [
         "Rhizomode.SharedKernel",
+        "Rhizomode.NodeCatalog.Contracts",
+        "Rhizomode.NodeCatalog.Runtime",
+        "Rhizomode.Input.Contracts",
         "Rhizomode.Graph.Model",
         "Rhizomode.Graph.Serialization",
         "Rhizomode.Cameras",

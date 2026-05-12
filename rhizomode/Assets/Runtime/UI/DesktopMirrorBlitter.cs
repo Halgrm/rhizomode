@@ -3,6 +3,10 @@
 using UnityEngine;
 using UnityEngine.UI;
 
+using Rhizomode.NodeCatalog.Contracts;
+using Rhizomode.NodeCatalog.Runtime;
+using Rhizomode.Input.Contracts;
+
 namespace Rhizomode.UI
 {
     /// <summary>

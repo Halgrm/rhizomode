@@ -2,7 +2,7 @@
 
 using UnityEngine;
 
-namespace Rhizomode.UI
+namespace Rhizomode.Input.Contracts
 {
     /// <summary>
     /// 左手コントローラーのレイ情報とリグ回転を提供する。

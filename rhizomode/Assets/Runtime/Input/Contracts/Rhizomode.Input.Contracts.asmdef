@@ -1,0 +1,19 @@
+{
+    "name": "Rhizomode.Input.Contracts",
+    "rootNamespace": "Rhizomode.Input.Contracts",
+    "references": [
+        "Rhizomode.SharedKernel",
+        "R3.Unity"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": true,
+    "precompiledReferences": [
+        "R3.dll"
+    ],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

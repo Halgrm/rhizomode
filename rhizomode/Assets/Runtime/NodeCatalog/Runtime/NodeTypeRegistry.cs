@@ -3,7 +3,9 @@
 using System.Collections.Generic;
 using System.Linq;
 
-namespace Rhizomode.UI
+using Rhizomode.NodeCatalog.Contracts;
+
+namespace Rhizomode.NodeCatalog.Runtime
 {
     /// <summary>
     /// 全ノードタイプのUI情報を管理するレジストリ。

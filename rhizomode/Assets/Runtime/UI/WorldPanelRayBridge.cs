@@ -6,6 +6,10 @@ using System.Reflection;
 using UnityEngine;
 using UnityEngine.UIElements;
 
+using Rhizomode.NodeCatalog.Contracts;
+using Rhizomode.NodeCatalog.Runtime;
+using Rhizomode.Input.Contracts;
+
 namespace Rhizomode.UI
 {
     /// <summary>

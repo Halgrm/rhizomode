@@ -5,7 +5,7 @@
         "Rhizomode.SharedKernel",
         "Rhizomode.Graph.Model",
         "Rhizomode.Graph.Serialization",
-        "Rhizomode.Interaction"
+        "Rhizomode.Interaction.Contracts"
     ],
     "includePlatforms": [
         "Editor"

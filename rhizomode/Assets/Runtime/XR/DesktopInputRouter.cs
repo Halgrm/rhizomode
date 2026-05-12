@@ -5,6 +5,10 @@ using Rhizomode.UI;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
+using Rhizomode.NodeCatalog.Contracts;
+using Rhizomode.NodeCatalog.Runtime;
+using Rhizomode.Input.Contracts;
+
 namespace Rhizomode.XR
 {
     /// <summary>
