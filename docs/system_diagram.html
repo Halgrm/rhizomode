@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>rhizomode System Diagram (2026-04-01)</title>
+<style>
+  @page { size: A4 landscape; margin: 12mm; }
+  body { font-family: 'Segoe UI', 'Meiryo', sans-serif; margin: 24px; color: #222; background: #fff; }
+  h1 { font-size: 22px; border-bottom: 2px solid #333; padding-bottom: 6px; }
+  h2 { font-size: 16px; margin-top: 28px; color: #444; border-left: 4px solid #6a9; padding-left: 8px; }
+  h3 { font-size: 13px; margin-top: 16px; color: #666; }
+  .diagram { margin: 12px 0; }
+  .note { font-size: 12px; color: #666; margin: 6px 0 18px 0; }
+  table { border-collapse: collapse; font-size: 12px; margin: 8px 0; }
+  th, td { border: 1px solid #ccc; padding: 4px 10px; text-align: left; }
+  th { background: #f0f0f0; }
+  .page-break { page-break-before: always; }
+  .cols { display: flex; gap: 24px; }
+  .cols > div { flex: 1; }
+  code { background: #f4f4f4; padding: 1px 4px; font-size: 12px; }
+</style>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({startOnLoad:true, theme:'neutral', flowchart:{useMaxWidth:true}});</script>
+</head>
+<body>
+
+<h1>rhizomode System Diagram</h1>
+<p class="note">Generated: 2026-04-01 | Unity 6 + URP 17.3 | C# 9 + R3 | PCVR (Quest Link)</p>
+
+<!-- ============================== -->
+<h2>1. Assembly Dependency Graph</h2>
+<div class="diagram">
+<pre class="mermaid">
+graph LR
+  XR["Rhizomode.XR<br/>(9 files)"]
+  UI["Rhizomode.UI<br/>(16 files)"]
+  Nodes["Rhizomode.Nodes<br/>(empty)"]
+  Modules["Rhizomode.Modules<br/>(empty)"]
+  Audio["Rhizomode.Audio<br/>(empty)"]
+  Core["Rhizomode.Core<br/>(17 files)"]
+
+  XR --> UI
+  XR --> Core
+  UI --> Core
+  UI --> Nodes
+  Nodes --> Core
+  Modules --> Core
+  Audio --> Core
+
+  style Core fill:#e8f5e9,stroke:#4caf50
+  style UI fill:#e3f2fd,stroke:#2196f3
+  style XR fill:#fff3e0,stroke:#ff9800
+  style Nodes fill:#f5f5f5,stroke:#999,stroke-dasharray:5
+  style Modules fill:#f5f5f5,stroke:#999,stroke-dasharray:5
+  style Audio fill:#f5f5f5,stroke:#999,stroke-dasharray:5
+</pre>
+</div>
+<p class="note">破線 = Week 4以降で実装予定。依存方向は厳守（逆方向禁止）。</p>
+
+<!-- ============================== -->
+<h2>2. VR UI Pipeline (Ray Interaction)</h2>
+<div class="diagram">
+<pre class="mermaid">
+flowchart TD
+  CIR["ControllerInputRouter<br/><i>IRayProvider + IControllerInput</i>"]
+  UIR["UIRaycastDriver<br/><i>毎フレーム Physics.Raycast</i>"]
+  WPR["WorldPanelRayBridge<br/><i>Reflection経由イベント注入</i>"]
+  UIT["UIToolkit Panel<br/><i>RenderTexture上のUI</i>"]
+  WPH["WorldPanelHost<br/><i>Quad + MeshCollider</i>"]
+
+  CIR -->|RayOrigin / RayDirection| UIR
+  UIR -->|RaycastHit| WPR
+  WPR -->|PointerDown / Up / Hover| UIT
+  WPH -->|hosts| UIT
+
+  CIR -->|OnSelect / OnGrab / etc.| Handlers
+
+  subgraph Handlers["Interaction Handlers"]
+    EDH["EdgeDragHandler"]
+    ECH["EdgeCutHandler"]
+    NDH["NodeDeleteHandler"]
+    NGH["NodeGrabHandler"]
+  end
+
+  style CIR fill:#fff3e0,stroke:#ff9800
+  style UIR fill:#fff3e0,stroke:#ff9800
+  style WPR fill:#e3f2fd,stroke:#2196f3
+  style UIT fill:#e3f2fd,stroke:#2196f3
+  style WPH fill:#e3f2fd,stroke:#2196f3
+  style Handlers fill:#fce4ec,stroke:#e91e63
+</pre>
+</div>
+
+<div class="cols">
+<div>
+<h3>Controller Mapping</h3>
+<table>
+  <tr><th>Button</th><th>Observable</th><th>Handler</th></tr>
+  <tr><td>Right Trigger</td><td><code>OnSelect</code></td><td>EdgeDragHandler / UIRaycastDriver</td></tr>
+  <tr><td>Right Grip</td><td><code>OnGrab</code></td><td>NodeGrabHandler</td></tr>
+  <tr><td>Right A</td><td><code>OnDeleteNode</code></td><td>NodeDeleteHandler</td></tr>
+  <tr><td>Right B</td><td><code>OnCutEdge</code></td><td>EdgeCutHandler</td></tr>
+  <tr><td>Left X</td><td><code>OnOpenMenu</code></td><td>NodeCreationHandler</td></tr>
+</table>
+</div>
+<div>
+<h3>Key Design Notes</h3>
+<ul style="font-size:12px;">
+  <li>ノードは <code>MeshCollider</code> 付きQuad（前面のみヒット）</li>
+  <li>生成時にプレイヤー方向を向く (<code>LookRotation</code>)</li>
+  <li><code>PanelSettings</code> はテーマ付きテンプレートからクローン</li>
+  <li>メニュー非表示: <code>MeshRenderer/Collider.enabled</code> トグル</li>
+  <li>UIToolkit protected setterはReflectionで突破</li>
+</ul>
+</div>
+</div>
+
+<!-- ============================== -->
+<div class="page-break"></div>
+<h2>3. Edge Connection State Machine (Rector Style)</h2>
+<div class="diagram">
+<pre class="mermaid">
+stateDiagram-v2
+  [*] --> Idle
+  Idle --> SourceSelected : Trigger on node\n(auto-select nearest output port)
+  SourceSelected --> Idle : Trigger on empty / same node\n(cancel)
+  SourceSelected --> SourceSelected : Trigger on incompatible node\n(stay, try another)
+  SourceSelected --> Idle : Trigger on compatible node\n(auto-select input port, connect!)
+
+  note right of SourceSelected
+    Preview line: source port → ray end
+    Snap highlight on compatible target port
+  end note
+</pre>
+</div>
+<p class="note">旧方式（ドラッグ）→ 新方式（2クリック）に変更済み。ポートの正確な狙いは不要、ノードに当てるだけで最近接ポートを自動選択。</p>
+
+<!-- ============================== -->
+<h2>4. Core Signal Flow (R3 Reactive)</h2>
+<div class="diagram">
+<pre class="mermaid">
+flowchart LR
+  subgraph NodeA["ConstFloat Node"]
+    OA["OutputPort&lt;float&gt;<br/><i>Subject&lt;float&gt;</i>"]
+  end
+  subgraph NodeB["Multiply Node"]
+    IA["InputPort&lt;float&gt; A"]
+    IB["InputPort&lt;float&gt; B"]
+    OB["OutputPort&lt;float&gt; Result"]
+  end
+  subgraph NodeC["VFXModule Node"]
+    IC["InputPort&lt;float&gt;"]
+  end
+
+  OA -->|"Edge (Subscribe)"| IA
+  OB -->|"Edge (Subscribe)"| IC
+
+  style NodeA fill:#e8f5e9,stroke:#4caf50
+  style NodeB fill:#e3f2fd,stroke:#2196f3
+  style NodeC fill:#fce4ec,stroke:#e91e63
+</pre>
+</div>
+
+<div class="cols">
+<div>
+<h3>Port Types</h3>
+<table>
+  <tr><th>ParamType</th><th>C# Type</th><th>Color</th></tr>
+  <tr><td>Float</td><td><code>float</code></td><td style="background:#a1d4ea;">Blue</td></tr>
+  <tr><td>Color</td><td><code>UnityEngine.Color</code></td><td style="background:#f0c863;">Orange</td></tr>
+  <tr><td>Bool</td><td><code>bool</code></td><td style="background:#f08c8c;">Red</td></tr>
+</table>
+</div>
+<div>
+<h3>Connection Rules</h3>
+<ul style="font-size:12px;">
+  <li>Output → Input のみ（同方向接続不可）</li>
+  <li>ParamType一致が必須（型変換なし）</li>
+  <li><code>Edge.Subscription</code> で切断時にDispose</li>
+  <li>GraphContextが全Edge/Nodeを管理</li>
+</ul>
+</div>
+</div>
+
+<!-- ============================== -->
+<h2>5. GameBootstrap Wiring</h2>
+<div class="diagram">
+<pre class="mermaid">
+flowchart TD
+  GB["GameBootstrap<br/><i>(Awake)</i>"]
+
+  GB -->|Initialize| NTR["NodeTypeRegistry<br/><i>9 node types</i>"]
+  GB -->|Initialize| NVM["NodeVisualManager"]
+  GB -->|Initialize| MCM["NodeCreationMenuController"]
+  GB -->|Initialize| NCH["NodeCreationHandler"]
+  GB -->|Initialize| EVM["EdgeVisualManager"]
+  GB -->|Initialize| EDH["EdgeDragHandler"]
+  GB -->|Initialize| ECH["EdgeCutHandler"]
+  GB -->|Initialize| NDH["NodeDeleteHandler"]
+  GB -->|Initialize| NGH["NodeGrabHandler"]
+  GB -->|Initialize| UIR["UIRaycastDriver"]
+
+  CIR["ControllerInputRouter"] -.->|IRayProvider| EDH
+  CIR -.->|IRayProvider| ECH
+  CIR -.->|IRayProvider| NDH
+  CIR -.->|IRayProvider| NGH
+  CIR -.->|IRayProvider| UIR
+  CIR -.->|IControllerInput| EDH
+  CIR -.->|IControllerInput| ECH
+  CIR -.->|IControllerInput| NDH
+  CIR -.->|IControllerInput| NGH
+  CIR -.->|IControllerInput| UIR
+
+  GCB["GraphContextBehaviour"] -.-> EDH
+  GCB -.-> ECH
+  GCB -.-> NDH
+
+  style GB fill:#fff3e0,stroke:#ff9800
+  style CIR fill:#fff3e0,stroke:#ff9800
+  style GCB fill:#e8f5e9,stroke:#4caf50
+</pre>
+</div>
+
+<!-- ============================== -->
+<div class="page-break"></div>
+<h2>6. File Map</h2>
+<div class="cols">
+<div>
+<h3>Core (17 files)</h3>
+<table>
+  <tr><th>File</th><th>Role</th></tr>
+  <tr><td>ParamType.cs</td><td>Float/Color/Bool enum</td></tr>
+  <tr><td>PortDirection.cs</td><td>Input/Output enum</td></tr>
+  <tr><td>PortDefinition.cs</td><td>Port metadata struct</td></tr>
+  <tr><td>IOutputPort.cs</td><td>Output interface</td></tr>
+  <tr><td>IInputPort.cs</td><td>Input interface</td></tr>
+  <tr><td>OutputPort&lt;T&gt;.cs</td><td>R3 Subject emitter</td></tr>
+  <tr><td>InputPort&lt;T&gt;.cs</td><td>Value receiver</td></tr>
+  <tr><td>ParamDefaults.cs</td><td>Fallback values</td></tr>
+  <tr><td>NodeBase.cs</td><td>Abstract node base</td></tr>
+  <tr><td>Edge.cs</td><td>Connection + Subscription</td></tr>
+  <tr><td>GraphContext.cs</td><td>Graph manager</td></tr>
+  <tr><td>NodeData.cs</td><td>Serialization DTO</td></tr>
+  <tr><td>EdgeData.cs</td><td>Serialization DTO</td></tr>
+  <tr><td>GraphData.cs</td><td>Top-level DTO</td></tr>
+  <tr><td>IPerformanceModule.cs</td><td>Module interface</td></tr>
+  <tr><td>ParamDefinition.cs</td><td>Module param def</td></tr>
+  <tr><td>ModuleDefinition.cs</td><td>ScriptableObject</td></tr>
+</table>
+</div>
+<div>
+<h3>UI (16 files)</h3>
+<table>
+  <tr><th>File</th><th>Role</th></tr>
+  <tr><td>IControllerInput.cs</td><td>Input interface</td></tr>
+  <tr><td>IRayProvider.cs</td><td>Ray interface</td></tr>
+  <tr><td>GraphContextBehaviour.cs</td><td>MonoBehaviour wrapper</td></tr>
+  <tr><td>NodeVisualManager.cs</td><td>Node visual factory</td></tr>
+  <tr><td>NodeVisualController.cs</td><td>Single node display</td></tr>
+  <tr><td>WorldPanelHost.cs</td><td>UIToolkit on Quad</td></tr>
+  <tr><td>WorldPanelRayBridge.cs</td><td>Ray → UIToolkit events</td></tr>
+  <tr><td>NodeCreationMenuController.cs</td><td>2-tier create menu</td></tr>
+  <tr><td>EdgeDragHandler.cs</td><td>Edge connection SM</td></tr>
+  <tr><td>EdgeVisualManager.cs</td><td>Edge LineRenderers</td></tr>
+  <tr><td>EdgeVisual.cs</td><td>Edge visual data</td></tr>
+  <tr><td>MathUtils.cs</td><td>Ray-segment distance</td></tr>
+  <tr><td>NodeTypeRegistry.cs</td><td>Type name registry</td></tr>
+  <tr><td>NodeTypeInfo.cs</td><td>Display metadata</td></tr>
+  <tr><td>NodeCategory.cs</td><td>Category enum</td></tr>
+  <tr><td>NodeCategoryColors.cs</td><td>Category colors</td></tr>
+</table>
+
+<h3>XR (9 files)</h3>
+<table>
+  <tr><th>File</th><th>Role</th></tr>
+  <tr><td>ControllerInputRouter.cs</td><td>InputSystem → R3</td></tr>
+  <tr><td>GameBootstrap.cs</td><td>System initializer</td></tr>
+  <tr><td>UIRaycastDriver.cs</td><td>Panel raycast driver</td></tr>
+  <tr><td>EdgeCutHandler.cs</td><td>Right-B edge cut</td></tr>
+  <tr><td>NodeDeleteHandler.cs</td><td>Right-A node delete</td></tr>
+  <tr><td>NodeGrabHandler.cs</td><td>Right-Grip grab</td></tr>
+  <tr><td>NodeCreationHandler.cs</td><td>Menu → node spawn</td></tr>
+  <tr><td>XRRigSetup.cs</td><td>XR rig validation</td></tr>
+  <tr><td>DummyNode.cs</td><td>Test placeholder</td></tr>
+</table>
+</div>
+</div>
+
+<h3>Tests (4 files)</h3>
+<table>
+  <tr><th>File</th><th>Tests</th><th>Status</th></tr>
+  <tr><td>PortConnectionTests.cs</td><td>Port subscribe/emit/type</td><td>34/34 passed</td></tr>
+  <tr><td>GraphContextTests.cs</td><td>Register/connect/disconnect</td><td></td></tr>
+  <tr><td>SerializationTests.cs</td><td>JSON roundtrip</td><td></td></tr>
+  <tr><td>MathUtilsTests.cs</td><td>Ray-segment distance</td><td></td></tr>
+</table>
+
+<!-- ============================== -->
+<h2>7. Schedule Overview</h2>
+<div class="diagram">
+<pre class="mermaid">
+gantt
+  title rhizomode Development Schedule
+  dateFormat YYYY-MM-DD
+  axisFormat %m/%d
+
+  section Week 1
+  Core foundation        :done, w1, 2026-03-30, 7d
+
+  section Week 2
+  XR + Minimal UI        :done, w2, 2026-04-06, 7d
+
+  section Week 3
+  Node operations        :active, w3, 2026-04-13, 7d
+
+  section Week 4
+  Node impl + Audio      :w4, 2026-04-20, 7d
+
+  section Week 5
+  Integration + Output   :w5, 2026-04-27, 7d
+
+  section Week 6-6.5
+  Polish + Rehearsal     :w6, 2026-05-04, 12d
+
+  section Launch
+  v0.3.0 Release         :milestone, 2026-05-16, 0d
+</pre>
+</div>
+
+<p style="font-size:11px; color:#999; margin-top:32px;">
+  rhizomode &copy; 2026 | VR Live Performance Node Graph Tool | This document auto-generated for development reference.
+</p>
+
+</body>
+</html>

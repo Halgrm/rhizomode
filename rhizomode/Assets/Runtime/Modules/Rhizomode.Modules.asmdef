@@ -1,0 +1,18 @@
+{
+    "name": "Rhizomode.Modules",
+    "rootNamespace": "Rhizomode.Modules",
+    "references": [
+        "Rhizomode.Core",
+        "Unity.VisualEffectGraph.Runtime",
+        "Unity.Cinemachine"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

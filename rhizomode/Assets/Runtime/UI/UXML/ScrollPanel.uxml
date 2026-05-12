@@ -1,0 +1,9 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements">
+    <ui:VisualElement name="scroll-root" class="scroll-panel">
+        <ui:VisualElement name="scroll-body" class="scroll-body">
+            <ui:VisualElement name="node-viewport" class="scroll-node-viewport">
+                <ui:VisualElement name="node-list" class="scroll-node-list" />
+            </ui:VisualElement>
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>

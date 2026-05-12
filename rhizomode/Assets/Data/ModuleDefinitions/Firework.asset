@@ -1,0 +1,43 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3390c342213d5dd4585d6d2aab36e607, type: 3}
+  m_Name: Firework
+  m_EditorClassIdentifier: Rhizomode.Core::Rhizomode.Core.ModuleDefinition
+  moduleName: Firework
+  prefab: {fileID: 1377219024282356920, guid: 735539e454eb57a4d9925343e7d3a6e0, type: 3}
+  parameters:
+  - name: BaseColor
+    type: 1
+    defaultFloat: 0
+    minFloat: 0
+    maxFloat: 1
+    defaultColor: {r: 0, g: 0, b: 0, a: 0}
+    defaultBool: 0
+    isEvent: 0
+  - name: BaseColor 1
+    type: 1
+    defaultFloat: 0
+    minFloat: 0
+    maxFloat: 1
+    defaultColor: {r: 0, g: 0, b: 0, a: 0}
+    defaultBool: 0
+    isEvent: 0
+  - name: Intensity
+    type: 0
+    defaultFloat: 0
+    minFloat: 0
+    maxFloat: 1
+    defaultColor: {r: 0, g: 0, b: 0, a: 0}
+    defaultBool: 0
+    isEvent: 0
+  events:
+  - OnPlay

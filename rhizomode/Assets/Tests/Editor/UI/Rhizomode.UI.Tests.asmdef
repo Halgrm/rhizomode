@@ -1,0 +1,26 @@
+{
+    "name": "Rhizomode.UI.Tests",
+    "rootNamespace": "Rhizomode.UI.Tests",
+    "references": [
+        "Rhizomode.Core",
+        "Rhizomode.Catalog",
+        "Rhizomode.UI",
+        "R3.Unity"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": true,
+    "precompiledReferences": [
+        "nunit.framework.dll",
+        "R3.dll"
+    ],
+    "autoReferenced": false,
+    "defineConstraints": [
+        "UNITY_INCLUDE_TESTS"
+    ],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

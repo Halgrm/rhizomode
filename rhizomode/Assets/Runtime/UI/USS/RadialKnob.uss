@@ -1,0 +1,51 @@
+/* ============================================================
+   rhizomode — RadialKnob (Monochrome / Minimal)
+   Used by Ableton Macro panel and any other knob input.
+   ============================================================ */
+
+.rzm-knob {
+    width: 36px;
+    height: 36px;
+    background-color: rgba(0, 0, 0, 0);
+    border-width: 1.5px;
+    border-color: rgba(255, 255, 255, 0.45);
+    border-top-left-radius: 18px;
+    border-top-right-radius: 18px;
+    border-bottom-left-radius: 18px;
+    border-bottom-right-radius: 18px;
+    align-items: center;
+    justify-content: center;
+}
+
+.rzm-knob:hover {
+    border-color: rgba(255, 255, 255, 0.85);
+}
+
+.rzm-knob.hover {
+    border-color: rgba(255, 255, 255, 0.85);
+}
+
+/* インジケータホスト: ノブと同じ大きさを絶対配置で重ね、回転トランスフォームを担当 */
+.rzm-knob__indicator-host {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    transform-origin: 50% 50%;
+}
+
+/* 針: ノブ上端付近に立つ細い縦線 */
+.rzm-knob__needle {
+    position: absolute;
+    top: 3px;
+    left: 50%;
+    width: 1.5px;
+    height: 11px;
+    margin-left: -0.75px;
+    background-color: rgba(255, 255, 255, 0.92);
+    border-top-left-radius: 1px;
+    border-top-right-radius: 1px;
+    border-bottom-left-radius: 1px;
+    border-bottom-right-radius: 1px;
+}

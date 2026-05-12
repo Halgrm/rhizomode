@@ -1,0 +1,30 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements">
+    <ui:VisualElement name="root" class="abl-panel">
+        <ui:Label text="Ableton OSC" class="abl-panel__title" />
+
+        <ui:VisualElement name="sections-root" class="abl-panel__sections">
+            <ui:VisualElement name="connection-section" class="abl-section">
+                <ui:Label text="Connection" class="abl-section__header" />
+                <ui:VisualElement class="abl-row">
+                    <ui:Label text="Host" class="abl-row__label" />
+                    <ui:TextField name="host-field" value="127.0.0.1" class="abl-row__input" />
+                </ui:VisualElement>
+                <ui:VisualElement class="abl-row">
+                    <ui:Label text="Send Port" class="abl-row__label" />
+                    <ui:TextField name="send-port-field" value="11000" class="abl-row__input" />
+                </ui:VisualElement>
+                <ui:VisualElement class="abl-row">
+                    <ui:Label text="Recv Port" class="abl-row__label" />
+                    <ui:TextField name="recv-port-field" value="11001" class="abl-row__input" />
+                </ui:VisualElement>
+            </ui:VisualElement>
+        </ui:VisualElement>
+
+        <ui:Label name="status-label" text="" class="abl-panel__status" />
+
+        <ui:VisualElement class="abl-panel__buttons">
+            <ui:Button name="connect-btn" text="Connect &amp; Spawn Grid" class="abl-button abl-button--primary" />
+            <ui:Button name="skip-btn" text="Skip" class="abl-button abl-button--secondary" />
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>

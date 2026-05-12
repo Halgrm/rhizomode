@@ -1,0 +1,11 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements">
+    <ui:VisualElement class="status-panel">
+        <ui:Label name="status-title" text="Status" class="status-title" />
+        <ui:Label name="node-count" text="Nodes: 0" class="status-line" />
+        <ui:Label name="edge-count" text="Edges: 0" class="status-line" />
+        <ui:Label name="active-modules" text="Modules: —" class="status-line" />
+        <ui:Label name="bpm-display" text="BPM: —" class="status-line" />
+        <ui:Label name="fps-display" text="FPS: — / —" class="status-line" />
+        <ui:Label name="audio-device" text="Audio: —" class="status-line" />
+    </ui:VisualElement>
+</ui:UXML>

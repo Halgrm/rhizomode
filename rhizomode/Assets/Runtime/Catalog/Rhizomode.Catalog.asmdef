@@ -1,0 +1,16 @@
+{
+    "name": "Rhizomode.Catalog",
+    "rootNamespace": "Rhizomode.Catalog",
+    "references": [
+        "Rhizomode.Core"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

@@ -1,0 +1,180 @@
+/* ============================================================
+   rhizomode — Ableton Setup Panel (Monochrome / Minimal)
+   外枠のみ角丸+黒。内部要素は線のみ。
+   ============================================================ */
+
+:root {
+    --abl-text: rgba(255, 255, 255, 0.78);
+    --abl-text-bright: rgba(255, 255, 255, 0.95);
+    --abl-text-dim: rgba(255, 255, 255, 0.4);
+    --abl-bg: rgba(0, 0, 0, 1);
+    --abl-line: rgba(255, 255, 255, 0.2);
+    --abl-line-bright: rgba(255, 255, 255, 0.55);
+    --abl-transparent: rgba(0, 0, 0, 0);
+}
+
+/* ---- Outer rounded frame ---- */
+.abl-panel {
+    width: 100%;
+    height: 100%;
+    background-color: var(--abl-bg);
+    border-width: 1px;
+    border-color: var(--abl-line);
+    border-top-left-radius: 14px;
+    border-top-right-radius: 14px;
+    border-bottom-left-radius: 14px;
+    border-bottom-right-radius: 14px;
+    padding: 18px 20px;
+}
+
+.abl-panel__title {
+    color: var(--abl-text-bright);
+    font-size: 20px;
+    -unity-text-align: middle-left;
+    margin-bottom: 14px;
+    border-bottom-width: 1px;
+    border-bottom-color: var(--abl-line);
+    padding-bottom: 6px;
+}
+
+.abl-panel__sections {
+    flex-grow: 1;
+}
+
+/* ---- Section (no background, no border — just spacing) ---- */
+.abl-section {
+    background-color: var(--abl-transparent);
+    border-width: 0;
+    margin-bottom: 6px;
+    padding: 0;
+}
+
+.abl-section__header {
+    color: var(--abl-text-dim);
+    font-size: 12px;
+    -unity-text-align: middle-left;
+    margin-bottom: 4px;
+}
+
+/* ---- Row (label + control) ---- */
+.abl-row {
+    flex-direction: row;
+    align-items: center;
+    margin: 3px 0;
+    height: 26px;
+}
+
+.abl-row__label {
+    color: var(--abl-text);
+    font-size: 13px;
+    width: 90px;
+    -unity-text-align: middle-left;
+}
+
+.abl-row__input {
+    flex-grow: 1;
+    height: 22px;
+    color: var(--abl-text-bright);
+    background-color: var(--abl-transparent);
+    border-width: 0;
+    border-bottom-width: 1px;
+    border-bottom-color: var(--abl-line);
+    padding: 0 4px;
+    font-size: 13px;
+}
+
+.abl-row__input:focus {
+    border-bottom-color: var(--abl-line-bright);
+}
+
+/* ---- Status — monochrome ---- */
+.abl-panel__status {
+    color: var(--abl-text-dim);
+    font-size: 12px;
+    margin: 8px 0;
+    -unity-text-align: middle-left;
+    min-height: 16px;
+}
+
+.abl-panel__status--warn {
+    color: var(--abl-text);
+}
+
+.abl-panel__status--error {
+    color: var(--abl-text-bright);
+    -unity-font-style: bold;
+}
+
+.abl-panel__status--ok {
+    color: var(--abl-text-bright);
+}
+
+/* ---- Buttons ---- */
+.abl-panel__buttons {
+    flex-direction: row;
+    justify-content: space-between;
+    margin-top: 8px;
+}
+
+.abl-button {
+    height: 28px;
+    flex-grow: 1;
+    margin: 0 3px;
+    font-size: 13px;
+    -unity-font-style: normal;
+    border-width: 1px;
+    border-top-left-radius: 4px;
+    border-top-right-radius: 4px;
+    border-bottom-left-radius: 4px;
+    border-bottom-right-radius: 4px;
+}
+
+.abl-button--primary {
+    color: rgba(0, 0, 0, 1);
+    background-color: rgba(255, 255, 255, 0.92);
+    border-color: rgba(255, 255, 255, 0.92);
+}
+
+.abl-button--primary:hover {
+    background-color: rgba(255, 255, 255, 1);
+    border-color: rgba(255, 255, 255, 1);
+}
+
+.abl-button--secondary {
+    color: var(--abl-text);
+    background-color: var(--abl-transparent);
+    border-color: var(--abl-line);
+}
+
+.abl-button--secondary:hover {
+    color: var(--abl-text-bright);
+    border-color: var(--abl-line-bright);
+}
+
+.abl-button:active {
+    background-color: rgba(255, 255, 255, 0.18);
+}
+
+/* ---- Slider internals (shared with control panel) ---- */
+.unity-base-slider__tracker {
+    background-color: var(--abl-line);
+    border-width: 0;
+    height: 1px;
+    margin-top: -1px;
+}
+
+.unity-base-slider__dragger {
+    background-color: rgba(255, 255, 255, 0.92);
+    border-width: 0;
+    width: 8px;
+    height: 8px;
+    border-top-left-radius: 4px;
+    border-top-right-radius: 4px;
+    border-bottom-left-radius: 4px;
+    border-bottom-right-radius: 4px;
+}
+
+/* ---- Hover state ---- */
+.hover {
+    background-color: rgba(255, 255, 255, 0.05);
+}

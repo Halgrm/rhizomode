@@ -1,0 +1,5 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements">
+    <ui:VisualElement name="bar-root" class="category-bar">
+        <ui:Label name="bar-label" class="category-bar-label" text="Category" />
+    </ui:VisualElement>
+</ui:UXML>

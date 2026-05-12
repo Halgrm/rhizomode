@@ -1,0 +1,27 @@
+{
+    "name": "Rhizomode.Performance.Tests",
+    "rootNamespace": "Rhizomode.Performance.Tests",
+    "references": [
+        "Rhizomode.Core",
+        "Rhizomode.Catalog",
+        "Rhizomode.Bootstrap",
+        "Rhizomode.Nodes",
+        "R3.Unity"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": true,
+    "precompiledReferences": [
+        "nunit.framework.dll",
+        "R3.dll"
+    ],
+    "autoReferenced": false,
+    "defineConstraints": [
+        "UNITY_INCLUDE_TESTS"
+    ],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

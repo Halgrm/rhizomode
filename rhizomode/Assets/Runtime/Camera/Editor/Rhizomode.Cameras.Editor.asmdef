@@ -1,0 +1,20 @@
+{
+    "name": "Rhizomode.Cameras.Editor",
+    "rootNamespace": "Rhizomode.Cameras.Editor",
+    "references": [
+        "Rhizomode.Cameras",
+        "Unity.Splines",
+        "Unity.Mathematics"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

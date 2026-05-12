@@ -1,0 +1,25 @@
+{
+    "name": "Rhizomode.ExternalInput.Tests",
+    "rootNamespace": "Rhizomode.ExternalInput.Tests",
+    "references": [
+        "Rhizomode.Core",
+        "Rhizomode.ExternalInput",
+        "R3.Unity"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": true,
+    "precompiledReferences": [
+        "nunit.framework.dll",
+        "R3.dll"
+    ],
+    "autoReferenced": false,
+    "defineConstraints": [
+        "UNITY_INCLUDE_TESTS"
+    ],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

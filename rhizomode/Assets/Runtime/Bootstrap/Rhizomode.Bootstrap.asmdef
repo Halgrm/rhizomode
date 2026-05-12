@@ -1,0 +1,36 @@
+{
+    "name": "Rhizomode.Bootstrap",
+    "rootNamespace": "Rhizomode.Bootstrap",
+    "references": [
+        "Rhizomode.Core",
+        "Rhizomode.Catalog",
+        "Rhizomode.Interaction",
+        "Rhizomode.Nodes",
+        "Rhizomode.Modules",
+        "Rhizomode.UI",
+        "Rhizomode.XR",
+        "Rhizomode.Audio",
+        "Rhizomode.ExternalInput",
+        "Rhizomode.Cameras",
+        "R3.Unity",
+        "Unity.Cinemachine",
+        "Unity.InputSystem",
+        "VContainer",
+        "VContainer.Unity"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [
+        {
+            "name": "jp.hadashikick.vcontainer",
+            "expression": "",
+            "define": "VCONTAINER_ENABLED"
+        }
+    ],
+    "noEngineReferences": false
+}

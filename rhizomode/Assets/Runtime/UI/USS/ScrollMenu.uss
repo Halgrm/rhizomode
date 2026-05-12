@@ -1,0 +1,137 @@
+/* ============================================================
+   rhizomode — Scroll Menu Styles (Rector-inspired)
+   ============================================================ */
+
+/* ---- Category Bar ---- */
+
+.category-bar {
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.7);
+    flex-direction: row;
+    align-items: center;
+    border-width: 1px;
+    border-color: rgba(255, 255, 255, 0.10);
+}
+
+.category-bar-label {
+    color: rgba(255, 255, 255, 0.55);
+    font-size: 18px;
+    padding: 0 8px;
+    -unity-text-align: middle-left;
+    -unity-font-style: normal;
+}
+
+/* Category accent (left border) */
+.category-bar--input {
+    border-left-width: 3px;
+    border-left-color: rgba(160, 210, 240, 0.9);
+}
+
+.category-bar--math {
+    border-left-width: 3px;
+    border-left-color: rgb(81, 201, 107);
+}
+
+.category-bar--module {
+    border-left-width: 3px;
+    border-left-color: rgb(173, 117, 224);
+}
+
+.category-bar--time {
+    border-left-width: 3px;
+    border-left-color: rgb(224, 199, 81);
+}
+
+.category-bar--utility {
+    border-left-width: 3px;
+    border-left-color: rgba(255, 255, 255, 0.3);
+}
+
+/* ---- Bar Highlight (ray hit feedback) ---- */
+
+.category-bar--highlight {
+    background-color: rgba(255, 255, 255, 0.12);
+    border-color: rgba(255, 255, 255, 0.40);
+}
+
+.category-bar--highlight > .category-bar-label {
+    color: rgba(255, 255, 255, 0.90);
+}
+
+/* ---- Scroll Panel ---- */
+
+.scroll-panel {
+    width: 100%;
+    height: 100%;
+    background-color: rgba(10, 10, 10, 0.88);
+    border-width: 1px;
+    border-color: rgba(255, 255, 255, 0.10);
+    padding: 4px 0;
+}
+
+.scroll-body {
+    flex-grow: 1;
+    flex-direction: row;
+}
+
+.scroll-node-viewport {
+    flex-grow: 1;
+    overflow: hidden;
+}
+
+.scroll-node-list {
+    flex-direction: column;
+    position: relative;
+}
+
+.scroll-sidebar {
+    width: 40px;
+    min-width: 40px;
+    flex-shrink: 0;
+    flex-direction: column;
+    padding: 4px 2px;
+}
+
+.scroll-sidebar .unity-base-slider__input {
+    flex-grow: 1;
+}
+
+.scroll-sidebar .unity-base-slider__dragger {
+    background-color: rgba(200, 200, 200, 0.5);
+    border-radius: 4px;
+    width: 24px;
+    min-height: 30px;
+    left: 2px;
+}
+
+.scroll-sidebar .unity-base-slider__tracker {
+    background-color: rgba(80, 80, 80, 0.4);
+    border-radius: 4px;
+    width: 28px;
+}
+
+.scroll-node-button {
+    height: 40px;
+    min-height: 40px;
+    flex-shrink: 0;
+    margin: 2px 6px;
+    padding: 4px 12px;
+    background-color: rgba(255, 255, 255, 0.04);
+    border-width: 1px;
+    border-color: rgba(255, 255, 255, 0.10);
+    color: rgba(255, 255, 255, 0.55);
+    font-size: 16px;
+    -unity-text-align: middle-left;
+    -unity-font-style: normal;
+}
+
+.scroll-node-button:hover {
+    background-color: rgba(0, 100, 150, 0.25);
+    color: rgba(255, 255, 255, 0.85);
+    border-color: rgba(255, 255, 255, 0.35);
+}
+
+.scroll-node-button:active {
+    background-color: rgba(255, 255, 255, 0.12);
+}

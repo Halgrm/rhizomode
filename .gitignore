@@ -1,0 +1,15 @@
+# Unity build outputs at project root
+/buil/
+/build/
+/build2/
+/build3/
+/builds/
+
+# Local tool state
+.codex/
+.claude/scheduled_tasks.lock
+.claude/local/
+
+# Unity scene recovery
+/rhizomode/Assets/_Recovery/
+/rhizomode/Assets/_Recovery.meta

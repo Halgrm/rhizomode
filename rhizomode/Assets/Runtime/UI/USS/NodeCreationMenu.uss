@@ -1,0 +1,139 @@
+.creation-menu {
+    width: 100%;
+    height: 100%;
+    background-color: rgba(20, 20, 20, 0.95);
+    border-radius: 12px;
+    padding: 16px;
+}
+
+.menu-title {
+    color: white;
+    font-size: 26px;
+    -unity-font-style: bold;
+    margin-bottom: 8px;
+    -unity-text-align: middle-center;
+}
+
+/* --- Scroll buttons --- */
+
+.scroll-btn {
+    height: 40px;
+    min-height: 40px;
+    flex-shrink: 0;
+    background-color: rgba(80, 80, 80, 0.6);
+    color: rgb(200, 200, 200);
+    font-size: 20px;
+    border-radius: 4px;
+    border-width: 0;
+    -unity-text-align: middle-center;
+    margin: 2px 0;
+}
+
+.scroll-btn:hover {
+    background-color: rgba(120, 120, 120, 0.8);
+}
+
+/* --- Viewport clips overflowing list content --- */
+
+.scroll-viewport {
+    flex-grow: 1;
+    overflow: hidden;
+}
+
+/* --- Lists inside viewport --- */
+
+.category-list {
+    flex-direction: column;
+    position: relative;
+}
+
+.node-list {
+    flex-direction: column;
+    position: relative;
+}
+
+/* --- Buttons --- */
+
+.category-button {
+    height: 52px;
+    min-height: 52px;
+    margin: 4px 0;
+    border-radius: 6px;
+    padding: 8px 16px;
+    color: white;
+    font-size: 20px;
+    -unity-text-align: middle-left;
+    border-width: 0;
+    flex-shrink: 0;
+}
+
+.category-button:hover {
+    opacity: 0.85;
+}
+
+.category-button--input {
+    background-color: rgb(51, 102, 230);
+}
+
+.category-button--math {
+    background-color: rgb(51, 191, 77);
+}
+
+.category-button--module {
+    background-color: rgb(153, 77, 204);
+}
+
+.category-button--vfx {
+    background-color: rgb(153, 77, 204);
+}
+
+.category-button--shader {
+    background-color: rgb(204, 128, 51);
+}
+
+.category-button--time {
+    background-color: rgb(204, 179, 51);
+}
+
+.category-button--utility {
+    background-color: rgb(128, 128, 128);
+}
+
+.category-button--scene {
+    background-color: rgb(77, 179, 179);
+}
+
+.node-button {
+    height: 46px;
+    min-height: 46px;
+    margin: 3px 0;
+    border-radius: 4px;
+    padding: 8px 14px;
+    background-color: rgba(60, 60, 60, 0.8);
+    color: white;
+    font-size: 18px;
+    -unity-text-align: middle-left;
+    border-width: 0;
+    flex-shrink: 0;
+}
+
+.node-button:hover {
+    background-color: rgba(90, 90, 90, 0.9);
+}
+
+.back-button {
+    height: 42px;
+    min-height: 42px;
+    margin: 8px 0 4px 0;
+    background-color: rgba(80, 80, 80, 0.6);
+    color: rgb(180, 180, 180);
+    font-size: 16px;
+    border-radius: 4px;
+    -unity-text-align: middle-center;
+    border-width: 0;
+    flex-shrink: 0;
+}
+
+.back-button:hover {
+    background-color: rgba(100, 100, 100, 0.7);
+}

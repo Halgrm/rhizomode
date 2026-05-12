@@ -1,0 +1,32 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements">
+    <ui:VisualElement name="root" class="abl-ctrl">
+        <ui:VisualElement class="abl-ctrl__top">
+            <ui:VisualElement class="abl-ctrl__row">
+                <ui:Label text="Master" class="abl-ctrl__row-label" />
+                <ui:Slider name="master-slider" low-value="0" high-value="1" value="0.85" class="abl-ctrl__row-slider" />
+                <ui:Label name="master-value" text="0.85" class="abl-ctrl__row-value" />
+            </ui:VisualElement>
+            <ui:VisualElement class="abl-ctrl__row">
+                <ui:Label text="Tempo" class="abl-ctrl__row-label" />
+                <ui:Slider name="tempo-slider" low-value="20" high-value="200" value="120" class="abl-ctrl__row-slider" />
+                <ui:Label name="tempo-value" text="120" class="abl-ctrl__row-value" />
+            </ui:VisualElement>
+            <ui:VisualElement class="abl-ctrl__transport">
+                <ui:Button name="play-btn" text="Play" class="abl-ctrl__transport-btn" />
+                <ui:Button name="stop-btn" text="Stop" class="abl-ctrl__transport-btn" />
+            </ui:VisualElement>
+        </ui:VisualElement>
+
+        <ui:VisualElement class="abl-ctrl__macro-target">
+            <ui:Button name="track-prev" text="◀ T" class="abl-ctrl__macro-target-btn" />
+            <ui:Label name="macro-target-label" text="T0 / D0" class="abl-ctrl__macro-target-label" />
+            <ui:Button name="track-next" text="T ▶" class="abl-ctrl__macro-target-btn" />
+            <ui:Button name="device-prev" text="− D" class="abl-ctrl__macro-target-btn" />
+            <ui:Button name="device-next" text="D +" class="abl-ctrl__macro-target-btn" />
+        </ui:VisualElement>
+
+        <ui:VisualElement name="macros-root" class="abl-ctrl__macros" />
+
+        <ui:VisualElement name="tracks-root" class="abl-ctrl__tracks" />
+    </ui:VisualElement>
+</ui:UXML>

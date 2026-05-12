@@ -1,0 +1,34 @@
+{
+    "name": "Rhizomode.UI",
+    "rootNamespace": "Rhizomode.UI",
+    "references": [
+        "Rhizomode.Core",
+        "Rhizomode.Cameras",
+        "Unity.Cinemachine",
+        "R3.Unity",
+        "Unity.InputSystem",
+        "Unity.RenderPipelines.Universal.Runtime",
+        "GUID:7cdfac5ef1f961d4ebfe51361a2020bd",
+        "GUID:b59f669f136310547b59ad72df53b42f"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [
+        {
+            "name": "jp.keijiro.klak.spout",
+            "expression": "",
+            "define": "KLAK_SPOUT"
+        },
+        {
+            "name": "jp.keijiro.klak.ndi",
+            "expression": "",
+            "define": "KLAK_NDI"
+        }
+    ],
+    "noEngineReferences": false
+}

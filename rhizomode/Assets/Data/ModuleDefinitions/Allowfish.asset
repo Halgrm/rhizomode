@@ -1,0 +1,43 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3390c342213d5dd4585d6d2aab36e607, type: 3}
+  m_Name: Allowfish
+  m_EditorClassIdentifier: Rhizomode.Core::Rhizomode.Core.ModuleDefinition
+  moduleName: allowfish
+  prefab: {fileID: 5929970160155840205, guid: 7518a3c6c9523ee4abdaf52746381824, type: 3}
+  parameters:
+  - name: Intensity
+    type: 0
+    defaultFloat: 32
+    minFloat: 0
+    maxFloat: 64
+    defaultColor: {r: 0, g: 0, b: 0, a: 0}
+    defaultBool: 0
+    isEvent: 0
+  - name: SpawnRate
+    type: 0
+    defaultFloat: 5
+    minFloat: 0
+    maxFloat: 32
+    defaultColor: {r: 0, g: 0, b: 0, a: 0}
+    defaultBool: 0
+    isEvent: 0
+  - name: Speed
+    type: 0
+    defaultFloat: 1
+    minFloat: 0
+    maxFloat: 2
+    defaultColor: {r: 0, g: 0, b: 0, a: 0}
+    defaultBool: 0
+    isEvent: 0
+  events:
+  - OnPlay

@@ -1,0 +1,20 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3390c342213d5dd4585d6d2aab36e607, type: 3}
+  m_Name: FloatingCube
+  m_EditorClassIdentifier: Rhizomode.Core::Rhizomode.Core.ModuleDefinition
+  moduleName: Floating Cube
+  prefab: {fileID: 1598355632201986338, guid: 03624e1a83179774985b2a4fc8df9c77, type: 3}
+  parameters: []
+  events:
+  - OnPlay
+  - Spawn

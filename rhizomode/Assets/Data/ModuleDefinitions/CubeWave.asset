@@ -1,0 +1,51 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3390c342213d5dd4585d6d2aab36e607, type: 3}
+  m_Name: CubeWave
+  m_EditorClassIdentifier: Rhizomode.Core::Rhizomode.Core.ModuleDefinition
+  moduleName: Cube Wave
+  prefab: {fileID: 8581924811113452431, guid: ce3cf656ac4b3204db04261900766090, type: 3}
+  parameters:
+  - name: Coun
+    type: 0
+    defaultFloat: 17.1
+    minFloat: 1
+    maxFloat: 32
+    defaultColor: {r: 0, g: 0, b: 0, a: 0}
+    defaultBool: 0
+    isEvent: 0
+  - name: Scale
+    type: 0
+    defaultFloat: 2
+    minFloat: 1
+    maxFloat: 8
+    defaultColor: {r: 0, g: 0, b: 0, a: 0}
+    defaultBool: 0
+    isEvent: 0
+  - name: Size
+    type: 0
+    defaultFloat: 1
+    minFloat: 0
+    maxFloat: 1
+    defaultColor: {r: 0, g: 0, b: 0, a: 0}
+    defaultBool: 0
+    isEvent: 0
+  - name: Speed
+    type: 0
+    defaultFloat: -4
+    minFloat: -10
+    maxFloat: 10
+    defaultColor: {r: 0, g: 0, b: 0, a: 0}
+    defaultBool: 0
+    isEvent: 0
+  events:
+  - OnPlay

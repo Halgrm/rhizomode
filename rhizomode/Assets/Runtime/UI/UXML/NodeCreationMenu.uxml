@@ -1,0 +1,13 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements">
+    <ui:VisualElement name="menu-root" class="creation-menu">
+        <ui:Label name="menu-title" class="menu-title" text="Create Node" />
+        <ui:Button name="scroll-up-btn" class="scroll-btn scroll-btn--up" text="▲" />
+        <ui:VisualElement name="category-viewport" class="scroll-viewport">
+            <ui:VisualElement name="category-list" class="category-list" />
+        </ui:VisualElement>
+        <ui:VisualElement name="node-viewport" class="scroll-viewport">
+            <ui:VisualElement name="node-list" class="node-list" />
+        </ui:VisualElement>
+        <ui:Button name="scroll-down-btn" class="scroll-btn scroll-btn--down" text="▼" />
+    </ui:VisualElement>
+</ui:UXML>
