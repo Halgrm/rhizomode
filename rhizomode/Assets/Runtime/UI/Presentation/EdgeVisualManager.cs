@@ -2,12 +2,8 @@
 
 using System.Collections.Generic;
 using Rhizomode.SharedKernel;
-using Rhizomode.Graph.Model;
+using Rhizomode.UI.Contracts;
 using UnityEngine;
-
-using Rhizomode.NodeCatalog.Contracts;
-using Rhizomode.NodeCatalog.Runtime;
-using Rhizomode.Input.Contracts;
 
 namespace Rhizomode.UI
 {
@@ -89,23 +85,23 @@ namespace Rhizomode.UI
         /// <summary>
         /// エッジの視覚表現を生成する。
         /// </summary>
-        public void CreateEdgeVisual(Edge edge, ParamType portType)
+        public void CreateEdgeVisual(EdgeViewModel edge, ParamType portType)
         {
-            if (_edgeVisuals.ContainsKey(edge.Id)) return;
+            if (_edgeVisuals.ContainsKey(edge.EdgeId)) return;
 
-            var go = new GameObject($"Edge_{edge.Id}");
+            var go = new GameObject($"Edge_{edge.EdgeId}");
             go.transform.SetParent(transform);
 
             var line = go.AddComponent<LineRenderer>();
 
             var visual = new EdgeVisual(
-                edge.Id, go, line,
-                edge.FromNodeId, edge.FromPort,
-                edge.ToNodeId, edge.ToPort,
+                edge.EdgeId, go, line,
+                edge.FromNodeId, edge.FromPortName,
+                edge.ToNodeId, edge.ToPortName,
                 portType
             );
             ConfigureLineRenderer(line, portType, visual);
-            _edgeVisuals[edge.Id] = visual;
+            _edgeVisuals[edge.EdgeId] = visual;
             _allDirty = true;
         }
 
@@ -200,18 +196,16 @@ namespace Rhizomode.UI
         }
 
         /// <summary>
-        /// GraphContextの全エッジからエッジビジュアルを再構築する。グラフロード後に使用。
+        /// 用意済みの (edge, portType) ペア集合からエッジビジュアルを再構築する。
+        /// グラフロード後に使用。caller (GraphAdapter) が GraphState から
+        /// EdgeViewModel + ParamType を抽出して渡す。
         /// </summary>
-        public void RebuildAllEdgeVisuals(GraphState context)
+        public void RebuildAllEdgeVisuals(IReadOnlyList<(EdgeViewModel edge, ParamType portType)> edges)
         {
             Clear();
 
-            foreach (var edge in context.Edges)
-            {
-                var fromNode = context.Nodes.TryGetValue(edge.FromNodeId, out var n) ? n : null;
-                var portType = fromNode?.GetOutputPort(edge.FromPort)?.Type ?? ParamType.Float;
+            foreach (var (edge, portType) in edges)
                 CreateEdgeVisual(edge, portType);
-            }
         }
 
         /// <summary>

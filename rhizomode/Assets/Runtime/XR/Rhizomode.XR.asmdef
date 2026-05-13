@@ -24,6 +24,7 @@
         "Rhizomode.Nodes.Scene",
         "Rhizomode.Modules.Runtime",
         "Rhizomode.UI",
+        "Rhizomode.UI.Contracts",
         "Rhizomode.UI.Presentation",
         "Rhizomode.UI.GraphAdapter",
         "Rhizomode.Cameras",

@@ -10,6 +10,7 @@
         "Rhizomode.Graph.Model",
         "Rhizomode.Graph.Serialization",
         "Rhizomode.UI",
+        "Rhizomode.UI.Contracts",
         "Rhizomode.UI.Presentation",
         "Rhizomode.Cameras",
         "Rhizomode.Nodes.Standard",

@@ -5,6 +5,7 @@ using R3;
 using Rhizomode.Interaction.Contracts;
 using Rhizomode.SharedKernel;
 using Rhizomode.Graph.Model;
+using Rhizomode.UI.Contracts;
 using UnityEngine;
 
 using Rhizomode.Input.Contracts;
@@ -257,7 +258,8 @@ namespace Rhizomode.UI
                 if (edge.FromNodeId == _sourceNodeId && edge.FromPort == _sourcePortName &&
                     edge.ToNodeId == targetNodeId && edge.ToPort == targetPort)
                 {
-                    _edgeVisualManager.CreateEdgeVisual(edge, _sourceParamType);
+                    var vm = new EdgeViewModel(edge.Id, edge.FromNodeId, edge.FromPort, edge.ToNodeId, edge.ToPort);
+                    _edgeVisualManager.CreateEdgeVisual(vm, _sourceParamType);
                     break;
                 }
             }

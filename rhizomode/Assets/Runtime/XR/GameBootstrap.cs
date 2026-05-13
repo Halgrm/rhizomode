@@ -356,8 +356,18 @@ namespace Rhizomode.XR
             // ノードビジュアルを再構築
             visualManager?.RebuildAllVisuals(ctx);
 
-            // エッジビジュアルを再構築
-            edgeVisualManager?.RebuildAllEdgeVisuals(ctx);
+            // エッジビジュアルを再構築 (Round E2: EdgeViewModel + ParamType ペアに変換して渡す)
+            if (edgeVisualManager != null)
+            {
+                var edgePairs = new List<(Rhizomode.UI.Contracts.EdgeViewModel edge, ParamType portType)>(ctx.Edges.Count);
+                foreach (var edge in ctx.Edges)
+                {
+                    var fromNode = ctx.Nodes.TryGetValue(edge.FromNodeId, out var n) ? n : null;
+                    var portType = fromNode?.GetOutputPort(edge.FromPort)?.Type ?? ParamType.Float;
+                    edgePairs.Add((new Rhizomode.UI.Contracts.EdgeViewModel(edge.Id, edge.FromNodeId, edge.FromPort, edge.ToNodeId, edge.ToPort), portType));
+                }
+                edgeVisualManager.RebuildAllEdgeVisuals(edgePairs);
+            }
 
             // ロード後、全ノードをプレイヤー方向に向ける
             if (visualManager != null && controllerInput != null)
@@ -464,7 +474,12 @@ namespace Rhizomode.XR
 
                 // Source → target 間の edge visual (接続成功時のみ)
                 if (r.PrimaryEdge != null)
-                    edgeVisualManager.CreateEdgeVisual(r.PrimaryEdge, r.PortType);
+                {
+                    var pe = r.PrimaryEdge;
+                    edgeVisualManager.CreateEdgeVisual(
+                        new Rhizomode.UI.Contracts.EdgeViewModel(pe.Id, pe.FromNodeId, pe.FromPort, pe.ToNodeId, pe.ToPort),
+                        r.PortType);
+                }
 
                 // Trigger ノードがあれば visual + edge visual
                 if (r.TriggerNode != null)
@@ -474,7 +489,12 @@ namespace Rhizomode.XR
                         triggerVisual.transform.rotation = Quaternion.LookRotation(r.TriggerPosition - headPos);
 
                     if (r.TriggerEdge != null)
-                        edgeVisualManager.CreateEdgeVisual(r.TriggerEdge, ParamType.Bool);
+                    {
+                        var te = r.TriggerEdge;
+                        edgeVisualManager.CreateEdgeVisual(
+                            new Rhizomode.UI.Contracts.EdgeViewModel(te.Id, te.FromNodeId, te.FromPort, te.ToNodeId, te.ToPort),
+                            ParamType.Bool);
+                    }
                 }
             }
         }
