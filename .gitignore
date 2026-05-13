@@ -9,6 +9,7 @@
 .codex/
 .claude/scheduled_tasks.lock
 .claude/local/
+.claude/worktrees/
 
 # Unity scene recovery
 /rhizomode/Assets/_Recovery/
