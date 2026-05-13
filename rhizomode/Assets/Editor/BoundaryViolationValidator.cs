@@ -81,7 +81,7 @@ namespace Rhizomode.Editor
         // Rule implementations (限定有効化、現状違反なし)
         // ---------------------------------------------------------------
 
-        private const int EnabledRuleCount = 7;
+        private const int EnabledRuleCount = 8;
 
         private static string[] ValidateAll()
         {
@@ -129,6 +129,13 @@ namespace Rhizomode.Editor
 
             // Rule 7: Bootstrap is the ONLY asmdef referencing VContainer
             violations.AddRange(CheckVContainerOnlyBootstrap());
+
+            // Rule 8 (Phase 9 Round F3): UI.Presentation ⊄ Graph.Model / Graph.Serialization
+            // Plan v5.3 完了条件「UI.Presentation 配下から Graph.* 参照 0 件」を CI で固定。
+            // Round E (E1-E6) で全 .cs source および asmdef references から物理撤去済。
+            violations.AddRange(CheckNoReferences(
+                "Rhizomode.UI.Presentation",
+                forbidden: new[] { "Rhizomode.Graph.Model", "Rhizomode.Graph.Serialization", "Rhizomode.Graph.Runtime", "Rhizomode.Graph.Events", "Rhizomode.Graph.Mutation", "Rhizomode.Graph.Query", "Rhizomode.Graph.Snapshot", "Rhizomode.Graph.CatalogBridge" }));
 
             return violations.ToArray();
         }
