@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using Rhizomode.SharedKernel;
 using Rhizomode.Graph.Model;
+using Rhizomode.UI.Contracts;
 using UnityEngine;
 using UnityEngine.UIElements;
 

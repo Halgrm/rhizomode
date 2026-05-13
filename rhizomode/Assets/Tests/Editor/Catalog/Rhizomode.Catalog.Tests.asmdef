@@ -8,6 +8,7 @@
         "Rhizomode.Graph.CatalogBridge",
         "Rhizomode.NodeCatalog.Contracts",
         "Rhizomode.NodeCatalog.Runtime",
+        "Rhizomode.UI.Contracts",
         "Rhizomode.Nodes.Standard",
         "Rhizomode.Nodes.Audio",
         "Rhizomode.Nodes.OscMidi",

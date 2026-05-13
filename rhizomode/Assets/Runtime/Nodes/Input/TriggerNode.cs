@@ -3,6 +3,7 @@
 using R3;
 using Rhizomode.SharedKernel;
 using Rhizomode.Graph.Model;
+using Rhizomode.UI.Contracts;
 
 using Rhizomode.NodeCatalog.Contracts;
 namespace Rhizomode.Nodes.Input

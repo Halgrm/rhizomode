@@ -4,6 +4,7 @@ using System;
 using R3;
 using Rhizomode.SharedKernel;
 using Rhizomode.Graph.Model;
+using Rhizomode.UI.Contracts;
 using Rhizomode.Graph.Serialization;
 using UnityEngine;
 

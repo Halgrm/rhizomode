@@ -2,6 +2,7 @@
 
 using Rhizomode.SharedKernel;
 using Rhizomode.Graph.Model;
+using Rhizomode.UI.Contracts;
 using UnityEngine;
 using UnityEngine.UIElements;
 
