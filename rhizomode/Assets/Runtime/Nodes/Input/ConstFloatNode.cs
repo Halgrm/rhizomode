@@ -14,7 +14,7 @@ namespace Rhizomode.Nodes.Input
     /// レンジプリセットをボタンでサイクル切替可能。
     /// </summary>
     [NodeType("ConstFloat", "Const Float", NodeCategory.Input)]
-    public class ConstFloatNode : NodeBase, IInlineSlider, IInlineButton
+    public class ConstFloatNode : NodeBase, IInlineSlider, IInlineButton, INodeParamAccessor
     {
         private static readonly (float min, float max)[] RangePresets =
         {
@@ -120,6 +120,27 @@ namespace Rhizomode.Nodes.Input
         {
             public float value;
             public int rangeIndex;
+        }
+
+        bool INodeParamAccessor.TrySetParam(string paramName, ParamValue value)
+        {
+            if (paramName == "Value" && value.Type == ParamType.Float)
+            {
+                Value = value.AsFloat;
+                return true;
+            }
+            return false;
+        }
+
+        bool INodeParamAccessor.TryGetParam(string paramName, out ParamValue value)
+        {
+            if (paramName == "Value")
+            {
+                value = ParamValue.Float(_value);
+                return true;
+            }
+            value = default;
+            return false;
         }
     }
 }

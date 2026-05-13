@@ -15,7 +15,7 @@ namespace Rhizomode.Nodes.Time
     /// Resetの立ち上がりエッジでタイマーをリセットする。
     /// </summary>
     [NodeType("Timer", "Timer", NodeCategory.Time)]
-    public class TimerNode : NodeBase
+    public class TimerNode : NodeBase, INodeParamAccessor
     {
         private const float DefaultDuration = 1f;
 
@@ -99,6 +99,27 @@ namespace Rhizomode.Nodes.Time
         private struct TimerParams
         {
             public float duration;
+        }
+
+        bool INodeParamAccessor.TrySetParam(string paramName, ParamValue value)
+        {
+            if (paramName == "Duration" && value.Type == ParamType.Float)
+            {
+                _duration = Mathf.Max(value.AsFloat, 0f);
+                return true;
+            }
+            return false;
+        }
+
+        bool INodeParamAccessor.TryGetParam(string paramName, out ParamValue value)
+        {
+            if (paramName == "Duration")
+            {
+                value = ParamValue.Float(_duration);
+                return true;
+            }
+            value = default;
+            return false;
         }
     }
 }

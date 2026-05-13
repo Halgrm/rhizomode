@@ -13,7 +13,7 @@ namespace Rhizomode.Nodes.Input
     /// 固定Color値を出力するノード。HSVカラーピッカーUI内蔵。
     /// </summary>
     [NodeType("ConstColor", "Const Color", NodeCategory.Input)]
-    public class ConstColorNode : NodeBase, IInlineColorPicker
+    public class ConstColorNode : NodeBase, IInlineColorPicker, INodeParamAccessor
     {
         private static readonly Color DefaultColor = Color.white;
 
@@ -84,6 +84,28 @@ namespace Rhizomode.Nodes.Input
             public float g;
             public float b;
             public float a;
+        }
+
+        bool INodeParamAccessor.TrySetParam(string paramName, ParamValue value)
+        {
+            if (paramName == "Value" && value.Type == ParamType.Color)
+            {
+                var rz = value.AsColor;
+                Value = new Color(rz.R, rz.G, rz.B, rz.A);
+                return true;
+            }
+            return false;
+        }
+
+        bool INodeParamAccessor.TryGetParam(string paramName, out ParamValue value)
+        {
+            if (paramName == "Value")
+            {
+                value = ParamValue.Color(new RzColor(_color.r, _color.g, _color.b, _color.a));
+                return true;
+            }
+            value = default;
+            return false;
         }
     }
 }

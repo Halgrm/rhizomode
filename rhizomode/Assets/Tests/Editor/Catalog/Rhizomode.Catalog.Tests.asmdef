@@ -12,7 +12,9 @@
         "Rhizomode.Nodes.Audio",
         "Rhizomode.Nodes.OscMidi",
         "Rhizomode.Nodes.Ableton",
-        "Rhizomode.Nodes.Scene"
+        "Rhizomode.Nodes.Scene",
+        "Rhizomode.Nodes.Defaults",
+        "Rhizomode.Graph.Runtime"
     ],
     "includePlatforms": [
         "Editor"
