@@ -30,7 +30,7 @@ Plan v5.3 Phase 1 (asmdef 大改修、6 日、7 sub-step) の各 sub-step ごと
 | 1D | Nodes 5 asmdef 分割 | 1d | `c7f9cd80` | (不要) | 2026-05-13 |
 | 1E | UI 3 分割 + Interaction.GraphAdapter + Cameras | 1d | `7db66461` | (不要) | 2026-05-13 |
 | 1F | Scene/Modules/Persistence/Observability + Input.XR/Desktop | 1d | `4c2a39cf` | (不要) | 2026-05-13 |
-| 1G | XR refs 整理 + Boundary CI 有効化 | 0.5d | - | (必須) | - |
+| 1G | XR refs 整理 + Boundary CI 有効化 | 0.5d | **Phase 2 に併合** | (Phase 2 開始時に必須) | 2026-05-13 (決定) |
 
 ---
 
@@ -235,6 +235,20 @@ XR/ ディレクトリ整理後の残存: GameBootstrap.cs, XRRigSetup.cs のみ
 
 一時的 Plan v5.3 違反: Input.XR が UI / UI.Presentation / Interaction を参照
 (UIRaycastDriver の SharedRaycastService + WorldPanelRayBridge 使用、Phase 5 で再配置)。
+
+---
+
+## Phase 1G 併合決定 (2026-05-13)
+
+1F 完了時点で Plan v5.3 一時違反が 8 件発生したため、Boundary CI を有効化する前にこれらを解消する必要がある。Phase 2 (Graph 内部実装 + Snapshot) で大部分が自然解消される設計のため、当初 1G スコープ (XR refs 整理 + Boundary CI 有効化) を Phase 2 開始時にまとめて実施することにした。
+
+Phase 1 完了 (1A-1F)、Phase 2 開始時に以下をまとめて実施:
+1. Standalone Player build 検証 (1D-1F は compile + tests のみ。Player build 退行確認)
+2. XR.asmdef references 整理
+3. SharedKernel.asmdef `noEngineReferences=true` 復帰 (RzColor 実装後)
+4. Graph.Model→Serialization 一時参照削除 (Serializer 経由化)
+5. 8 件の一時違反解消後、`scripts/verify-asmdef-boundaries.sh` の `SKELETON_ONLY=0`
+6. `Editor/BoundaryViolationValidator.cs` の `EnableRealChecks = true`
 
 ---
 
