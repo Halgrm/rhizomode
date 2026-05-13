@@ -12,6 +12,7 @@
         "Rhizomode.Interaction",
         "Rhizomode.Interaction.GraphAdapter",
         "Rhizomode.Graph.Model",
+        "Rhizomode.Graph.Runtime",
         "Rhizomode.Graph.Serialization",
         "Rhizomode.Graph.Events",
         "Rhizomode.Graph.CatalogBridge",

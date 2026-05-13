@@ -9,6 +9,7 @@ using Rhizomode.Audio.GraphAdapter;
 using Rhizomode.Cameras;
 using Rhizomode.SharedKernel;
 using Rhizomode.Graph.Model;
+using Rhizomode.Graph.Runtime;
 using Rhizomode.Ableton.Transport;
 using Rhizomode.Ableton.Session;
 using Rhizomode.Ableton.GraphAdapter;
@@ -123,12 +124,6 @@ namespace Rhizomode.XR
         private Action<string>? _onDeviceSelected;
         private Action? _onRefreshRequested;
 
-        /// <summary>
-        /// モジュールノードに紐づくPrefabインスタンスを追跡する。
-        /// ノード削除・グラフロード時のクリーンアップに使用。
-        /// </summary>
-        private readonly Dictionary<string, GameObject> _moduleInstances = new();
-
         /// <summary>Object3Dプレハブ名→元プレハブの逆引き。Instantiate用。</summary>
         private readonly Dictionary<string, GameObject> _object3DPrefabMap = new();
 
@@ -138,6 +133,14 @@ namespace Rhizomode.XR
         /// 移行したら本フィールドは削除される。
         /// </summary>
         private Rhizomode.Graph.Events.GraphEventBus? _phase5EventBus;
+
+        /// <summary>
+        /// Phase 6 Round A: Module/Object3D の Prefab instantiation + IPerformanceModule 注入を
+        /// 担当する LifecycleProcessor。InstantiateVFXModule / InstantiateShaderModule /
+        /// InstantiateObject3D / DestroyModuleInstance / CleanupModuleInstances は本 processor に集約。
+        /// Phase 8 で NodeRuntime + EventBus 経由の自動駆動に切替予定 (現状は GameBootstrap が手動呼び出し)。
+        /// </summary>
+        private ModuleLifecycleProcessor? _moduleProcessor;
 
         private static readonly Dictionary<string, Func<string, NodeBase>> NodeFactoryMap = new()
         {
@@ -189,9 +192,51 @@ namespace Rhizomode.XR
             RegisterModuleTypes();
             RegisterCinemachineModules();
             RegisterObject3DTypes();
+
+            // Phase 6 Round A: ModuleLifecycleProcessor を初期化
+            // (RegisterObject3DTypes で _object3DPrefabMap が populate された後)。
+            _moduleProcessor = new ModuleLifecycleProcessor(
+                _object3DPrefabMap,
+                new BootstrapModulePlacement(this),
+                new BootstrapObject3DRegistry(this));
+
             InitializeSystems();
             InitializeVerticalSliceSystems();
             RegisterSceneObjects();
+        }
+
+        /// <summary>
+        /// Phase 6 Round A 用 placement adapter。<see cref="_activeInput"/> から head pose を取り、
+        /// FreshSpawn は head+forward*offset、Deserialize は node.Position を返す。
+        /// VFX は offset=1.5、Object3D は offset=1.0 (旧コード保持の意図)。
+        /// </summary>
+        private sealed class BootstrapModulePlacement : IModulePlacementService
+        {
+            private readonly GameBootstrap _owner;
+            public BootstrapModulePlacement(GameBootstrap owner) { _owner = owner; }
+
+            public Vector3 GetSpawnPosition(NodeBase node, NodeInitMode mode)
+            {
+                if (mode != NodeInitMode.FreshSpawn || _owner._activeInput == null)
+                    return node.Position;
+
+                var headPos = _owner._activeInput.HeadPosition;
+                var headFwd = _owner._activeInput.HeadForward;
+                var offset = node is Object3DNode ? 1.0f : 1.5f;
+                return headPos + headFwd * offset;
+            }
+        }
+
+        /// <summary>
+        /// Phase 6 Round A 用 Object3DProxy registry adapter。<see cref="object3DGrabHandler"/> に転送する。
+        /// </summary>
+        private sealed class BootstrapObject3DRegistry : IObject3DProxyRegistry
+        {
+            private readonly GameBootstrap _owner;
+            public BootstrapObject3DRegistry(GameBootstrap owner) { _owner = owner; }
+
+            public void Register(Object3DProxy proxy) => _owner.object3DGrabHandler?.Register(proxy);
+            public void Unregister(Object3DProxy proxy) => _owner.object3DGrabHandler?.Unregister(proxy);
         }
 
         private void RegisterNodeTypes()
@@ -234,8 +279,8 @@ namespace Rhizomode.XR
 
         /// <summary>
         /// ModuleDefinition配列からVFX/Shaderモジュールノードのタイプとファクトリを動的登録する。
-        /// ファクトリはノード生成のみ。Prefab注入はメニュー選択時(InjectModuleIfNeeded)
-        /// またはグラフロード後(ReinjectModulesAfterLoad)に分離して行う。
+        /// ファクトリはノード生成のみ。Prefab注入は ModuleLifecycleProcessor (Phase 6 Round A) が
+        /// AfterSetup で実施する。
         /// </summary>
         private void RegisterModuleTypes()
         {
@@ -273,149 +318,20 @@ namespace Rhizomode.XR
         }
 
         /// <summary>
-        /// VFXModuleNodeにPrefabインスタンスとVFXModuleを注入する。
-        /// Prefabが未設定またはGetComponent失敗時はログ出力のみで続行（映像停止防止）。
+        /// Phase 6 Round A: Object3D Proxy の Observable 購読のみここで実行。
+        /// Prefab 生成 + IPerformanceModule 注入は <see cref="ModuleLifecycleProcessor"/> が担当。
+        /// 本ヘルパーは <see cref="GraphState"/> 依存を Modules layer から切り離すために残置。
         /// </summary>
-        private void InstantiateVFXModule(VFXModuleNode node, ModuleDefinition def)
+        private void BindObject3DProxyObservables(Object3DNode node)
         {
-            if (def.prefab == null)
-            {
-                Debug.LogWarning($"[GameBootstrap] VFX module '{def.moduleName}' has no prefab assigned");
-                return;
-            }
+            if (_moduleProcessor == null || graphContext == null) return;
+            if (!_moduleProcessor.Instances.TryGetValue(node.Id, out var instance)) return;
+            if (instance == null) return;
 
-            try
-            {
-                var instance = Instantiate(def.prefab);
-                instance.name = $"VFXModule_{def.moduleName}_{node.Id[..8]}";
+            var proxy = instance.GetComponent<Object3DProxy>();
+            if (proxy == null) return;
 
-                // ノード位置の前方にVFXを配置（プレイヤーから見える位置）
-                if (controllerInput != null)
-                {
-                    var headPos = _activeInput!.HeadPosition;
-                    var headFwd = _activeInput!.HeadForward;
-                    instance.transform.position = headPos + headFwd * 1.5f;
-                }
-                else
-                {
-                    instance.transform.position = node.Position;
-                }
-
-                _moduleInstances[node.Id] = instance;
-
-                var module = instance.GetComponent<VFXModule>();
-                if (module != null)
-                {
-                    module.Initialize(def);
-                    node.Module = module;
-                }
-                else
-                {
-                    Debug.LogError(
-                        $"[GameBootstrap] VFX prefab '{def.prefab.name}' lacks VFXModule component");
-                }
-            }
-            catch (Exception e)
-            {
-                Debug.LogError($"[GameBootstrap] VFX module instantiation failed for '{def.moduleName}': {e.Message}");
-            }
-        }
-
-        /// <summary>
-        /// ShaderModuleNodeにPrefabインスタンスとShaderModuleを注入する。
-        /// RendererコンポーネントがPrefab上に必要。
-        /// </summary>
-        private void InstantiateShaderModule(ShaderModuleNode node, ModuleDefinition def)
-        {
-            if (def.prefab == null)
-            {
-                Debug.LogWarning($"[GameBootstrap] Shader module '{def.moduleName}' has no prefab assigned");
-                return;
-            }
-
-            try
-            {
-                var instance = Instantiate(def.prefab);
-                instance.name = $"ShaderModule_{def.moduleName}_{node.Id[..8]}";
-                _moduleInstances[node.Id] = instance;
-
-                var module = instance.GetComponent<ShaderModule>();
-                var renderer = instance.GetComponent<Renderer>();
-                if (module != null && renderer != null)
-                {
-                    module.Initialize(def, renderer);
-                    node.Module = module;
-                }
-                else
-                {
-                    Debug.LogError(
-                        $"[GameBootstrap] Shader prefab '{def.prefab.name}' lacks ShaderModule or Renderer component");
-                }
-            }
-            catch (Exception e)
-            {
-                Debug.LogError($"[GameBootstrap] Shader module instantiation failed for '{def.moduleName}': {e.Message}");
-            }
-        }
-
-        /// <summary>
-        /// Object3DNodeにプレハブインスタンスとObject3DProxyを注入する。
-        /// </summary>
-        private void InstantiateObject3D(Object3DNode node)
-        {
-            if (!_object3DPrefabMap.TryGetValue(node.PrefabName, out var prefab))
-            {
-                Debug.LogWarning($"[GameBootstrap] Object3D prefab not found: {node.PrefabName}");
-                return;
-            }
-
-            try
-            {
-                var instance = Instantiate(prefab);
-                instance.name = $"Object3D_{node.PrefabName}_{node.Id[..8]}";
-
-                // プレイヤー前方にスポーン
-                if (controllerInput != null)
-                {
-                    var headPos = _activeInput!.HeadPosition;
-                    var headFwd = _activeInput!.HeadForward;
-                    instance.transform.position = headPos + headFwd * 1.0f;
-                }
-                else
-                {
-                    instance.transform.position = node.Position;
-                }
-
-                _moduleInstances[node.Id] = instance;
-
-                // Object3DProxy追加（なければ）
-                var proxy = instance.GetComponent<Object3DProxy>();
-                if (proxy == null)
-                    proxy = instance.AddComponent<Object3DProxy>();
-
-                // コライダー追加（なければ）
-                if (instance.GetComponent<Collider>() == null)
-                {
-                    var meshFilter = instance.GetComponent<MeshFilter>();
-                    if (meshFilter != null)
-                        instance.AddComponent<MeshCollider>();
-                    else
-                        instance.AddComponent<BoxCollider>();
-                }
-
-                proxy.NodeId = node.Id;
-
-                // グラブハンドラーに登録
-                object3DGrabHandler?.Register(proxy);
-
-                // R3 Observable購読を開始
-                if (graphContext != null)
-                    node.BindProxyObservables(graphContext.Context, proxy.Position, proxy.Scale);
-            }
-            catch (Exception e)
-            {
-                Debug.LogError($"[GameBootstrap] Object3D instantiation failed for '{node.PrefabName}': {e.Message}");
-            }
+            node.BindProxyObservables(graphContext.Context, proxy.Position, proxy.Scale);
         }
 
         /// <summary>
@@ -1031,7 +947,9 @@ namespace Rhizomode.XR
                 nodeDeleteHandler.Initialize(
                     input, sharedRaycastService, visualManager,
                     graphContext, edgeVisualManager);
-                nodeDeleteHandler.SetDeleteDependencies(edgeDragHandler, DestroyModuleInstance);
+                // Phase 6 Round A: DestroyModuleInstance → _moduleProcessor.DestroyInstance に委譲
+                nodeDeleteHandler.SetDeleteDependencies(edgeDragHandler,
+                    _moduleProcessor != null ? _moduleProcessor.DestroyInstance : (Action<string>?)null);
             }
 
             if (nodeGrabHandler != null && visualManager != null &&
@@ -1132,7 +1050,7 @@ namespace Rhizomode.XR
             var ctx = graphContext.Context;
 
             // 旧モジュールインスタンスを破棄（グラフ切替時のリーク防止）
-            CleanupModuleInstances();
+            _moduleProcessor?.CleanupAll();
 
             // デシリアライズされたモジュールノードにPrefab・IPerformanceModuleを再注入
             ReinjectModulesAfterLoad(ctx);
@@ -1165,18 +1083,17 @@ namespace Rhizomode.XR
         /// </summary>
         private void ReinjectModulesAfterLoad(GraphState ctx)
         {
+            if (_moduleProcessor == null) return;
+
             foreach (var node in ctx.Nodes.Values)
             {
                 try
                 {
+                    // Module/Object3D は LifecycleProcessor で instantiation + IPerformanceModule 注入
+                    _moduleProcessor.AfterSetup(node, NodeInitMode.Deserialize);
+
                     switch (node)
                     {
-                        case VFXModuleNode vfxNode:
-                            InstantiateVFXModule(vfxNode, vfxNode.Definition);
-                            break;
-                        case ShaderModuleNode shaderNode:
-                            InstantiateShaderModule(shaderNode, shaderNode.Definition);
-                            break;
                         case SceneSwitchNode sceneNode:
                             sceneNode.Loader = sceneLoader;
                             break;
@@ -1184,7 +1101,8 @@ namespace Rhizomode.XR
                             triggerNode.Loader = sceneLoader;
                             break;
                         case Object3DNode object3DNode:
-                            InstantiateObject3D(object3DNode);
+                            // Proxy 観測の bind は GraphState を持つ層 (本クラス) で実施
+                            BindObject3DProxyObservables(object3DNode);
                             break;
                     }
                 }
@@ -1194,26 +1112,6 @@ namespace Rhizomode.XR
                         $"[GameBootstrap] Module re-injection failed for node '{node.Id}': {e.Message}");
                 }
             }
-        }
-
-        /// <summary>
-        /// 全モジュールPrefabインスタンスを破棄する。
-        /// </summary>
-        private void CleanupModuleInstances()
-        {
-            foreach (var kvp in _moduleInstances)
-            {
-                if (kvp.Value != null)
-                {
-                    // Object3DProxyの場合はグラブハンドラーから登録解除
-                    var proxy = kvp.Value.GetComponent<Object3DProxy>();
-                    if (proxy != null)
-                        object3DGrabHandler?.Unregister(proxy);
-
-                    Destroy(kvp.Value);
-                }
-            }
-            _moduleInstances.Clear();
         }
 
         private void OnDestroy()
@@ -1239,7 +1137,8 @@ namespace Rhizomode.XR
             _macroValueListenerSub = null;
 
             // モジュールPrefabインスタンスの破棄
-            CleanupModuleInstances();
+            _moduleProcessor?.Dispose();
+            _moduleProcessor = null;
 
             // Phase 5 Round E で構築した EventBus を解放 (Codex review fix #8)。
             // applier / dispatcher / translator は IDisposable ではないため EventBus のみで OK。
@@ -1269,7 +1168,15 @@ namespace Rhizomode.XR
             node.Position = spawnPos;
 
             // モジュールノードの場合、Prefabインスタンスを生成してModule注入
-            InjectModuleIfNeeded(node);
+            // Phase 6 Round A: LifecycleProcessor に委譲。Scene loader 注入と Object3D の
+            // GraphState binding は本クラスが残りの責務として処理 (Phase 8 で Installer に移譲)。
+            _moduleProcessor?.AfterSetup(node, NodeInitMode.FreshSpawn);
+            switch (node)
+            {
+                case SceneSwitchNode sceneNode: sceneNode.Loader = sceneLoader; break;
+                case SceneTriggerNode triggerNode: triggerNode.Loader = sceneLoader; break;
+                case Object3DNode obj3d: BindObject3DProxyObservables(obj3d); break;
+            }
 
             Debug.Log($"[GameBootstrap] Node created: {node.Id} type={node.NodeType} inputPorts={node.InputPorts.Count}");
 
@@ -1405,48 +1312,5 @@ namespace Rhizomode.XR
             }
         }
 
-        /// <summary>
-        /// ノードがModuleNodeBaseの場合、対応するPrefabをInstantiateしてModuleを注入する。
-        /// メニュー選択時の単発生成用。デシリアライズ時はReinjectModulesAfterLoadが担当。
-        /// </summary>
-        private void InjectModuleIfNeeded(NodeBase node)
-        {
-            switch (node)
-            {
-                case VFXModuleNode vfxNode:
-                    InstantiateVFXModule(vfxNode, vfxNode.Definition);
-                    break;
-                case ShaderModuleNode shaderNode:
-                    InstantiateShaderModule(shaderNode, shaderNode.Definition);
-                    break;
-                case SceneSwitchNode sceneNode:
-                    sceneNode.Loader = sceneLoader;
-                    break;
-                case SceneTriggerNode triggerNode:
-                    triggerNode.Loader = sceneLoader;
-                    break;
-                case Object3DNode object3DNode:
-                    InstantiateObject3D(object3DNode);
-                    break;
-            }
-        }
-
-        /// <summary>
-        /// 指定ノードのモジュールPrefabインスタンスを破棄する。ノード削除時に呼ぶ。
-        /// </summary>
-        public void DestroyModuleInstance(string nodeId)
-        {
-            if (!_moduleInstances.TryGetValue(nodeId, out var instance)) return;
-
-            _moduleInstances.Remove(nodeId);
-            if (instance != null)
-            {
-                var proxy = instance.GetComponent<Object3DProxy>();
-                if (proxy != null)
-                    object3DGrabHandler?.Unregister(proxy);
-
-                Destroy(instance);
-            }
-        }
     }
 }

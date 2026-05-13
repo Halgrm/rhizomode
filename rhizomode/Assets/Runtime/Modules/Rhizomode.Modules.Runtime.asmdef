@@ -7,6 +7,7 @@
         "Rhizomode.NodeCatalog.Runtime",
         "Rhizomode.Input.Contracts",
         "Rhizomode.Graph.Model",
+        "Rhizomode.Graph.Runtime",
         "Rhizomode.Graph.Serialization",
         "Rhizomode.Graph.CatalogBridge",
         "R3.Unity",
