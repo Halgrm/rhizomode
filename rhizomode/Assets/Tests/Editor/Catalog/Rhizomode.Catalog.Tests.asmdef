@@ -14,7 +14,8 @@
         "Rhizomode.Nodes.Ableton",
         "Rhizomode.Nodes.Scene",
         "Rhizomode.Nodes.Defaults",
-        "Rhizomode.Graph.Runtime"
+        "Rhizomode.Graph.Runtime",
+        "Rhizomode.Modules.Runtime"
     ],
     "includePlatforms": [
         "Editor"
