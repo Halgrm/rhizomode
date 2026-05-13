@@ -12,7 +12,7 @@ namespace Rhizomode.SharedKernel
     /// boxing を避けるため struct で実装。Type プロパティでどの variant が有効か判別する。
     /// UnityEngine.Color への変換は呼び出し側 (UI.Presentation 等) で extension method として実装。
     /// </remarks>
-    public readonly record struct ParamValue
+    public readonly struct ParamValue : IEquatable<ParamValue>
     {
         public ParamType Type { get; }
         private readonly float _floatValue;
@@ -42,5 +42,14 @@ namespace Rhizomode.SharedKernel
         public bool AsBool => Type == ParamType.Bool
             ? _boolValue
             : throw new InvalidOperationException($"ParamValue is {Type}, not Bool");
+
+        public bool Equals(ParamValue other) => Type == other.Type
+            && _floatValue == other._floatValue
+            && _colorValue == other._colorValue
+            && _boolValue == other._boolValue;
+        public override bool Equals(object? obj) => obj is ParamValue p && Equals(p);
+        public override int GetHashCode() => HashCode.Combine((int)Type, _floatValue, _colorValue, _boolValue);
+        public static bool operator ==(ParamValue a, ParamValue b) => a.Equals(b);
+        public static bool operator !=(ParamValue a, ParamValue b) => !a.Equals(b);
     }
 }

@@ -32,10 +32,10 @@ namespace Rhizomode.Graph.Events
         public Observable<string> OnEdgeRemoved => _onEdgeRemoved;
         public Observable<GraphChangeSet> OnGraphChanged => _onGraphChanged;
 
-        internal void EmitNodeAdded(string nodeId) => _onNodeAdded.OnNext(nodeId);
-        internal void EmitNodeRemoved(string nodeId) => _onNodeRemoved.OnNext(nodeId);
-        internal void EmitEdgeAdded(string edgeId) => _onEdgeAdded.OnNext(edgeId);
-        internal void EmitEdgeRemoved(string edgeId) => _onEdgeRemoved.OnNext(edgeId);
-        internal void EmitGraphChanged(GraphChangeSet changeSet) => _onGraphChanged.OnNext(changeSet);
+        public void EmitNodeAdded(string nodeId) => _onNodeAdded.OnNext(nodeId);
+        public void EmitNodeRemoved(string nodeId) => _onNodeRemoved.OnNext(nodeId);
+        public void EmitEdgeAdded(string edgeId) => _onEdgeAdded.OnNext(edgeId);
+        public void EmitEdgeRemoved(string edgeId) => _onEdgeRemoved.OnNext(edgeId);
+        public void EmitGraphChanged(GraphChangeSet changeSet) => _onGraphChanged.OnNext(changeSet);
     }
 }

@@ -94,7 +94,24 @@ namespace Rhizomode.Graph.Model
             return set;
         }
 
-        private readonly record struct EndpointKey(
-            string FromNodeId, string FromPort, string ToNodeId, string ToPort);
+        private readonly struct EndpointKey : System.IEquatable<EndpointKey>
+        {
+            public readonly string FromNodeId;
+            public readonly string FromPort;
+            public readonly string ToNodeId;
+            public readonly string ToPort;
+
+            public EndpointKey(string fromNodeId, string fromPort, string toNodeId, string toPort)
+            {
+                FromNodeId = fromNodeId; FromPort = fromPort; ToNodeId = toNodeId; ToPort = toPort;
+            }
+
+            public bool Equals(EndpointKey other) =>
+                FromNodeId == other.FromNodeId && FromPort == other.FromPort
+                && ToNodeId == other.ToNodeId && ToPort == other.ToPort;
+            public override bool Equals(object? obj) => obj is EndpointKey k && Equals(k);
+            public override int GetHashCode() =>
+                System.HashCode.Combine(FromNodeId, FromPort, ToNodeId, ToPort);
+        }
     }
 }

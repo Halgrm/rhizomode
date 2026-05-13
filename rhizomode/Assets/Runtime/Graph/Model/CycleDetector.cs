@@ -63,7 +63,8 @@ namespace Rhizomode.Graph.Model
                 if (!color.ContainsKey(edge.ToNodeId)) color[edge.ToNodeId] = White;
             }
 
-            foreach (var node in color.Keys)
+            var nodes = new List<string>(color.Keys);
+            foreach (var node in nodes)
             {
                 if (color[node] == White && DfsHasCycle(node, index, color, Gray, Black)) return true;
             }

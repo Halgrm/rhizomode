@@ -1,6 +1,7 @@
 #nullable enable
 
 using NUnit.Framework;
+using R3;
 using Rhizomode.Graph.Events;
 
 namespace Rhizomode.Graph.Tests
