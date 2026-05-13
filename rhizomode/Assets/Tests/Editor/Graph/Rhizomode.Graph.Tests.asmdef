@@ -13,6 +13,8 @@
         "Rhizomode.Graph.Mutation",
         "Rhizomode.Interaction.Contracts",
         "Rhizomode.Interaction.GraphAdapter",
+        "Rhizomode.Scene.Contracts",
+        "Rhizomode.Scene.GraphAdapter",
         "R3.Unity"
     ],
     "includePlatforms": [
