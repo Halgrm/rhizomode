@@ -26,7 +26,7 @@ Plan v5.3 Phase 1 (asmdef 大改修、6 日、7 sub-step) の各 sub-step ごと
 |---|---|---:|---|---|---|
 | 1A | SharedKernel + Graph 8 asmdef + Core 解体 | 1.5d | `014cf94c` | `[player-build: pass]` | 2026-05-13 |
 | 1B | NodeCatalog 2 分割 + Input.Contracts + Interaction.Contracts | 0.5d | `dadff7e3` | (不要) | 2026-05-13 |
-| 1C | Audio / OscMidi / Ableton bounded context | 1d | - | (必須) | - |
+| 1C | Audio / OscMidi / Ableton bounded context | 1d | `ab95b5d2` | `[player-build: pass]` | 2026-05-13 |
 | 1D | Nodes 5 asmdef 分割 | 1d | - | - | - |
 | 1E | UI 3 分割 + Interaction.GraphAdapter + Cameras | 1d | - | - | - |
 | 1F | Scene/Modules/Persistence/Observability + Input.XR/Desktop | 1d | - | - | - |
@@ -99,6 +99,69 @@ namespace 変更 + 参照側更新 (5 既存 asmdef + UI/XR 配下の .cs 多数
 - ✅ Compile errors 0
 - ✅ EditMode Test Runner 全件パス (Reimport All 後、50+ tests)
 - (Player build は Phase 1B 不要)
+
+---
+
+## 1C 詳細 (2026-05-13 完了)
+
+**Commit**: `ab95b5d2 refactor(phase-1c): Audio / OscMidi / Ableton bounded context [player-build: pass]`
+
+新規 asmdef (9 個 + Audio.Analysis rename = 10 個):
+- `Rhizomode.Audio.Contracts` (Phase 10 で AudioFrame/IAudioFrameSource/IAudioDrivenNode/IAudioDeviceDrivenNode)
+- `Rhizomode.Audio.GraphAdapter` (AudioDriverBehaviour 移送、Phase 10 で AudioDriverHost に class rename)
+- `Rhizomode.OscMidi.Contracts` (Phase 5 で OscMessage/MidiControlChange/IOscSource/IMidiSource)
+- `Rhizomode.OscMidi.Transport` (OscServer, MidiServer)
+- `Rhizomode.OscMidi.GraphAdapter` (Phase 6 で OscBindingLifecycleProcessor/MidiBindingLifecycleProcessor)
+- `Rhizomode.Ableton.Contracts` (Phase 5 で ClipMeta/TrackMeta/MacroMeta/SessionState/IAbletonSession)
+- `Rhizomode.Ableton.Transport` (AbletonLink)
+- `Rhizomode.Ableton.Session` (AbletonOscBridge)
+- `Rhizomode.Ableton.GraphAdapter` (AbletonClipGridManager, ClipObject)
+
+Rename:
+- `Rhizomode.Audio.asmdef` → `Rhizomode.Audio.Analysis.asmdef` (GUID 流用)
+
+Delete:
+- `Rhizomode.ExternalInput.asmdef` (+ `Assets/Runtime/ExternalInput/` ディレクトリ)
+
+ファイル移動 (21 .cs):
+- Audio/{AudioAnalyzer, AudioSpectrumDisplay, AudioWaveformDisplay} → Audio/Analysis/
+- XR/AudioDriverBehaviour.cs → Audio/GraphAdapter/ (class rename は Phase 10)
+- ExternalInput/{OscServer, MidiServer} → OscMidi/Transport/
+- ExternalInput/AbletonLink → Ableton/Transport/
+- ExternalInput/AbletonOscBridge → Ableton/Session/
+- ExternalInput/{AbletonClipGridManager, ClipObject} → Ableton/GraphAdapter/
+- ExternalInput/{OscReceiver, MidiCC}Node → Nodes/OscMidi/ (Phase 1D で Nodes.OscMidi asmdef に再分離予定)
+- ExternalInput/Ableton{ClipFire, Tempo, TrackVolume, Transport}Node → Nodes/Ableton/ (Phase 1D で Nodes.Ableton asmdef に再分離予定)
+
+namespace 一括変更:
+- `Rhizomode.Audio` → `Rhizomode.Audio.Analysis` (3 file)
+- `Rhizomode.ExternalInput` → 6 namespace に分割 (15 file):
+  - `Rhizomode.OscMidi.Transport` (2 file)
+  - `Rhizomode.Ableton.Transport` (1 file)
+  - `Rhizomode.Ableton.Session` (1 file)
+  - `Rhizomode.Ableton.GraphAdapter` (2 file)
+  - `Rhizomode.Nodes.OscMidi` (2 file)
+  - `Rhizomode.Nodes.Ableton` (4 file)
+
+参照側 (5 asmdef + 3 file) の references / using 更新:
+- Rhizomode.XR.asmdef + Rhizomode.Bootstrap.asmdef + Rhizomode.Nodes.asmdef
+- Rhizomode.Core.Tests.asmdef + Rhizomode.ExternalInput.Tests.asmdef (Tests は維持、Phase 5 で Ableton.Tests/OscMidi.Tests に分割)
+- GameBootstrap.cs + ClipFireRayHandler.cs + AbletonOscBridgeTests.cs (using 更新)
+
+Package 参照を name-based に変更 (GUID 不透明性回避):
+- `"OscJack.Runtime"` (旧 `GUID:9df4bb2434fa4444a85e58f9b2d5d6d2`)
+- `"Minis"` (旧 `GUID:3290356123b9eaf43b18df17cbfad07c`)
+- `"Unity.TextMeshPro"` (旧 `GUID:6055be8ebefd69e48b49212b09b47b2f`)
+
+一時的な Plan v5.3 違反 (Phase 2/5/10 で refactor 予定):
+- `Rhizomode.Nodes` asmdef が `OscMidi.Transport` / `Ableton.Transport` を参照 (Phase 1D で Nodes.OscMidi/Nodes.Ableton 分離時に解消)
+- `Rhizomode.Audio.GraphAdapter` が `Rhizomode.UI` を参照 (Phase 5 で Graph.Mutation/Events/Query 経由に置換)
+
+完了条件 (全達成):
+- ✅ Compile errors 0 (warnings 既存のみ: RadialKnobElement UxmlFactory 非推奨など)
+- ✅ EditMode + PlayMode Test Runner 全件パス
+- ✅ Standalone Player build 'Succeeded' (128 秒、`[player-build: pass]`)
+- ✅ BoundaryValidator skeleton mode 維持 (Phase 1G で有効化)
 
 ---
 
