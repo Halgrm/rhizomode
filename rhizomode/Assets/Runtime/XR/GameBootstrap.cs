@@ -164,6 +164,12 @@ namespace Rhizomode.XR
         /// </summary>
         private Rhizomode.Graph.Runtime.NodeRuntime? _nodeRuntime;
 
+        /// <summary>
+        /// Phase 8 Round C: ScrollMenu spawn + 入力ノード auto-spawn の graph mutation 部を集約。
+        /// visual 創出は引き続き GameBootstrap が担当。
+        /// </summary>
+        private NodeSpawnService? _nodeSpawnService;
+
         private static readonly Dictionary<string, Func<string, NodeBase>> NodeFactoryMap = new()
         {
             ["ConstFloat"] = id => new ConstFloatNode(id),
@@ -240,6 +246,9 @@ namespace Rhizomode.XR
                     {
                         _sceneLoaderProcessor, _moduleProcessor
                     });
+
+                // Phase 8 Round C: NodeSpawnService を初期化 (Plan v5.3 F-8.2 抽出 1/N)。
+                _nodeSpawnService = new NodeSpawnService(graphContext.Context, _nodeRuntime);
             }
 
             InitializeSystems();
@@ -1219,181 +1228,67 @@ namespace Rhizomode.XR
         private void OnScrollMenuNodeSelected(string nodeType)
         {
             if (graphContext == null || visualManager == null || controllerInput == null) return;
-            // Phase 8 Codex review fix #4: _nodeRuntime が null だと visual だけ作成され ghost 化する。
-            if (_nodeRuntime == null)
+            if (_nodeSpawnService == null)
             {
-                Debug.LogError($"[GameBootstrap] OnScrollMenuNodeSelected aborted ({nodeType}) — _nodeRuntime not initialized.");
+                Debug.LogError($"[GameBootstrap] OnScrollMenuNodeSelected aborted ({nodeType}) — _nodeSpawnService not initialized.");
                 return;
             }
 
             Debug.Log($"[GameBootstrap] OnScrollMenuNodeSelected: {nodeType}");
 
-            var ctx = graphContext.Context;
-            var node = ctx.CreateNode(nodeType);
-            if (node == null)
-            {
-                Debug.LogWarning($"[GameBootstrap] ScrollMenu: failed to create node '{nodeType}'");
-                return;
-            }
+            // Phase 8 Round C: graph mutation は NodeSpawnService に委譲、visual 創出はここで実行。
+            var headPos = _activeInput!.HeadPosition;
+            var headFwd = _activeInput!.HeadForward;
+            var spawnResult = _nodeSpawnService.TrySpawnFromMenu(nodeType, headPos, headFwd);
+            if (spawnResult == null) return;
 
-            // ノード生成後にスクロールメニューを閉じてIdle状態に戻す
+            // ノード生成後にスクロールメニューを閉じる
             scrollMenuInteraction?.CloseMenu();
 
-            var headPos = _activeInput!.HeadPosition;
-            var spawnPos = headPos + _activeInput!.HeadForward * 0.3f;
-            node.Position = spawnPos;
+            // Object3D の Proxy 観測 bind (visual 創出と同層、GraphState 必要)
+            if (spawnResult.Node is Object3DNode obj3d) BindObject3DProxyObservables(obj3d);
 
-            Debug.Log($"[GameBootstrap] Node created: {node.Id} type={node.NodeType} inputPorts={node.InputPorts.Count}");
-
-            // Phase 8 Round B: NodeRuntime.RegisterNode が processors を自動駆動。
-            // SceneLoaderLifecycleProcessor.BeforeSetup → state.RegisterNode (Setup 内蔵) →
-            // ModuleLifecycleProcessor.AfterSetup の順で実行される。
-            // Codex review fix #4: 冒頭の fail-fast で _nodeRuntime は non-null と保証済。
-            _nodeRuntime.RegisterNode(node, NodeInitMode.FreshSpawn);
-
-            // Object3D は GraphState を持つ層 (本クラス) で proxy 観測を bind
-            if (node is Object3DNode obj3d) BindObject3DProxyObservables(obj3d);
-
-            var visual = visualManager.CreateNodeVisual(node, spawnPos);
+            // ノード visual を生成 (本クラスの責務、UI 層への副作用)
+            var visual = visualManager.CreateNodeVisual(spawnResult.Node, spawnResult.Position);
             if (visual != null)
-                visual.transform.rotation = Quaternion.LookRotation(spawnPos - headPos);
+                visual.transform.rotation = Quaternion.LookRotation(spawnResult.Position - headPos);
 
-            // 入力ポートにConst/Toggleを自動生成+プリコネクト
-            SpawnInputNodes(node, spawnPos, headPos);
+            // 入力ポートに Const/Toggle/Trigger を auto-spawn + プリコネクト
+            SpawnInputVisuals(spawnResult.Node, spawnResult.Position, headPos);
 
-            Debug.Log($"[GameBootstrap] Node setup complete: {node.NodeType}");
+            Debug.Log($"[GameBootstrap] Node setup complete: {spawnResult.Node.NodeType}");
         }
 
         /// <summary>
-        /// ノードの全入力ポートに対してConst/Toggleノードを自動生成・プリコネクトする。
-        /// 全ノード共通（モジュールノード・通常ノード問わず）。
+        /// Phase 8 Round C: NodeSpawnService が返す InputSpawnResult から visual を生成する。
+        /// graph mutation は service 側で完了済。
         /// </summary>
-        private void SpawnInputNodes(NodeBase targetNode, Vector3 nodePos, Vector3 headPos)
+        private void SpawnInputVisuals(NodeBase targetNode, Vector3 nodePos, Vector3 headPos)
         {
-            if (graphContext == null || visualManager == null || edgeVisualManager == null) return;
-            // Phase 8 Codex review fix #4: _nodeRuntime が null だと auto-spawn が visual だけ作って
-            // GraphState 未登録の ghost 化する。fail-fast。
-            if (_nodeRuntime == null)
+            if (visualManager == null || edgeVisualManager == null || _nodeSpawnService == null) return;
+
+            var results = _nodeSpawnService.SpawnInputNodes(targetNode, nodePos, headPos);
+            foreach (var r in results)
             {
-                Debug.LogError("[GameBootstrap] SpawnInputNodes aborted — _nodeRuntime not initialized.");
-                return;
-            }
-
-            var ctx = graphContext.Context;
-            var inputPorts = targetNode.InputPorts;
-            if (inputPorts.Count == 0) return;
-
-            // モジュールノードのイベントポート（OnPlay等）はスキップ（ユーザーが手動接続）
-            var moduleNode = targetNode as ModuleNodeBase;
-
-            // スキップ対象を除いたポート数でレイアウト計算
-            var portCount = 0;
-            foreach (var kvp in inputPorts)
-            {
-                if (moduleNode != null && moduleNode.Definition.IsEvent(kvp.Key)) continue;
-                portCount++;
-            }
-            if (portCount == 0) return;
-
-            var nodeForward = (nodePos - headPos).normalized;
-            var nodeRight = Vector3.Cross(Vector3.up, nodeForward).normalized;
-            var startOffset = nodePos - nodeRight * 0.35f;
-            var verticalSpacing = 0.18f;
-            var topY = startOffset.y + (portCount - 1) * verticalSpacing * 0.5f;
-            var slotIndex = 0;
-
-            foreach (var kvp in inputPorts)
-            {
-                var portName = kvp.Key;
-                var portType = kvp.Value.Type;
-
-                // モジュールノードのイベントポートはスキップ
-                if (moduleNode != null && moduleNode.Definition.IsEvent(portName))
-                    continue;
-
-                NodeBase? sourceNode = null;
-                switch (portType)
-                {
-                    case ParamType.Float:
-                        sourceNode = new ConstFloatNode(Guid.NewGuid().ToString());
-                        break;
-                    case ParamType.Color:
-                        sourceNode = new ConstColorNode(Guid.NewGuid().ToString());
-                        break;
-                    case ParamType.Bool:
-                        sourceNode = new ToggleNode(Guid.NewGuid().ToString());
-                        break;
-                }
-
-                if (sourceNode == null) continue;
-
-                var pos = new Vector3(
-                    startOffset.x,
-                    topY - slotIndex * verticalSpacing,
-                    startOffset.z);
-                sourceNode.Position = pos;
-
-                // Phase 8 Round B: NodeRuntime 経由 (Const/Toggle は Module/Scene 関係ないため processors は no-op)
-                // Codex review fix #4: 冒頭 fail-fast で _nodeRuntime non-null 保証済。
-                _nodeRuntime.RegisterNode(sourceNode, NodeInitMode.FreshSpawn);
-                var visual = visualManager.CreateNodeVisual(sourceNode, pos);
+                // Source ノード (Const/Toggle) の visual
+                var visual = visualManager.CreateNodeVisual(r.Source, r.SourcePosition);
                 if (visual != null)
-                    visual.transform.rotation = Quaternion.LookRotation(pos - headPos);
+                    visual.transform.rotation = Quaternion.LookRotation(r.SourcePosition - headPos);
 
-                var edgeId = Guid.NewGuid().ToString();
-                var outputPort = sourceNode is ToggleNode ? "State" : "Value";
-                if (_nodeRuntime.AddEdge(edgeId, sourceNode.Id, outputPort, targetNode.Id, portName))
+                // Source → target 間の edge visual (接続成功時のみ)
+                if (r.PrimaryEdge != null)
+                    edgeVisualManager.CreateEdgeVisual(r.PrimaryEdge, r.PortType);
+
+                // Trigger ノードがあれば visual + edge visual
+                if (r.TriggerNode != null)
                 {
-                    // 接続後に初期値を再発行（Subject<T>はリプレイしないため）
-                    if (sourceNode is ConstFloatNode constFloat)
-                        constFloat.Value = constFloat.Value;
-                    else if (sourceNode is ConstColorNode constColor)
-                        constColor.Value = constColor.Value;
-
-                    var edges = ctx.Edges;
-                    for (var j = edges.Count - 1; j >= 0; j--)
-                    {
-                        var edge = edges[j];
-                        if (edge.FromNodeId == sourceNode.Id && edge.FromPort == outputPort &&
-                            edge.ToNodeId == targetNode.Id && edge.ToPort == portName)
-                        {
-                            edgeVisualManager.CreateEdgeVisual(edge, portType);
-                            break;
-                        }
-                    }
-                }
-
-                // ToggleノードにはTriggerノードを追加生成してプリコネクト
-                if (sourceNode is ToggleNode toggleNode)
-                {
-                    var triggerNode = new TriggerNode(Guid.NewGuid().ToString());
-                    var triggerPos = pos - nodeRight * 0.3f;
-                    triggerNode.Position = triggerPos;
-
-                    // Phase 8 Round B: NodeRuntime 経由 (fail-fast 済で non-null)
-                    _nodeRuntime.RegisterNode(triggerNode, NodeInitMode.FreshSpawn);
-                    var triggerVisual = visualManager.CreateNodeVisual(triggerNode, triggerPos);
+                    var triggerVisual = visualManager.CreateNodeVisual(r.TriggerNode, r.TriggerPosition);
                     if (triggerVisual != null)
-                        triggerVisual.transform.rotation = Quaternion.LookRotation(triggerPos - headPos);
+                        triggerVisual.transform.rotation = Quaternion.LookRotation(r.TriggerPosition - headPos);
 
-                    var triggerEdgeId = Guid.NewGuid().ToString();
-                    if (_nodeRuntime.AddEdge(triggerEdgeId, triggerNode.Id, "Trigger", toggleNode.Id, "Trigger"))
-                    {
-                        var triggerEdges = ctx.Edges;
-                        for (var k = triggerEdges.Count - 1; k >= 0; k--)
-                        {
-                            var te = triggerEdges[k];
-                            if (te.FromNodeId == triggerNode.Id && te.FromPort == "Trigger" &&
-                                te.ToNodeId == toggleNode.Id && te.ToPort == "Trigger")
-                            {
-                                edgeVisualManager.CreateEdgeVisual(te, ParamType.Bool);
-                                break;
-                            }
-                        }
-                    }
+                    if (r.TriggerEdge != null)
+                        edgeVisualManager.CreateEdgeVisual(r.TriggerEdge, ParamType.Bool);
                 }
-
-                slotIndex++;
             }
         }
 
