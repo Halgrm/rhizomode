@@ -172,6 +172,16 @@ namespace Rhizomode.XR
         private NodeSpawnService? _nodeSpawnService;
 
         /// <summary>
+        /// Phase 9 Round F1: グラフロード完了時の visual rebuild + プレイヤー方向回転を集約。
+        /// </summary>
+        private GraphLoadCoordinator? _graphLoadCoordinator;
+
+        /// <summary>
+        /// Phase 9 Round F2: ScrollMenu 選択時の visual 創出 + 入力ノード自動 spawn の visual 構築を集約。
+        /// </summary>
+        private MenuNodeSpawnCoordinator? _menuNodeSpawnCoordinator;
+
+        /// <summary>
         /// Phase 8 Round D: SceneObjectBridge スキャン + SceneObjectNode 自動 spawn を集約。
         /// </summary>
         private SceneObjectRegistrationService? _sceneObjectService;
@@ -239,6 +249,13 @@ namespace Rhizomode.XR
 
                 // Phase 8 Round C: NodeSpawnService を初期化 (Plan v5.3 F-8.2 抽出 1/N)。
                 _nodeSpawnService = new NodeSpawnService(graphContext.Context, _nodeRuntime);
+
+                // Phase 9 Round F: visual coordinator を初期化 (F-8.2 抽出残)。
+                if (visualManager != null && edgeVisualManager != null)
+                {
+                    _graphLoadCoordinator = new GraphLoadCoordinator(visualManager, edgeVisualManager);
+                    _menuNodeSpawnCoordinator = new MenuNodeSpawnCoordinator(visualManager, edgeVisualManager, _nodeSpawnService);
+                }
 
                 // Phase 8 Round D: SceneObjectRegistrationService を初期化 (F-8.2 抽出 2/N)。
                 if (_typeRegistry != null)
@@ -354,42 +371,8 @@ namespace Rhizomode.XR
                     BindObject3DProxyObservables(object3DNode);
             }
 
-            // ノードビジュアルを再構築 (Round E3+E4: INodeView リストに変換して渡す)
-            if (visualManager != null)
-            {
-                var views = new List<INodeView>(ctx.Nodes.Count);
-                foreach (var node in ctx.Nodes.Values)
-                    views.Add(new NodeViewAdapter(node));
-                visualManager.RebuildAllVisuals(views);
-            }
-
-            // エッジビジュアルを再構築 (Round E2: EdgeViewModel + ParamType ペアに変換して渡す)
-            if (edgeVisualManager != null)
-            {
-                var edgePairs = new List<(Rhizomode.UI.Contracts.EdgeViewModel edge, ParamType portType)>(ctx.Edges.Count);
-                foreach (var edge in ctx.Edges)
-                {
-                    var fromNode = ctx.Nodes.TryGetValue(edge.FromNodeId, out var n) ? n : null;
-                    var portType = fromNode?.GetOutputPort(edge.FromPort)?.Type ?? ParamType.Float;
-                    edgePairs.Add((new Rhizomode.UI.Contracts.EdgeViewModel(edge.Id, edge.FromNodeId, edge.FromPort, edge.ToNodeId, edge.ToPort), portType));
-                }
-                edgeVisualManager.RebuildAllEdgeVisuals(edgePairs);
-            }
-
-            // ロード後、全ノードをプレイヤー方向に向ける
-            if (visualManager != null && controllerInput != null)
-            {
-                var headPos = _activeInput!.HeadPosition;
-                foreach (var node in ctx.Nodes.Values)
-                {
-                    var visual = visualManager.GetVisual(node.Id);
-                    if (visual != null)
-                    {
-                        var pos = visual.transform.position;
-                        visual.transform.rotation = Quaternion.LookRotation(pos - headPos);
-                    }
-                }
-            }
+            // Round F1: visual rebuild + プレイヤー方向への回転は GraphLoadCoordinator に委譲。
+            _graphLoadCoordinator?.Rebuild(ctx, _activeInput);
         }
 
         private void OnDestroy()
@@ -452,58 +435,11 @@ namespace Rhizomode.XR
             // Object3D の Proxy 観測 bind (visual 創出と同層、GraphState 必要)
             if (spawnResult.Node is Object3DNode obj3d) BindObject3DProxyObservables(obj3d);
 
-            // ノード visual を生成 (本クラスの責務、UI 層への副作用)
-            var visual = visualManager.CreateNodeVisual(new NodeViewAdapter(spawnResult.Node), spawnResult.Position);
-            if (visual != null)
-                visual.transform.rotation = Quaternion.LookRotation(spawnResult.Position - headPos);
-
-            // 入力ポートに Const/Toggle/Trigger を auto-spawn + プリコネクト
-            SpawnInputVisuals(spawnResult.Node, spawnResult.Position, headPos);
+            // Round F2: visual 創出 + 入力ノード自動 spawn の visual 構築は MenuNodeSpawnCoordinator に委譲。
+            _menuNodeSpawnCoordinator?.CreatePrimaryVisual(spawnResult.Node, spawnResult.Position, headPos);
+            _menuNodeSpawnCoordinator?.SpawnInputVisuals(spawnResult.Node, spawnResult.Position, headPos);
 
             Debug.Log($"[GameBootstrap] Node setup complete: {spawnResult.Node.NodeType}");
-        }
-
-        /// <summary>
-        /// Phase 8 Round C: NodeSpawnService が返す InputSpawnResult から visual を生成する。
-        /// graph mutation は service 側で完了済。
-        /// </summary>
-        private void SpawnInputVisuals(NodeBase targetNode, Vector3 nodePos, Vector3 headPos)
-        {
-            if (visualManager == null || edgeVisualManager == null || _nodeSpawnService == null) return;
-
-            var results = _nodeSpawnService.SpawnInputNodes(targetNode, nodePos, headPos);
-            foreach (var r in results)
-            {
-                // Source ノード (Const/Toggle) の visual
-                var visual = visualManager.CreateNodeVisual(new NodeViewAdapter(r.Source), r.SourcePosition);
-                if (visual != null)
-                    visual.transform.rotation = Quaternion.LookRotation(r.SourcePosition - headPos);
-
-                // Source → target 間の edge visual (接続成功時のみ)
-                if (r.PrimaryEdge != null)
-                {
-                    var pe = r.PrimaryEdge;
-                    edgeVisualManager.CreateEdgeVisual(
-                        new Rhizomode.UI.Contracts.EdgeViewModel(pe.Id, pe.FromNodeId, pe.FromPort, pe.ToNodeId, pe.ToPort),
-                        r.PortType);
-                }
-
-                // Trigger ノードがあれば visual + edge visual
-                if (r.TriggerNode != null)
-                {
-                    var triggerVisual = visualManager.CreateNodeVisual(new NodeViewAdapter(r.TriggerNode), r.TriggerPosition);
-                    if (triggerVisual != null)
-                        triggerVisual.transform.rotation = Quaternion.LookRotation(r.TriggerPosition - headPos);
-
-                    if (r.TriggerEdge != null)
-                    {
-                        var te = r.TriggerEdge;
-                        edgeVisualManager.CreateEdgeVisual(
-                            new Rhizomode.UI.Contracts.EdgeViewModel(te.Id, te.FromNodeId, te.FromPort, te.ToNodeId, te.ToPort),
-                            ParamType.Bool);
-                    }
-                }
-            }
         }
 
     }
