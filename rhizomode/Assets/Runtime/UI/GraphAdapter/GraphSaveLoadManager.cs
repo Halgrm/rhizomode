@@ -101,8 +101,10 @@ namespace Rhizomode.UI
             var data = _repository.LoadGraph(resolved);
             if (data == null) return false;
 
-            // 既存グラフをクリアしてから Executor で復元
-#pragma warning disable CS0618 // GraphState.Clear は Phase 8 で internal 化予定
+            // Codex review fix #3: 部分適用 orphan を避けるため Clear 前に backup を取り、
+            // Executor 失敗時は backup から復元する (旧 GraphState.Deserialize の安全網パターン)。
+#pragma warning disable CS0618 // GraphState.Serialize/Clear は Phase 8 で internal 化予定
+            var backup = _graphContext.Context.Serialize();
             _graphContext.Context.Clear();
 #pragma warning restore CS0618
 
@@ -113,13 +115,36 @@ namespace Rhizomode.UI
             }
             catch (Exception e)
             {
-                Debug.LogError($"[GraphSaveLoadManager] Hydration failed: {resolved} — {e.Message}");
+                Debug.LogError($"[GraphSaveLoadManager] Hydration failed: {resolved} — rolling back. {e.Message}");
+                RestoreFromBackup(backup);
                 return false;
             }
 
             Debug.Log($"[GraphSaveLoadManager] Loaded: {resolved} ({data.nodes.Count} nodes, {data.edges.Count} edges)");
             OnGraphLoaded?.Invoke();
             return true;
+        }
+
+        /// <summary>
+        /// Codex review fix #3: Executor 失敗時の rollback。backup 自体が壊れている可能性があるため
+        /// 二重 try で 失敗してもエラーログだけで Video は止めない (映像継続原則)。
+        /// </summary>
+        private void RestoreFromBackup(GraphData backup)
+        {
+            if (_graphContext == null || _hydrator == null || _executor == null || _factory == null) return;
+            try
+            {
+#pragma warning disable CS0618
+                _graphContext.Context.Clear();
+#pragma warning restore CS0618
+                var plan = _hydrator.Build(backup);
+                _executor.Execute(plan, _factory);
+                Debug.LogWarning($"[GraphSaveLoadManager] Rolled back to backup ({backup.nodes.Count} nodes).");
+            }
+            catch (Exception e)
+            {
+                Debug.LogError($"[GraphSaveLoadManager] Rollback also failed — graph may be empty: {e.Message}");
+            }
         }
 
         public string[] GetSaveFiles() => _repository?.GetSaveFiles() ?? Array.Empty<string>();

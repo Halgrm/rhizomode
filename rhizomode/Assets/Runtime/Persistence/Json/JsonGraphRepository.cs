@@ -30,16 +30,27 @@ namespace Rhizomode.Persistence.Json
         public bool SaveGraph(string fileName, GraphData data)
         {
             var path = GetFilePath(fileName);
+            // Codex review fix #7: atomic write — tmp に書き終えてから rename で原子的に置換。
+            // WriteAllText 途中 (例: 電源断 / プロセスクラッシュ) で既存セーブが破損するのを防ぐ。
+            var tmpPath = path + ".tmp";
             try
             {
                 var json = JsonUtility.ToJson(data, true);
-                File.WriteAllText(path, json);
+                File.WriteAllText(tmpPath, json);
+
+                // .NET Standard 2.1 では File.Move(overwrite:) overload なし。
+                // Replace は別 volume だと失敗するため、existing を消してから rename する 2 段階。
+                // 失敗ウィンドウ (delete 成功 + move 失敗) では tmp が残るが、次回 SaveGraph で上書きされる。
+                if (File.Exists(path)) File.Delete(path);
+                File.Move(tmpPath, path);
                 Debug.Log($"[JsonGraphRepository] Saved: {path}");
                 return true;
             }
             catch (Exception e)
             {
                 Debug.LogError($"[JsonGraphRepository] Save failed: {path} — {e.Message}");
+                // 失敗時の tmp 残骸を best-effort で削除 (失敗してもセーブ自体は既に失敗してるので無視)。
+                try { if (File.Exists(tmpPath)) File.Delete(tmpPath); } catch { /* ignore */ }
                 return false;
             }
         }
