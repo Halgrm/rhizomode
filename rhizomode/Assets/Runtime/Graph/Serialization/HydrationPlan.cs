@@ -27,7 +27,21 @@ namespace Rhizomode.Graph.Serialization
         string NodeId,
         string TypeName,
         RzVector3 Position,
-        IReadOnlyDictionary<string, ParamValue> ParamValues);
+        IReadOnlyDictionary<string, ParamValue> ParamValues)
+    {
+        /// <summary>
+        /// 互換のため transitional に保持する legacy paramsJson 文字列。
+        /// </summary>
+        /// <remarks>
+        /// Plan v5.3 違反 (一時、Phase 13 で削除予定):
+        /// 本来 HydrationPlan は <see cref="ParamValues"/> のみで param 復元すべきだが、
+        /// 41 ノード全てに INodeParamReader を実装するまでは、<c>NodeBase.RestoreParamsFromJson</c>
+        /// 経由で legacy 復元する必要がある。<see cref="Rhizomode.Graph.Runtime.HydrationPlanExecutor"/>
+        /// は ParamsJson が非空なら RestoreParamsFromJson を呼んだ後、ParamValues を TrySetParam で
+        /// 上書き適用する設計。
+        /// </remarks>
+        public string ParamsJson { get; init; } = "";
+    }
 
     public sealed record EdgeHydrationEntry(
         string EdgeId,

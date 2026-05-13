@@ -61,6 +61,17 @@ namespace Rhizomode.Graph.Runtime
 
                 node.Position = new Vector3(entry.Position.X, entry.Position.Y, entry.Position.Z);
 
+                // Phase 7 transitional: legacy paramsJson があれば先に RestoreParamsFromJson、
+                // その後 ParamValues (INodeParamAccessor) で上書き。Phase 13 で paramsJson 廃止予定。
+                if (!string.IsNullOrEmpty(entry.ParamsJson))
+                {
+                    try { node.RestoreParamsFromJson(entry.ParamsJson); }
+                    catch (System.Exception ex)
+                    {
+                        Debug.LogError($"[HydrationPlanExecutor] RestoreParamsFromJson failed: {entry.NodeId} — {ex.Message}");
+                    }
+                }
+
                 if (node is INodeParamAccessor accessor)
                 {
                     foreach (var kvp in entry.ParamValues)
