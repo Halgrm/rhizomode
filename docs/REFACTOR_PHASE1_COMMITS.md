@@ -27,9 +27,9 @@ Plan v5.3 Phase 1 (asmdef 大改修、6 日、7 sub-step) の各 sub-step ごと
 | 1A | SharedKernel + Graph 8 asmdef + Core 解体 | 1.5d | `014cf94c` | `[player-build: pass]` | 2026-05-13 |
 | 1B | NodeCatalog 2 分割 + Input.Contracts + Interaction.Contracts | 0.5d | `dadff7e3` | (不要) | 2026-05-13 |
 | 1C | Audio / OscMidi / Ableton bounded context | 1d | `ab95b5d2` | `[player-build: pass]` | 2026-05-13 |
-| 1D | Nodes 5 asmdef 分割 | 1d | - | - | - |
-| 1E | UI 3 分割 + Interaction.GraphAdapter + Cameras | 1d | - | - | - |
-| 1F | Scene/Modules/Persistence/Observability + Input.XR/Desktop | 1d | - | - | - |
+| 1D | Nodes 5 asmdef 分割 | 1d | `c7f9cd80` | (不要) | 2026-05-13 |
+| 1E | UI 3 分割 + Interaction.GraphAdapter + Cameras | 1d | `7db66461` | (不要) | 2026-05-13 |
+| 1F | Scene/Modules/Persistence/Observability + Input.XR/Desktop | 1d | `4c2a39cf` | (不要) | 2026-05-13 |
 | 1G | XR refs 整理 + Boundary CI 有効化 | 0.5d | - | (必須) | - |
 
 ---
@@ -162,6 +162,79 @@ Package 参照を name-based に変更 (GUID 不透明性回避):
 - ✅ EditMode + PlayMode Test Runner 全件パス
 - ✅ Standalone Player build 'Succeeded' (128 秒、`[player-build: pass]`)
 - ✅ BoundaryValidator skeleton mode 維持 (Phase 1G で有効化)
+
+---
+
+## 1D 詳細 (2026-05-13 完了)
+
+**Commit**: `c7f9cd80 refactor(phase-1d): Nodes 5 asmdef 分割 (Standard / Audio / OscMidi / Ableton / Scene)`
+
+新規 asmdef (4) + rename 1:
+- Rename: Rhizomode.Nodes.asmdef → Rhizomode.Nodes.Standard.asmdef
+- Rhizomode.Nodes.Audio / OscMidi / Ableton / Scene
+
+ファイル移動 (10 file): Audio 系 7 file + Scene 系 3 file。
+namespace 更新: Nodes.{Input,Utility} → Nodes.{Audio,Scene}。
+
+参照側 6 asmdef 更新 (Rhizomode.Nodes → 新 5 asmdef name)。
+Nodes.Standard.asmdef の OscMidi/Ableton.Transport 一時参照を解消。
+
+---
+
+## 1E 詳細 (2026-05-13 完了)
+
+**Commit**: `7db66461 refactor(phase-1e): UI 3 分割 + Interaction asmdef + handler 移送`
+
+新規 asmdef (5):
+- Rhizomode.UI.Contracts (stub)
+- Rhizomode.UI.Presentation
+- Rhizomode.UI.GraphAdapter
+- Rhizomode.Interaction
+- Rhizomode.Interaction.GraphAdapter (stub)
+
+ファイル移送 (37 file):
+- UI/ → UI/Presentation/ : 22 file (NodeVisual*, EdgeVisual*, panels, mirror)
+- UI/ → UI/GraphAdapter/ : 3 file (Save/Load, Preset, StatusPanel)
+- UI/ → Interaction/ : 3 file (EdgeDragHandler, ScrollMenuInteractionHandler, SharedRaycastService)
+- XR/ → Interaction/ : 7 file (NodeGrab/Object3DGrab/PathControlPointGrab/EdgeCut/NodeDelete/ClipFireRay/NodeCreation Handler)
+- Audio/Analysis/ → UI/Presentation/Audio/ : 2 file (AudioSpectrum/Waveform Display)
+
+namespace 不変 (Phase 9 で UI namespace 統合予定)。
+
+NodeDeleteHandler の GameBootstrap 依存を Action<string> callback に置換
+(Interaction → XR cycle 回避、SRP 改善)。最終形は Phase 6 の INodeLifecycleProcessor pattern。
+
+一時的 Plan v5.3 違反: UI.Presentation/GraphAdapter が UI を参照 (GraphContextBehaviour アクセス)、
+Interaction が UI / UI.Presentation / Nodes.* を参照 (Phase 5 で intent pattern に refactor)、
+NodeDeleteHandler の callback (Phase 6 で event 化)。
+
+---
+
+## 1F 詳細 (2026-05-13 完了)
+
+**Commit**: `4c2a39cf refactor(phase-1f): Scene/Modules/Persistence/Observability + Input.XR/Desktop`
+
+新規 asmdef (9): Scene.Contracts/Runtime/GraphAdapter, Persistence.Contracts/Json,
+Observability.Contracts/Runtime, Input.XR/Desktop。
+Rename: Rhizomode.Modules.asmdef → Rhizomode.Modules.Runtime.asmdef。
+
+ファイル移送 (15 file):
+- Graph/Model/ISceneLoader → Scene/Contracts/ (ns → Scene.Contracts)
+- XR/{AdditiveSceneLoader, SceneEnvironment} → Scene/Runtime/ (ns → Scene.Runtime)
+- Graph/Model/{IPerformanceModule, ModuleDefinition, Object3DPrefabList} → Modules/ (ns → Rhizomode.Modules)
+- UI/Object3DProxy → Modules/ (ns → Rhizomode.Modules)
+- Nodes/Modules/{ModuleNodeBase, VFX/ShaderModuleNode} → Modules/Nodes/
+- Nodes/Utility/Object3DNode → Modules/Nodes/ (ns → Rhizomode.Nodes.Modules)
+- XR/{ControllerInputRouter, UIRaycastDriver} → Input/XR/ (ns → Rhizomode.Input.XR)
+- XR/DesktopInputRouter → Input/Desktop/ (ns → Rhizomode.Input.Desktop)
+
+namespace 衝突解消: Rhizomode.Scene と UnityEngine.SceneManagement.Scene が
+AdditiveSceneLoader.cs 内で衝突。`using UnityScene = ...` alias で解決。
+
+XR/ ディレクトリ整理後の残存: GameBootstrap.cs, XRRigSetup.cs のみ。
+
+一時的 Plan v5.3 違反: Input.XR が UI / UI.Presentation / Interaction を参照
+(UIRaycastDriver の SharedRaycastService + WorldPanelRayBridge 使用、Phase 5 で再配置)。
 
 ---
 
