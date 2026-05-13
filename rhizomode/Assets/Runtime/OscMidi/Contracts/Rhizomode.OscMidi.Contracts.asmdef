@@ -1,0 +1,16 @@
+{
+    "name": "Rhizomode.OscMidi.Contracts",
+    "rootNamespace": "Rhizomode.OscMidi.Contracts",
+    "references": [
+        "Rhizomode.SharedKernel"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

@@ -2,7 +2,7 @@
 
 using System.Threading.Tasks;
 using NUnit.Framework;
-using Rhizomode.ExternalInput;
+using Rhizomode.Ableton.Session;
 using UnityEngine;
 
 namespace Rhizomode.Core.Tests

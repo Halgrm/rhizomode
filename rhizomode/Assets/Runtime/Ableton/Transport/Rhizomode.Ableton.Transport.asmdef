@@ -1,0 +1,28 @@
+{
+    "name": "Rhizomode.Ableton.Transport",
+    "rootNamespace": "Rhizomode.Ableton.Transport",
+    "references": [
+        "Rhizomode.SharedKernel",
+        "Rhizomode.Ableton.Contracts",
+        "Rhizomode.OscMidi.Contracts",
+        "R3.Unity",
+        "OscJack.Runtime"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": true,
+    "precompiledReferences": [
+        "R3.dll"
+    ],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [
+        {
+            "name": "jp.keijiro.osc-jack",
+            "expression": "",
+            "define": "OSC_JACK"
+        }
+    ],
+    "noEngineReferences": false
+}

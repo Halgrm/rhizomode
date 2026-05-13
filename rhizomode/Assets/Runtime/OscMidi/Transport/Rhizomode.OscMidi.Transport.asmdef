@@ -1,0 +1,34 @@
+{
+    "name": "Rhizomode.OscMidi.Transport",
+    "rootNamespace": "Rhizomode.OscMidi.Transport",
+    "references": [
+        "Rhizomode.SharedKernel",
+        "Rhizomode.OscMidi.Contracts",
+        "R3.Unity",
+        "Unity.InputSystem",
+        "OscJack.Runtime",
+        "Minis"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": true,
+    "precompiledReferences": [
+        "R3.dll"
+    ],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [
+        {
+            "name": "jp.keijiro.osc-jack",
+            "expression": "",
+            "define": "OSC_JACK"
+        },
+        {
+            "name": "jp.keijiro.minis",
+            "expression": "",
+            "define": "HAS_MINIS"
+        }
+    ],
+    "noEngineReferences": false
+}

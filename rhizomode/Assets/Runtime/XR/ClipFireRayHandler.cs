@@ -2,7 +2,8 @@
 
 using System;
 using R3;
-using Rhizomode.ExternalInput;
+using Rhizomode.Ableton.Transport;
+using Rhizomode.Ableton.GraphAdapter;
 using Rhizomode.UI;
 using UnityEngine;
 

@@ -1,13 +1,14 @@
 {
-    "name": "Rhizomode.Nodes",
-    "rootNamespace": "Rhizomode.Nodes",
+    "name": "Rhizomode.Ableton.GraphAdapter",
+    "rootNamespace": "Rhizomode.Ableton.GraphAdapter",
     "references": [
         "Rhizomode.SharedKernel",
-        "Rhizomode.Graph.Model",
-        "Rhizomode.Graph.Serialization",
-        "Rhizomode.OscMidi.Transport",
+        "Rhizomode.Ableton.Contracts",
         "Rhizomode.Ableton.Transport",
-        "R3.Unity"
+        "Rhizomode.Ableton.Session",
+        "Rhizomode.Graph.Model",
+        "R3.Unity",
+        "Unity.TextMeshPro"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

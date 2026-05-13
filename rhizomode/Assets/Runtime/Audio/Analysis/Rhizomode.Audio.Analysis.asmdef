@@ -1,0 +1,18 @@
+{
+    "name": "Rhizomode.Audio.Analysis",
+    "rootNamespace": "Rhizomode.Audio.Analysis",
+    "references": [
+        "Rhizomode.SharedKernel",
+        "Rhizomode.Audio.Contracts",
+        "Lasp.Runtime"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

@@ -7,7 +7,13 @@
         "Rhizomode.Graph.Serialization",
         "Rhizomode.Nodes",
         "Rhizomode.UI",
-        "Rhizomode.ExternalInput",
+        "Rhizomode.Ableton.Contracts",
+        "Rhizomode.Ableton.Transport",
+        "Rhizomode.Ableton.Session",
+        "Rhizomode.Ableton.GraphAdapter",
+        "Rhizomode.OscMidi.Contracts",
+        "Rhizomode.OscMidi.Transport",
+        "Rhizomode.OscMidi.GraphAdapter",
         "R3.Unity"
     ],
     "includePlatforms": [

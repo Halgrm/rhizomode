@@ -1,11 +1,9 @@
 {
-    "name": "Rhizomode.Nodes",
-    "rootNamespace": "Rhizomode.Nodes",
+    "name": "Rhizomode.Ableton.Session",
+    "rootNamespace": "Rhizomode.Ableton.Session",
     "references": [
         "Rhizomode.SharedKernel",
-        "Rhizomode.Graph.Model",
-        "Rhizomode.Graph.Serialization",
-        "Rhizomode.OscMidi.Transport",
+        "Rhizomode.Ableton.Contracts",
         "Rhizomode.Ableton.Transport",
         "R3.Unity"
     ],

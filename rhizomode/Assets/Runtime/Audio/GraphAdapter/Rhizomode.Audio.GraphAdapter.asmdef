@@ -1,21 +1,20 @@
 {
-    "name": "Rhizomode.Nodes",
-    "rootNamespace": "Rhizomode.Nodes",
+    "name": "Rhizomode.Audio.GraphAdapter",
+    "rootNamespace": "Rhizomode.Audio.GraphAdapter",
     "references": [
         "Rhizomode.SharedKernel",
+        "Rhizomode.Audio.Contracts",
+        "Rhizomode.Audio.Analysis",
         "Rhizomode.Graph.Model",
         "Rhizomode.Graph.Serialization",
-        "Rhizomode.OscMidi.Transport",
-        "Rhizomode.Ableton.Transport",
-        "R3.Unity"
+        "Rhizomode.Nodes",
+        "Rhizomode.UI"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
     "allowUnsafeCode": false,
-    "overrideReferences": true,
-    "precompiledReferences": [
-        "R3.dll"
-    ],
+    "overrideReferences": false,
+    "precompiledReferences": [],
     "autoReferenced": true,
     "defineConstraints": [],
     "versionDefines": [],

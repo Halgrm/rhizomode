@@ -1,21 +1,17 @@
 {
-    "name": "Rhizomode.Nodes",
-    "rootNamespace": "Rhizomode.Nodes",
+    "name": "Rhizomode.OscMidi.GraphAdapter",
+    "rootNamespace": "Rhizomode.OscMidi.GraphAdapter",
     "references": [
         "Rhizomode.SharedKernel",
-        "Rhizomode.Graph.Model",
-        "Rhizomode.Graph.Serialization",
+        "Rhizomode.OscMidi.Contracts",
         "Rhizomode.OscMidi.Transport",
-        "Rhizomode.Ableton.Transport",
-        "R3.Unity"
+        "Rhizomode.Graph.Model"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
     "allowUnsafeCode": false,
-    "overrideReferences": true,
-    "precompiledReferences": [
-        "R3.dll"
-    ],
+    "overrideReferences": false,
+    "precompiledReferences": [],
     "autoReferenced": true,
     "defineConstraints": [],
     "versionDefines": [],
