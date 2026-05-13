@@ -15,6 +15,8 @@
         "Rhizomode.Interaction.GraphAdapter",
         "Rhizomode.Scene.Contracts",
         "Rhizomode.Scene.GraphAdapter",
+        "Rhizomode.Persistence.Contracts",
+        "Rhizomode.Persistence.Json",
         "R3.Unity"
     ],
     "includePlatforms": [
