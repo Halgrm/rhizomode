@@ -2,10 +2,8 @@
 
 using System;
 using System.Collections.Generic;
-using R3;
 using Rhizomode.Cameras;
-using Rhizomode.SharedKernel;
-using Rhizomode.Graph.Model;
+using Rhizomode.UI.Contracts;
 using UnityEngine;
 using UnityEngine.UIElements;
 
@@ -15,6 +13,7 @@ namespace Rhizomode.UI
     /// <see cref="CameraManagerPanelController"/> の partial: PathCameraController 連動
     /// (Progress source dropdown / Slider / Edit toggle)。
     /// Phase 9 Round C で本体から分離。
+    /// Round E (E5) で <see cref="IFloatOutputCatalog"/> 経由に切替、Graph.Model 直依存撤廃。
     /// </summary>
     public partial class CameraManagerPanelController
     {
@@ -57,17 +56,9 @@ namespace Rhizomode.UI
         private void RefreshFloatOutputs()
         {
             _floatOutputs.Clear();
-            if (_graphContext == null) return;
-            var ctx = _graphContext.Context;
-            foreach (var node in ctx.Nodes.Values)
-            {
-                foreach (var kv in node.OutputPorts)
-                {
-                    if (kv.Value.Type != ParamType.Float) continue;
-                    var display = $"{node.NodeType} · {kv.Key}";
-                    _floatOutputs.Add(new NodePortRef(node.Id, display));
-                }
-            }
+            if (_floatOutputCatalog == null) return;
+            foreach (var entry in _floatOutputCatalog.GetFloatOutputs())
+                _floatOutputs.Add(entry);
         }
 
         private void OnProgressSourceChanged(ChangeEvent<string> e)
@@ -79,35 +70,27 @@ namespace Rhizomode.UI
             var pathCam = _selected.GetComponent<PathCameraController>();
             if (pathCam == null) return;
             if (string.IsNullOrEmpty(e.newValue) || e.newValue == NoSourceLabel) return;
-            if (_graphContext == null) return;
+            if (_floatOutputCatalog == null) return;
 
-            string? targetNodeId = null;
+            FloatOutputRef? target = null;
             foreach (var p in _floatOutputs)
             {
                 if (p.DisplayName != e.newValue) continue;
-                targetNodeId = p.NodeId;
+                target = p;
                 break;
             }
-            if (targetNodeId == null) return;
+            if (target == null) return;
 
-            var ctx = _graphContext.Context;
-            if (!ctx.Nodes.TryGetValue(targetNodeId, out var node)) return;
-
-            // ポート名はラベルの "·" 右側
-            var dot = e.newValue.LastIndexOf('·');
-            if (dot < 0 || dot + 2 > e.newValue.Length) return;
-            var portName = e.newValue.Substring(dot + 1).Trim();
-
-            var port = node.GetOutputPort(portName);
-            if (port is not OutputPort<float> floatPort) return;
-
-            _progressSubscription = floatPort.Observable.Subscribe(v =>
-            {
-                pathCam.SetProgress(v);
-                // スライダーも追従させて現在値を可視化
-                if (_progressSlider != null) _progressSlider.SetValueWithoutNotify(Mathf.Clamp01(v));
-                if (_progressValue != null) _progressValue.text = $"{v:F2}";
-            });
+            _progressSubscription = _floatOutputCatalog.Subscribe(
+                target.Value.NodeId,
+                target.Value.PortName,
+                v =>
+                {
+                    pathCam.SetProgress(v);
+                    // スライダーも追従させて現在値を可視化
+                    if (_progressSlider != null) _progressSlider.SetValueWithoutNotify(Mathf.Clamp01(v));
+                    if (_progressValue != null) _progressValue.text = $"{v:F2}";
+                });
         }
 
         /// <summary>

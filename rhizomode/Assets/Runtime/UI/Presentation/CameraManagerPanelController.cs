@@ -3,7 +3,7 @@
 using System;
 using System.Collections.Generic;
 using Rhizomode.Cameras;
-using Rhizomode.Graph.Model;
+using Rhizomode.UI.Contracts;
 using Unity.Cinemachine;
 using UnityEngine;
 using UnityEngine.UIElements;
@@ -41,12 +41,12 @@ namespace Rhizomode.UI
         [SerializeField] private PathControlPointVisualManager? pathEditorManager;
 
         private WorldPanelHost? _panelHost;
-        private GraphContextBehaviour? _graphContext;
+        private IFloatOutputCatalog? _floatOutputCatalog;
         private readonly List<CinemachineCamera> _cameras = new();
         private CinemachineCamera? _selected;
         private IDisposable? _progressSubscription;
         private readonly List<Button> _cameraButtons = new();
-        private readonly List<NodePortRef> _floatOutputs = new();
+        private readonly List<FloatOutputRef> _floatOutputs = new();
         private readonly List<Action<bool>> _editModeListeners = new();
 
         private VisualElement? _root;
@@ -67,24 +67,13 @@ namespace Rhizomode.UI
         private Toggle? _editPathToggle;
         private bool _initialized;
 
-        private readonly struct NodePortRef
-        {
-            public readonly string NodeId;
-            public readonly string DisplayName;
-
-            public NodePortRef(string nodeId, string displayName)
-            {
-                NodeId = nodeId;
-                DisplayName = displayName;
-            }
-        }
-
         /// <summary>
-        /// GraphState への参照を設定する。GameBootstrap から呼ぶ。
+        /// Float 出力カタログを設定する。GameBootstrap から呼ぶ。
+        /// Round E5 で <c>GraphContextBehaviour</c> から <see cref="IFloatOutputCatalog"/> に変更。
         /// </summary>
-        public void Initialize(GraphContextBehaviour graphContext)
+        public void Initialize(IFloatOutputCatalog floatOutputCatalog)
         {
-            _graphContext = graphContext;
+            _floatOutputCatalog = floatOutputCatalog;
             EnsureHostInitialized();
         }
 

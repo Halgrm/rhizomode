@@ -40,10 +40,11 @@ namespace Rhizomode.XR
             if (statusPanel != null && graphContext != null)
                 statusPanel.Initialize(graphContext);
 
-            // CameraManagerPanelController
+            // CameraManagerPanelController (Round E5: IFloatOutputCatalog 経由に切替)
             if (cameraManagerPanel != null && graphContext != null)
             {
-                cameraManagerPanel.Initialize(graphContext);
+                var floatOutputCatalog = new GraphStateFloatOutputCatalog(() => graphContext.Context);
+                cameraManagerPanel.Initialize(floatOutputCatalog);
                 // 編集モード中はエッジ接続・切断・ノード削除を一時無効化
                 cameraManagerPanel.AddEditModeListener(isEditing =>
                 {
