@@ -32,7 +32,8 @@ namespace Rhizomode.Persistence.Json
             var path = GetFilePath(fileName);
             // Codex review fix #7: atomic write — tmp に書き終えてから rename で原子的に置換。
             // WriteAllText 途中 (例: 電源断 / プロセスクラッシュ) で既存セーブが破損するのを防ぐ。
-            var tmpPath = path + ".tmp";
+            // Codex re-review fix #5: 並列 SaveGraph で tmp 奪い合いを避けるため Guid 付与で unique 化。
+            var tmpPath = path + ".tmp-" + System.Guid.NewGuid().ToString("N");
             try
             {
                 var json = JsonUtility.ToJson(data, true);
@@ -124,6 +125,11 @@ namespace Rhizomode.Persistence.Json
             try
             {
                 File.Delete(path);
+                // Codex re-review fix #6: 対応する .bak ファイルも best-effort で削除 (storage 上の orphan
+                // 累積防止)。.bak は SaveGraph の File.Replace 第3引数で自動生成される backup ファイル。
+                var bakPath = path + ".bak";
+                try { if (File.Exists(bakPath)) File.Delete(bakPath); } catch { /* ignore */ }
+
                 Debug.Log($"[JsonGraphRepository] Deleted: {path}");
                 return true;
             }
