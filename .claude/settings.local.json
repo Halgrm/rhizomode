@@ -73,7 +73,13 @@
       "Bash(awk -F'/' '{print $1\"/\"$2\"/\"$3}')",
       "Bash(git status *)",
       "Bash(git check-ignore *)",
-      "Bash(gh auth *)"
+      "Bash(gh auth *)",
+      "Bash(node *)",
+      "Bash(git merge *)",
+      "Bash(git push *)",
+      "Bash(git mv *)",
+      "Bash(git ls-tree *)",
+      "Bash(git checkout *)"
     ]
   }
 }
