@@ -15,7 +15,7 @@ namespace Rhizomode.Nodes.Generators
     /// インスタンスごとに異なるシードを使用し、複数ノードで異なる出力を保証。
     /// </summary>
     [NodeType("Noise", "Noise", NodeCategory.Time)]
-    public class NoiseNode : NodeBase
+    public class NoiseNode : NodeBase, INodeParamAccessor
     {
         private const float DefaultSpeed = 1f;
         private const float DefaultAmplitude = 1f;
@@ -97,6 +97,27 @@ namespace Rhizomode.Nodes.Generators
             public float seed;
             public float speed;
             public float amplitude;
+        }
+
+        bool INodeParamAccessor.TrySetParam(string paramName, ParamValue value)
+        {
+            if (value.Type != ParamType.Float) return false;
+            switch (paramName)
+            {
+                case "Speed": _speed = Mathf.Max(value.AsFloat, 0f); return true;
+                case "Amplitude": _amplitude = value.AsFloat; return true;
+                default: return false;
+            }
+        }
+
+        bool INodeParamAccessor.TryGetParam(string paramName, out ParamValue value)
+        {
+            switch (paramName)
+            {
+                case "Speed": value = ParamValue.Float(_speed); return true;
+                case "Amplitude": value = ParamValue.Float(_amplitude); return true;
+                default: value = default; return false;
+            }
         }
     }
 }

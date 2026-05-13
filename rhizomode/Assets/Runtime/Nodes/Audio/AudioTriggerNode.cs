@@ -12,7 +12,7 @@ namespace Rhizomode.Nodes.Audio
     /// AudioAnalyzer（Week 4後半）から毎フレーム駆動される想定。
     /// </summary>
     [NodeType("AudioTrigger", "Audio Trigger", NodeCategory.Input)]
-    public class AudioTriggerNode : NodeBase
+    public class AudioTriggerNode : NodeBase, INodeParamAccessor
     {
         private const float DefaultFreqMin = 60f;
         private const float DefaultFreqMax = 250f;
@@ -78,6 +78,29 @@ namespace Rhizomode.Nodes.Audio
             AddSubscription(
                 context.GetInputObservable<float>(this, "Threshold")
                     .Subscribe(v => { _threshold = v; }));
+        }
+
+        bool INodeParamAccessor.TrySetParam(string paramName, ParamValue value)
+        {
+            if (value.Type != ParamType.Float) return false;
+            switch (paramName)
+            {
+                case "FreqMin": _freqMin = value.AsFloat; return true;
+                case "FreqMax": _freqMax = value.AsFloat; return true;
+                case "Threshold": _threshold = value.AsFloat; return true;
+                default: return false;
+            }
+        }
+
+        bool INodeParamAccessor.TryGetParam(string paramName, out ParamValue value)
+        {
+            switch (paramName)
+            {
+                case "FreqMin": value = ParamValue.Float(_freqMin); return true;
+                case "FreqMax": value = ParamValue.Float(_freqMax); return true;
+                case "Threshold": value = ParamValue.Float(_threshold); return true;
+                default: value = default; return false;
+            }
         }
     }
 }

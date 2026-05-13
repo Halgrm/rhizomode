@@ -15,7 +15,7 @@ namespace Rhizomode.Nodes.Generators
     /// 位相アキュムレータ方式で周波数変更時の不連続を防止。
     /// </summary>
     [NodeType("LFO", "LFO", NodeCategory.Time)]
-    public class LfoNode : NodeBase, IInlineButton
+    public class LfoNode : NodeBase, IInlineButton, INodeParamAccessor
     {
         private const float DefaultFrequency = 1f;
         private const float DefaultAmplitude = 1f;
@@ -115,6 +115,27 @@ namespace Rhizomode.Nodes.Generators
             public int waveform;
             public float frequency;
             public float amplitude;
+        }
+
+        bool INodeParamAccessor.TrySetParam(string paramName, ParamValue value)
+        {
+            if (value.Type != ParamType.Float) return false;
+            switch (paramName)
+            {
+                case "Frequency": _frequency = Mathf.Max(value.AsFloat, 0f); return true;
+                case "Amplitude": _amplitude = value.AsFloat; return true;
+                default: return false;
+            }
+        }
+
+        bool INodeParamAccessor.TryGetParam(string paramName, out ParamValue value)
+        {
+            switch (paramName)
+            {
+                case "Frequency": value = ParamValue.Float(_frequency); return true;
+                case "Amplitude": value = ParamValue.Float(_amplitude); return true;
+                default: value = default; return false;
+            }
         }
     }
 }

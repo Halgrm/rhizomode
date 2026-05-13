@@ -15,7 +15,7 @@ namespace Rhizomode.Nodes.Math
     /// Lerp / EaseOut の2モード切替対応。
     /// </summary>
     [NodeType("Smooth", "Smooth", NodeCategory.Math)]
-    public class SmoothNode : NodeBase, IInlineButton
+    public class SmoothNode : NodeBase, IInlineButton, INodeParamAccessor
     {
         private const float DefaultDamping = 0.1f;
         private const int ModeCount = 2;
@@ -123,6 +123,25 @@ namespace Rhizomode.Nodes.Math
         {
             public float damping;
             public int mode;
+        }
+
+        bool INodeParamAccessor.TrySetParam(string paramName, ParamValue value)
+        {
+            if (value.Type != ParamType.Float) return false;
+            switch (paramName)
+            {
+                case "Damping": _damping = Mathf.Max(value.AsFloat, 0f); return true;
+                default: return false;
+            }
+        }
+
+        bool INodeParamAccessor.TryGetParam(string paramName, out ParamValue value)
+        {
+            switch (paramName)
+            {
+                case "Damping": value = ParamValue.Float(_damping); return true;
+                default: value = default; return false;
+            }
         }
     }
 }

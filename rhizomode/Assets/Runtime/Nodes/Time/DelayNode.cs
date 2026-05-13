@@ -15,7 +15,7 @@ namespace Rhizomode.Nodes.Time
     /// 循環バッファにタイムスタンプ付きで値を記録し、過去の値を再生する。
     /// </summary>
     [NodeType("Delay", "Delay", NodeCategory.Time)]
-    public class DelayNode : NodeBase
+    public class DelayNode : NodeBase, INodeParamAccessor
     {
         private const float DefaultDelayTime = 0.5f;
         private const int BufferSize = 512;
@@ -128,6 +128,25 @@ namespace Rhizomode.Nodes.Time
         private struct DelayParams
         {
             public float delayTime;
+        }
+
+        bool INodeParamAccessor.TrySetParam(string paramName, ParamValue value)
+        {
+            if (value.Type != ParamType.Float) return false;
+            switch (paramName)
+            {
+                case "DelayTime": _delayTime = Mathf.Max(value.AsFloat, 0f); return true;
+                default: return false;
+            }
+        }
+
+        bool INodeParamAccessor.TryGetParam(string paramName, out ParamValue value)
+        {
+            switch (paramName)
+            {
+                case "DelayTime": value = ParamValue.Float(_delayTime); return true;
+                default: value = default; return false;
+            }
         }
     }
 }

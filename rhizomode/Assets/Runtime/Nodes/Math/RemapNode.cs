@@ -13,7 +13,7 @@ namespace Rhizomode.Nodes.Math
     /// クランプなし（範囲外の外挿を許可）。
     /// </summary>
     [NodeType("Remap", "Remap", NodeCategory.Math)]
-    public class RemapNode : NodeBase
+    public class RemapNode : NodeBase, INodeParamAccessor
     {
         private readonly OutputPort<float> _resultOut;
         private float _input;
@@ -83,6 +83,31 @@ namespace Rhizomode.Nodes.Math
             float range = _inMax - _inMin;
             if (Mathf.Abs(range) < Mathf.Epsilon) return _outMin;
             return _outMin + (_input - _inMin) / range * (_outMax - _outMin);
+        }
+
+        bool INodeParamAccessor.TrySetParam(string paramName, ParamValue value)
+        {
+            if (value.Type != ParamType.Float) return false;
+            switch (paramName)
+            {
+                case "InMin": _inMin = value.AsFloat; return true;
+                case "InMax": _inMax = value.AsFloat; return true;
+                case "OutMin": _outMin = value.AsFloat; return true;
+                case "OutMax": _outMax = value.AsFloat; return true;
+                default: return false;
+            }
+        }
+
+        bool INodeParamAccessor.TryGetParam(string paramName, out ParamValue value)
+        {
+            switch (paramName)
+            {
+                case "InMin": value = ParamValue.Float(_inMin); return true;
+                case "InMax": value = ParamValue.Float(_inMax); return true;
+                case "OutMin": value = ParamValue.Float(_outMin); return true;
+                case "OutMax": value = ParamValue.Float(_outMax); return true;
+                default: value = default; return false;
+            }
         }
     }
 }
