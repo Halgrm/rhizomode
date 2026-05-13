@@ -175,56 +175,24 @@ namespace Rhizomode.XR
         /// </summary>
         private SceneObjectRegistrationService? _sceneObjectService;
 
-        private static readonly Dictionary<string, Func<string, NodeBase>> NodeFactoryMap = new()
-        {
-            ["ConstFloat"] = id => new ConstFloatNode(id),
-            ["AudioDevice"] = id => new AudioDeviceNode(id),
-            ["AudioTrigger"] = id => new AudioTriggerNode(id),
-            ["BeatDetector"] = id => new BeatDetectorNode(id),
-            ["TapTempo"] = id => new TapTempoNode(id),
-            ["Multiply"] = id => new MultiplyNode(id),
-            ["Smooth"] = id => new SmoothNode(id),
-            ["Time"] = id => new Nodes.Time.TimeNode(id),
-            ["Threshold"] = id => new ThresholdNode(id),
-            ["Toggle"] = id => new ToggleNode(id),
-            ["FloatMonitor"] = id => new FloatMonitorNode(id),
-            ["BoolMonitor"] = id => new BoolMonitorNode(id),
-            ["ColorMonitor"] = id => new ColorMonitorNode(id),
-            ["AudioMonitor"] = id => new AudioMonitorNode(id),
-            ["ConstColor"] = id => new ConstColorNode(id),
-            ["LFO"] = id => new LfoNode(id),
-            ["Noise"] = id => new NoiseNode(id),
-            ["OscReceiver"] = id => new OscReceiverNode(id),
-            ["MidiCC"] = id => new MidiCCNode(id),
-            ["Add"] = id => new AddNode(id),
-            ["Remap"] = id => new RemapNode(id),
-            ["Delay"] = id => new DelayNode(id),
-            ["Timer"] = id => new TimerNode(id),
-            ["ColorToFloats"] = id => new ColorToFloatsNode(id),
-            ["FloatsToColor"] = id => new FloatsToColorNode(id),
-            ["ColorToHSV"] = id => new ColorToHSVNode(id),
-            ["HSVToColor"] = id => new HSVToColorNode(id),
-            ["AudioBand"] = id => new AudioBandNode(id),
-            ["SpectrumMonitor"] = id => new SpectrumMonitorNode(id),
-            ["Trigger"] = id => new TriggerNode(id),
-            ["SceneSwitch"] = id => new SceneSwitchNode(id),
-            ["SceneDark"] = id => new SceneTriggerNode(id, "SceneDark", 0),
-            ["SceneWhite"] = id => new SceneTriggerNode(id, "SceneWhite", 1),
-            ["SceneNature"] = id => new SceneTriggerNode(id, "SceneNature", 2),
-            ["AbletonTempo"] = id => new AbletonTempoNode(id),
-            ["AbletonTransport"] = id => new AbletonTransportNode(id),
-            ["AbletonTrackVolume"] = id => new AbletonTrackVolumeNode(id),
-            ["AbletonClipFire"] = id => new AbletonClipFireNode(id),
-        };
+        // Phase 8 Round E: NodeFactoryMap + RegisterNodeTypes + RegisterFactories +
+        // RegisterModuleTypes + RegisterObject3DTypes は NodeRegistrationOrchestrator に移送済 (F-8.2 抽出 3/N)。
 
         private void Awake()
         {
             _typeRegistry = new NodeTypeRegistry();
-            RegisterNodeTypes();
-            RegisterFactories();
-            RegisterModuleTypes();
-            RegisterCinemachineModules();
-            RegisterObject3DTypes();
+
+            // Phase 8 Round E: 全 type/factory 登録を NodeRegistrationOrchestrator に委譲 (F-8.2 抽出 3/N)。
+            if (graphContext != null)
+            {
+                var registrationOrchestrator = new NodeRegistrationOrchestrator(
+                    _typeRegistry, graphContext.Context, moduleDefinitions, object3DPrefabs);
+                registrationOrchestrator.RegisterAll();
+
+                // Object3D prefab map は ModuleLifecycleProcessor の dependency として利用
+                foreach (var kvp in registrationOrchestrator.Object3DPrefabMap)
+                    _object3DPrefabMap[kvp.Key] = kvp.Value;
+            }
 
             // Phase 6 Round A: ModuleLifecycleProcessor を初期化
             // (RegisterObject3DTypes で _object3DPrefabMap が populate された後)。
@@ -302,84 +270,6 @@ namespace Rhizomode.XR
             public void Unregister(Object3DProxy proxy) => _owner.object3DGrabHandler?.Unregister(proxy);
         }
 
-        private void RegisterNodeTypes()
-        {
-            if (_typeRegistry == null) return;
-
-            // Phase 4F Round D: 静的 NodeTypeInfo の手動登録 (旧 38 行) は撤去。
-            // [NodeType] 属性付きクラスを Scanner で発見し、NodeTypeRegistry に流し込む
-            // (Catalog 二重 source-of-truth 解消、Codex Issue 3)。
-            var scanner = new NodeTypeAttributeScanner();
-            foreach (var registration in scanner.Scan())
-            {
-                var d = registration.Display;
-                _typeRegistry.Register(new NodeTypeInfo(d.TypeName, d.Label, d.Category));
-            }
-
-            // 動的 SceneTrigger 3 件は Phase 5 で SceneTriggerCatalog SO + 動的 INodeTypeProvider 経由に
-            // 置換するまでハードコードで残置。SceneTriggerNodeFactory は既に動的 INodeFactory として
-            // 実装済 (Phase 4F Round B)。UI menu 表示用の NodeTypeInfo 登録のみここで補う。
-            _typeRegistry.Register(new NodeTypeInfo("SceneDark", "Dark", NodeCategory.Scene));
-            _typeRegistry.Register(new NodeTypeInfo("SceneWhite", "White", NodeCategory.Scene));
-            _typeRegistry.Register(new NodeTypeInfo("SceneNature", "Nature", NodeCategory.Scene));
-        }
-
-        private void RegisterFactories()
-        {
-            if (_typeRegistry == null) return;
-
-            foreach (var typeName in _typeRegistry.AllTypes.Keys)
-            {
-                if (!NodeFactoryMap.TryGetValue(typeName, out var factory))
-                {
-                    Debug.LogError($"[GameBootstrap] No factory for registered type: {typeName}");
-                    continue;
-                }
-
-                graphContext?.Context.RegisterNodeFactory(typeName, factory);
-            }
-        }
-
-        /// <summary>
-        /// ModuleDefinition配列からVFX/Shaderモジュールノードのタイプとファクトリを動的登録する。
-        /// ファクトリはノード生成のみ。Prefab注入は ModuleLifecycleProcessor (Phase 6 Round A) が
-        /// AfterSetup で実施する。
-        /// </summary>
-        private void RegisterModuleTypes()
-        {
-            if (_typeRegistry == null || moduleDefinitions == null) return;
-
-            foreach (var def in moduleDefinitions)
-            {
-                if (def == null) continue;
-
-                var capturedDef = def;
-
-                // Prefabのコンポーネントで登録カテゴリを判定
-                var hasVfx = def.prefab != null && def.prefab.GetComponent<VFXModule>() != null;
-                var hasShader = def.prefab != null && def.prefab.GetComponent<ShaderModule>() != null;
-
-                // どちらもない場合は両方登録（後方互換）
-                if (!hasVfx && !hasShader) { hasVfx = true; hasShader = true; }
-
-                if (hasVfx)
-                {
-                    var vfxTypeName = $"VFX_{def.moduleName}";
-                    _typeRegistry.Register(new NodeTypeInfo(vfxTypeName, $"VFX: {def.moduleName}", NodeCategory.VFX));
-                    Func<string, NodeBase> vfxFactory = id => new VFXModuleNode(id, capturedDef);
-                    graphContext?.Context.RegisterNodeFactory(vfxTypeName, vfxFactory);
-                }
-
-                if (hasShader)
-                {
-                    var shaderTypeName = $"Shader_{def.moduleName}";
-                    _typeRegistry.Register(new NodeTypeInfo(shaderTypeName, $"Shader: {def.moduleName}", NodeCategory.Shader));
-                    Func<string, NodeBase> shaderFactory = id => new ShaderModuleNode(id, capturedDef);
-                    graphContext?.Context.RegisterNodeFactory(shaderTypeName, shaderFactory);
-                }
-            }
-        }
-
         /// <summary>
         /// Phase 6 Round A: Object3D Proxy の Observable 購読のみここで実行。
         /// Prefab 生成 + IPerformanceModule 注入は <see cref="ModuleLifecycleProcessor"/> が担当。
@@ -395,39 +285,6 @@ namespace Rhizomode.XR
             if (proxy == null) return;
 
             node.BindProxyObservables(graphContext.Context, proxy.Position, proxy.Scale);
-        }
-
-        /// <summary>
-        /// CinemachineModuleからCinemachineノードのタイプとファクトリを登録する。
-        /// 注意: ファクトリ未実装のため、タイプ登録もスキップする（メニューに表示しない）。
-        /// </summary>
-        private void RegisterCinemachineModules()
-        {
-            // TODO: CinemachineModuleNode用ファクトリ実装後にタイプ登録を有効化する。
-            // ファクトリなしで_typeRegistryに登録するとメニューに表示されるが生成不可になる。
-        }
-
-        /// <summary>
-        /// Object3DPrefabListからObject3Dノードのタイプとファクトリを動的登録する。
-        /// </summary>
-        private void RegisterObject3DTypes()
-        {
-            if (_typeRegistry == null || object3DPrefabs == null) return;
-
-            foreach (var prefab in object3DPrefabs.Prefabs)
-            {
-                if (prefab == null) continue;
-
-                var prefabName = prefab.name;
-                var typeName = $"Object3D_{prefabName}";
-                var capturedName = prefabName;
-
-                _object3DPrefabMap[prefabName] = prefab;
-                _typeRegistry.Register(new NodeTypeInfo(typeName, $"3D: {prefabName}", NodeCategory.Scene));
-
-                Func<string, NodeBase> factory = id => new Object3DNode(id, capturedName);
-                graphContext?.Context.RegisterNodeFactory(typeName, factory);
-            }
         }
 
         private void InitializeSystems()
