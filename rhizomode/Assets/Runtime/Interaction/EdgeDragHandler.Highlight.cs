@@ -22,7 +22,7 @@ namespace Rhizomode.UI
 
             var hit = _sharedRaycast.CurrentHit;
             var nodeVisual = _visualManager.GetVisualByCollider(hit.collider);
-            if (nodeVisual?.Node == null || nodeVisual.Node.Id == _sourceNodeId)
+            if (nodeVisual?.Node == null || nodeVisual.Node.NodeId == _sourceNodeId)
             {
                 ClearTargetHighlight();
                 return;
@@ -37,12 +37,12 @@ namespace Rhizomode.UI
             }
 
             // 前回と同じなら何もしない
-            if (_highlightedNodeId == nodeVisual.Node.Id && _highlightedPortName == portName)
+            if (_highlightedNodeId == nodeVisual.Node.NodeId && _highlightedPortName == portName)
                 return;
 
             ClearTargetHighlight();
             nodeVisual.SetPortHighlight(portName, true);
-            _highlightedNodeId = nodeVisual.Node.Id;
+            _highlightedNodeId = nodeVisual.Node.NodeId;
             _highlightedPortName = portName;
         }
 

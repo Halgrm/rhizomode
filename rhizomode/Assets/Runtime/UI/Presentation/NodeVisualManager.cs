@@ -3,21 +3,25 @@
 using System;
 using System.Collections.Generic;
 using Rhizomode.SharedKernel;
-using Rhizomode.Graph.Model;
 using Rhizomode.UI.Contracts;
 using UnityEngine;
 using UnityEngine.UIElements;
 
 using Rhizomode.NodeCatalog.Contracts;
 using Rhizomode.NodeCatalog.Runtime;
-using Rhizomode.Input.Contracts;
 
 namespace Rhizomode.UI
 {
     /// <summary>
-    /// GraphContext内の全ノードの視覚化を管理する。ノード追加・削除に応じて
+    /// 全ノードの視覚化を管理する。ノード追加・削除に応じて
     /// WorldSpaceパネルの生成・破棄を行う。
     /// </summary>
+    /// <remarks>
+    /// Plan v5.3 Phase 9 Round E (E3+E4): NodeBase / GraphState 直接依存を撤廃し、
+    /// UI.Contracts.<see cref="INodeView"/> 経由でノードを受け取る形に変更。
+    /// caller (UI.GraphAdapter / GameBootstrap) が <c>NodeViewAdapter</c> を構築して
+    /// 渡す。RebuildAllVisuals も IReadOnlyList&lt;INodeView&gt; を受ける。
+    /// </remarks>
     public class NodeVisualManager : MonoBehaviour
     {
         [Header("ノードサイズ")]
@@ -70,7 +74,7 @@ namespace Rhizomode.UI
         /// <summary>
         /// ノードの視覚表現を生成する。
         /// </summary>
-        public NodeVisualController? CreateNodeVisual(NodeBase node, Vector3 spawnPosition)
+        public NodeVisualController? CreateNodeVisual(INodeView node, Vector3 spawnPosition)
         {
             if (_typeRegistry == null || nodeUxml == null)
             {
@@ -78,11 +82,11 @@ namespace Rhizomode.UI
                 return null;
             }
 
-            var typeInfo = _typeRegistry.GetInfo(node.NodeType);
+            var typeInfo = _typeRegistry.GetInfo(node.TypeName);
             if (typeInfo == null)
             {
-                Debug.LogWarning($"[NodeVisualManager] Unknown node type: {node.NodeType}");
-                typeInfo = new NodeTypeInfo(node.NodeType, node.NodeType, NodeCategory.Utility);
+                Debug.LogWarning($"[NodeVisualManager] Unknown node type: {node.TypeName}");
+                typeInfo = new NodeTypeInfo(node.TypeName, node.TypeName, NodeCategory.Utility);
             }
 
             try
@@ -90,7 +94,7 @@ namespace Rhizomode.UI
                 // ポート数＋インライン要素からパネルサイズを算出
                 var (texHeight, worldHeight) = CalculateNodeSize(node);
 
-                var go = CreateNodeGameObject(node.Id, spawnPosition);
+                var go = CreateNodeGameObject(node.NodeId, spawnPosition);
                 var panelHost = go.GetComponent<WorldPanelHost>();
                 panelHost.Initialize(nodeUxml, nodeStyleSheet, textureWidth, texHeight);
                 panelHost.Resize(defaultNodeWidth, worldHeight);
@@ -98,7 +102,7 @@ namespace Rhizomode.UI
                 var controller = go.GetComponent<NodeVisualController>();
                 controller.Bind(node, typeInfo);
 
-                _visuals[node.Id] = controller;
+                _visuals[node.NodeId] = controller;
 
                 // Collider→Visual逆引きキャッシュに登録
                 var collider = go.GetComponent<Collider>();
@@ -109,7 +113,7 @@ namespace Rhizomode.UI
             }
             catch (Exception e)
             {
-                Debug.LogError($"[NodeVisualManager] Failed to create visual for {node.Id}: {e.Message}");
+                Debug.LogError($"[NodeVisualManager] Failed to create visual for {node.NodeId}: {e.Message}");
                 return null;
             }
         }
@@ -166,41 +170,29 @@ namespace Rhizomode.UI
         }
 
         /// <summary>
-        /// 全ビジュアルを再構築する。グラフロード後にGraphContextの全ノードから再生成する。
+        /// 全ビジュアルを再構築する。グラフロード後に caller が NodeView ハンドル一覧を渡す。
         /// </summary>
-        public void RebuildAllVisuals(GraphState context)
+        public void RebuildAllVisuals(IReadOnlyList<INodeView> nodes)
         {
             Clear();
 
-            foreach (var node in context.Nodes.Values)
-            {
-                var spawnPos = node.Position;
-                CreateNodeVisual(node, spawnPos);
-            }
+            foreach (var node in nodes)
+                CreateNodeVisual(node, node.Position);
         }
 
         /// <summary>
         /// ノードのポート数とインライン要素からテクスチャ高さ・ワールド高さを算出する。
         /// </summary>
-        private (int texHeight, float worldHeight) CalculateNodeSize(NodeBase node)
+        private (int texHeight, float worldHeight) CalculateNodeSize(INodeView node)
         {
-            var ports = node.GetPortDefinitions();
-            int inputCount = 0;
-            int outputCount = 0;
-            foreach (var p in ports)
-            {
-                if (p.direction == PortDirection.Input) inputCount++;
-                else outputCount++;
-            }
-
             // 入力・出力は横並びなので、多い方の行数
-            int portRows = Mathf.Max(inputCount, outputCount);
+            int portRows = Mathf.Max(node.InputPorts.Count, node.OutputPorts.Count);
 
             int inlineCount = 0;
-            if (node is IInlineSlider) inlineCount++;
-            if (node is IInlineButton) inlineCount++;
-            if (node is IInlineMonitor) inlineCount++;
-            if (node is IInlineColorPicker) inlineCount += 3; // H/S/Vスライダー + プレビュー
+            if (node.AsSlider() != null) inlineCount++;
+            if (node.AsButton() != null) inlineCount++;
+            if (node.AsMonitor() != null) inlineCount++;
+            if (node.AsColorPicker() != null) inlineCount += 3; // H/S/Vスライダー + プレビュー
 
             int pixelHeight = headerPixelHeight
                               + portContainerPadding

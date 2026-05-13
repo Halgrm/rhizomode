@@ -134,7 +134,7 @@ namespace Rhizomode.XR
             var visual = _visualManager.GetVisualByCollider(_sharedRaycast.CurrentHit.collider);
             if (visual?.Node == null) return;
 
-            _grabbedNodeId = visual.Node.Id;
+            _grabbedNodeId = visual.Node.NodeId;
             _grabControllerRotation = _controllerPose.ControllerRotation;
             _grabNodeRotation = visual.transform.rotation;
             _grabLocalOffset = visual.transform.position - _controllerPose.RayOrigin;
@@ -153,7 +153,7 @@ namespace Rhizomode.XR
             var visual = _visualManager.GetVisualByCollider(hit.collider);
             if (visual?.Node == null) return;
 
-            _grabbedNodeId = visual.Node.Id;
+            _grabbedNodeId = visual.Node.NodeId;
             _grabControllerRotation = Quaternion.LookRotation(_leftHandRay.LeftRayDirection);
             _grabNodeRotation = visual.transform.rotation;
             _grabLocalOffset = visual.transform.position - _leftHandRay.LeftRayOrigin;

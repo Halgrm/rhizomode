@@ -2,7 +2,6 @@
 
 using System.Collections.Generic;
 using Rhizomode.SharedKernel;
-using Rhizomode.Graph.Model;
 using Rhizomode.UI.Contracts;
 using UnityEngine;
 using UnityEngine.UIElements;
@@ -28,7 +27,7 @@ namespace Rhizomode.UI
         [SerializeField] private VisualTreeAsset? portUxml;
 
         private WorldPanelHost? _panelHost;
-        private NodeBase? _node;
+        private INodeView? _node;
         private NodeTypeInfo? _typeInfo;
         private readonly Dictionary<string, VisualElement> _portElements = new();
         private IInlineMonitor? _monitor;
@@ -46,8 +45,8 @@ namespace Rhizomode.UI
         private const int MaxBindRetries = 10;
         private bool _layoutReady;
 
-        /// <summary>バインドされたノード。</summary>
-        public NodeBase? Node => _node;
+        /// <summary>バインドされたノード (live view ハンドル)。</summary>
+        public INodeView? Node => _node;
 
         /// <summary>ノードタイプ情報。</summary>
         public NodeTypeInfo? TypeInfo => _typeInfo;
@@ -61,7 +60,7 @@ namespace Rhizomode.UI
         /// ノードデータをバインドし、UIを構築する。
         /// rootVisualElementが未準備の場合は次フレーム以降にリトライする。
         /// </summary>
-        public void Bind(NodeBase node, NodeTypeInfo typeInfo)
+        public void Bind(INodeView node, NodeTypeInfo typeInfo)
         {
             _node = node;
             _typeInfo = typeInfo;
@@ -79,8 +78,8 @@ namespace Rhizomode.UI
 
             SetTitle(root, _typeInfo.DisplayName);
             ApplyCategoryStyle(root, _typeInfo.Category);
-            BuildPortUI(root, _node.GetPortDefinitions());
-            BuildSlotBars(root, _node.GetPortDefinitions());
+            BuildPortUI(root, _node);
+            BuildSlotBars(root, _node);
             BuildInlineSlider(root, _node);
             BuildInlineButton(root, _node);
             BuildInlineMonitor(root, _node);
@@ -155,7 +154,7 @@ namespace Rhizomode.UI
                 _bindRetryCount++;
                 if (!TryBindInternal() && _bindRetryCount >= MaxBindRetries)
                 {
-                    Debug.LogWarning($"[NodeVisualController] Bind failed after {MaxBindRetries} retries for node {_node?.Id}");
+                    Debug.LogWarning($"[NodeVisualController] Bind failed after {MaxBindRetries} retries for node {_node?.NodeId}");
                     _needsBind = false;
                 }
             }

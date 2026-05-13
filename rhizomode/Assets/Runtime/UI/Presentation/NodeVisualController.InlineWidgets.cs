@@ -1,7 +1,6 @@
 #nullable enable
 
 using Rhizomode.SharedKernel;
-using Rhizomode.Graph.Model;
 using Rhizomode.UI.Contracts;
 using UnityEngine;
 using UnityEngine.UIElements;
@@ -11,12 +10,15 @@ namespace Rhizomode.UI
     /// <summary>
     /// <see cref="NodeVisualController"/> の partial: inline widget (slider/button/monitor/waveform/spectrum/color picker) 構築。
     /// Phase 9 Round A で本体から分離。
+    /// Round E (E3+E4) で <see cref="INodeView"/> 経由の IInline* 取得に変更し
+    /// Graph.Model.NodeBase 依存を撤廃。
     /// </summary>
     public partial class NodeVisualController
     {
-        private void BuildInlineSlider(VisualElement root, NodeBase node)
+        private void BuildInlineSlider(VisualElement root, INodeView node)
         {
-            if (node is not IInlineSlider slider) return;
+            var slider = node.AsSlider();
+            if (slider == null) return;
 
             var container = new VisualElement();
             container.AddToClassList("inline-slider-container");
@@ -46,9 +48,10 @@ namespace Rhizomode.UI
             InsertAboveOrAppendPortContainer(root, container);
         }
 
-        private void BuildInlineButton(VisualElement root, NodeBase node)
+        private void BuildInlineButton(VisualElement root, INodeView node)
         {
-            if (node is not IInlineButton button) return;
+            var button = node.AsButton();
+            if (button == null) return;
 
             var container = new VisualElement();
             container.AddToClassList("inline-button-container");
@@ -60,7 +63,8 @@ namespace Rhizomode.UI
                 if (btnRef != null) btnRef.text = button.ButtonLabel;
 
                 // スライダー範囲を同期（ConstFloat等のレンジ切替対応）
-                if (node is IInlineSlider sliderNode)
+                var sliderNode = node.AsSlider();
+                if (sliderNode != null)
                 {
                     var slider = root.Q<Slider>();
                     if (slider != null)
@@ -81,9 +85,10 @@ namespace Rhizomode.UI
             InsertAboveOrAppendPortContainer(root, container);
         }
 
-        private void BuildInlineMonitor(VisualElement root, NodeBase node)
+        private void BuildInlineMonitor(VisualElement root, INodeView node)
         {
-            if (node is not IInlineMonitor monitor) return;
+            var monitor = node.AsMonitor();
+            if (monitor == null) return;
             _monitor = monitor;
 
             var container = new VisualElement();
@@ -115,9 +120,10 @@ namespace Rhizomode.UI
             InsertAboveOrAppendPortContainer(root, container);
         }
 
-        private void BuildInlineWaveform(VisualElement root, NodeBase node)
+        private void BuildInlineWaveform(VisualElement root, INodeView node)
         {
-            if (node is not IInlineWaveform waveform) return;
+            var waveform = node.AsWaveform();
+            if (waveform == null) return;
             _waveform = waveform;
 
             var container = new VisualElement();
@@ -136,9 +142,10 @@ namespace Rhizomode.UI
             InsertAboveOrAppendPortContainer(root, container);
         }
 
-        private void BuildInlineSpectrum(VisualElement root, NodeBase node)
+        private void BuildInlineSpectrum(VisualElement root, INodeView node)
         {
-            if (node is not IInlineSpectrum spectrum) return;
+            var spectrum = node.AsSpectrum();
+            if (spectrum == null) return;
             _spectrum = spectrum;
 
             var container = new VisualElement();
@@ -157,9 +164,10 @@ namespace Rhizomode.UI
             InsertAboveOrAppendPortContainer(root, container);
         }
 
-        private void BuildInlineColorPicker(VisualElement root, NodeBase node)
+        private void BuildInlineColorPicker(VisualElement root, INodeView node)
         {
-            if (node is not IInlineColorPicker picker) return;
+            var picker = node.AsColorPicker();
+            if (picker == null) return;
 
             var container = new VisualElement();
             container.AddToClassList("inline-color-picker-container");

@@ -77,7 +77,7 @@ namespace Rhizomode.XR
             if (_sharedRaycast.HasHit)
             {
                 var visual = _visualManager.GetVisualByCollider(_sharedRaycast.CurrentHit.collider);
-                _selectedNodeId = visual?.Node?.Id;
+                _selectedNodeId = visual?.Node?.NodeId;
             }
             else
             {

@@ -1,8 +1,7 @@
 #nullable enable
 
-using System.Collections.Generic;
 using Rhizomode.SharedKernel;
-using Rhizomode.Graph.Model;
+using Rhizomode.UI.Contracts;
 using UnityEngine.UIElements;
 
 using Rhizomode.NodeCatalog.Contracts;
@@ -12,6 +11,8 @@ namespace Rhizomode.UI
     /// <summary>
     /// <see cref="NodeVisualController"/> の partial: タイトル / カテゴリ / ポート UI の構築。
     /// Phase 9 Round A で本体から分離。
+    /// Round E (E3+E4) で <see cref="INodeView"/> を直接受け取る形に変更し、
+    /// Graph.Model.PortDefinition / PortDirection 依存を撤廃。
     /// </summary>
     public partial class NodeVisualController
     {
@@ -44,7 +45,7 @@ namespace Rhizomode.UI
         /// <summary>
         /// Rector風スロットバーを上部（入力）・下部（出力）に配置する。
         /// </summary>
-        private static void BuildSlotBars(VisualElement root, IReadOnlyList<PortDefinition> ports)
+        private static void BuildSlotBars(VisualElement root, INodeView node)
         {
             var topSlots = root.Q("slot-list-top");
             var bottomSlots = root.Q("slot-list-bottom");
@@ -53,28 +54,29 @@ namespace Rhizomode.UI
             topSlots.Clear();
             bottomSlots.Clear();
 
-            foreach (var port in ports)
-            {
-                var bar = new VisualElement();
-                bar.AddToClassList("port-dot");
-                var typeClass = port.type switch
-                {
-                    ParamType.Float => "port-dot--float",
-                    ParamType.Color => "port-dot--color",
-                    ParamType.Bool => "port-dot--bool",
-                    _ => ""
-                };
-                if (!string.IsNullOrEmpty(typeClass))
-                    bar.AddToClassList(typeClass);
-
-                if (port.direction == PortDirection.Input)
-                    topSlots.Add(bar);
-                else
-                    bottomSlots.Add(bar);
-            }
+            foreach (var port in node.InputPorts)
+                topSlots.Add(CreateSlotBar(port.PortType));
+            foreach (var port in node.OutputPorts)
+                bottomSlots.Add(CreateSlotBar(port.PortType));
         }
 
-        private void BuildPortUI(VisualElement root, IReadOnlyList<PortDefinition> ports)
+        private static VisualElement CreateSlotBar(ParamType portType)
+        {
+            var bar = new VisualElement();
+            bar.AddToClassList("port-dot");
+            var typeClass = portType switch
+            {
+                ParamType.Float => "port-dot--float",
+                ParamType.Color => "port-dot--color",
+                ParamType.Bool => "port-dot--bool",
+                _ => ""
+            };
+            if (!string.IsNullOrEmpty(typeClass))
+                bar.AddToClassList(typeClass);
+            return bar;
+        }
+
+        private void BuildPortUI(VisualElement root, INodeView node)
         {
             var inputContainer = root.Q("input-ports");
             var outputContainer = root.Q("output-ports");
@@ -84,19 +86,21 @@ namespace Rhizomode.UI
             outputContainer.Clear();
             _portElements.Clear();
 
-            foreach (var port in ports)
+            foreach (var port in node.InputPorts)
             {
-                var container = port.direction == PortDirection.Input
-                    ? inputContainer
-                    : outputContainer;
-
                 var portElement = CreatePortElement(port);
-                container.Add(portElement);
-                _portElements[port.name] = portElement;
+                inputContainer.Add(portElement);
+                _portElements[port.PortName] = portElement;
+            }
+            foreach (var port in node.OutputPorts)
+            {
+                var portElement = CreatePortElement(port);
+                outputContainer.Add(portElement);
+                _portElements[port.PortName] = portElement;
             }
         }
 
-        private VisualElement CreatePortElement(PortDefinition port)
+        private VisualElement CreatePortElement(PortViewModel port)
         {
             VisualElement element;
 
@@ -112,13 +116,13 @@ namespace Rhizomode.UI
             // ポート名を設定
             var label = element.Q<Label>("port-label");
             if (label != null)
-                label.text = port.name;
+                label.text = port.PortName;
 
             // ポートの型に応じた色クラスを追加
             var dot = element.Q("port-dot");
             if (dot != null)
             {
-                var typeClass = port.type switch
+                var typeClass = port.PortType switch
                 {
                     ParamType.Float => "port-dot--float",
                     ParamType.Color => "port-dot--color",

@@ -28,6 +28,7 @@ using Rhizomode.Nodes.Modules;
 using Rhizomode.Nodes.Time;
 using Rhizomode.Nodes.Utility;
 using Rhizomode.UI;
+using Rhizomode.UI.Contracts;
 using UnityEngine;
 
 using Rhizomode.NodeCatalog.Contracts;
@@ -297,7 +298,7 @@ namespace Rhizomode.XR
 
             foreach (var r in results)
             {
-                var visual = visualManager.CreateNodeVisual(r.Node, r.SpawnPosition);
+                var visual = visualManager.CreateNodeVisual(new NodeViewAdapter(r.Node), r.SpawnPosition);
                 if (visual != null && controllerInput != null)
                 {
                     var headPos = _activeInput!.HeadPosition;
@@ -353,8 +354,14 @@ namespace Rhizomode.XR
                     BindObject3DProxyObservables(object3DNode);
             }
 
-            // ノードビジュアルを再構築
-            visualManager?.RebuildAllVisuals(ctx);
+            // ノードビジュアルを再構築 (Round E3+E4: INodeView リストに変換して渡す)
+            if (visualManager != null)
+            {
+                var views = new List<INodeView>(ctx.Nodes.Count);
+                foreach (var node in ctx.Nodes.Values)
+                    views.Add(new NodeViewAdapter(node));
+                visualManager.RebuildAllVisuals(views);
+            }
 
             // エッジビジュアルを再構築 (Round E2: EdgeViewModel + ParamType ペアに変換して渡す)
             if (edgeVisualManager != null)
@@ -446,7 +453,7 @@ namespace Rhizomode.XR
             if (spawnResult.Node is Object3DNode obj3d) BindObject3DProxyObservables(obj3d);
 
             // ノード visual を生成 (本クラスの責務、UI 層への副作用)
-            var visual = visualManager.CreateNodeVisual(spawnResult.Node, spawnResult.Position);
+            var visual = visualManager.CreateNodeVisual(new NodeViewAdapter(spawnResult.Node), spawnResult.Position);
             if (visual != null)
                 visual.transform.rotation = Quaternion.LookRotation(spawnResult.Position - headPos);
 
@@ -468,7 +475,7 @@ namespace Rhizomode.XR
             foreach (var r in results)
             {
                 // Source ノード (Const/Toggle) の visual
-                var visual = visualManager.CreateNodeVisual(r.Source, r.SourcePosition);
+                var visual = visualManager.CreateNodeVisual(new NodeViewAdapter(r.Source), r.SourcePosition);
                 if (visual != null)
                     visual.transform.rotation = Quaternion.LookRotation(r.SourcePosition - headPos);
 
@@ -484,7 +491,7 @@ namespace Rhizomode.XR
                 // Trigger ノードがあれば visual + edge visual
                 if (r.TriggerNode != null)
                 {
-                    var triggerVisual = visualManager.CreateNodeVisual(r.TriggerNode, r.TriggerPosition);
+                    var triggerVisual = visualManager.CreateNodeVisual(new NodeViewAdapter(r.TriggerNode), r.TriggerPosition);
                     if (triggerVisual != null)
                         triggerVisual.transform.rotation = Quaternion.LookRotation(r.TriggerPosition - headPos);
 

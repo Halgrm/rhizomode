@@ -1,7 +1,6 @@
 #nullable enable
 
 using Rhizomode.SharedKernel;
-using Rhizomode.Graph.Model;
 using UnityEngine;
 
 namespace Rhizomode.UI
@@ -9,6 +8,7 @@ namespace Rhizomode.UI
     /// <summary>
     /// <see cref="EdgeDragHandler"/> の partial: 出力 / 入力ポートの最近傍探索。
     /// Phase 9 Round D で本体から分離。
+    /// Round E (E3+E4) で INodeView 経由のポート列挙に変更し Graph.Model 依存撤廃。
     /// </summary>
     public partial class EdgeDragHandler
     {
@@ -21,17 +21,15 @@ namespace Rhizomode.UI
             var closestDist = float.MaxValue;
             var closestType = ParamType.Float;
 
-            foreach (var port in nodeVisual.Node.GetPortDefinitions())
+            foreach (var port in nodeVisual.Node.OutputPorts)
             {
-                if (port.direction != PortDirection.Output) continue;
-
-                var portPos = nodeVisual.GetPortWorldPosition(port.name);
+                var portPos = nodeVisual.GetPortWorldPosition(port.PortName);
                 var dist = Vector3.Distance(portPos, hitPoint);
                 if (dist < closestDist)
                 {
                     closestDist = dist;
-                    closestPort = port.name;
-                    closestType = port.type;
+                    closestPort = port.PortName;
+                    closestType = port.PortType;
                 }
             }
 
@@ -51,18 +49,17 @@ namespace Rhizomode.UI
             var closestDist = float.MaxValue;
             var closestType = ParamType.Float;
 
-            foreach (var port in nodeVisual.Node.GetPortDefinitions())
+            foreach (var port in nodeVisual.Node.InputPorts)
             {
-                if (port.direction != PortDirection.Input) continue;
-                if (port.type != _sourceParamType) continue;
+                if (port.PortType != _sourceParamType) continue;
 
-                var portPos = nodeVisual.GetPortWorldPosition(port.name);
+                var portPos = nodeVisual.GetPortWorldPosition(port.PortName);
                 var dist = Vector3.Distance(portPos, hitPoint);
                 if (dist < closestDist)
                 {
                     closestDist = dist;
-                    closestPort = port.name;
-                    closestType = port.type;
+                    closestPort = port.PortName;
+                    closestType = port.PortType;
                 }
             }
 

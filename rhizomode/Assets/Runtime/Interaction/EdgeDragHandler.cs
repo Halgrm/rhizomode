@@ -176,7 +176,7 @@ namespace Rhizomode.UI
             var (portName, paramType) = FindNearestOutputPort(nodeVisual, hit.point);
             if (portName == null) return;
 
-            _sourceNodeId = nodeVisual.Node.Id;
+            _sourceNodeId = nodeVisual.Node.NodeId;
             _sourcePortName = portName;
             _sourceParamType = paramType;
             _state = EdgeConnectionState.SourceSelected;
@@ -214,7 +214,7 @@ namespace Rhizomode.UI
             }
 
             // 同じノードをクリック → キャンセル
-            if (nodeVisual.Node.Id == _sourceNodeId)
+            if (nodeVisual.Node.NodeId == _sourceNodeId)
             {
                 Cancel();
                 return;
@@ -229,7 +229,7 @@ namespace Rhizomode.UI
             }
 
             // 接続実行
-            TryConnect(nodeVisual.Node.Id, targetPort);
+            TryConnect(nodeVisual.Node.NodeId, targetPort);
             ResetState();
         }
 
