@@ -7,12 +7,14 @@ using Rhizomode.Graph.Model;
 using Rhizomode.Graph.Serialization;
 using UnityEngine;
 
+using Rhizomode.NodeCatalog.Contracts;
 namespace Rhizomode.Nodes.Generators
 {
     /// <summary>
     /// Perlinノイズによる連続的なランダム値を生成するノード。
     /// インスタンスごとに異なるシードを使用し、複数ノードで異なる出力を保証。
     /// </summary>
+    [NodeType("Noise", "Noise", NodeCategory.Time)]
     public class NoiseNode : NodeBase
     {
         private const float DefaultSpeed = 1f;

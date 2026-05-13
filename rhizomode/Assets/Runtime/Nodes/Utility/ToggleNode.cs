@@ -4,11 +4,13 @@ using R3;
 using Rhizomode.SharedKernel;
 using Rhizomode.Graph.Model;
 
+using Rhizomode.NodeCatalog.Contracts;
 namespace Rhizomode.Nodes.Utility
 {
     /// <summary>
     /// boolトリガーの立ち上がりごとにtrue/falseをトグル出力する。
     /// </summary>
+    [NodeType("Toggle", "Toggle", NodeCategory.Utility)]
     public class ToggleNode : NodeBase
     {
         private readonly OutputPort<bool> _stateOut;

@@ -3,12 +3,14 @@
 using Rhizomode.SharedKernel;
 using Rhizomode.Graph.Model;
 
+using Rhizomode.NodeCatalog.Contracts;
 namespace Rhizomode.Nodes.Audio
 {
     /// <summary>
     /// LASP フィルタベースの帯域レベル (Level/Low/Mid/High) を出力する。
     /// AudioDriverBehaviour が毎フレーム SetBandLevels() で値を注入する。
     /// </summary>
+    [NodeType("AudioBand", "Audio Band", NodeCategory.Input)]
     public class AudioBandNode : NodeBase
     {
         private readonly OutputPort<float> _levelOut;

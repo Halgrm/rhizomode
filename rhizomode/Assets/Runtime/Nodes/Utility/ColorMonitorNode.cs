@@ -5,11 +5,13 @@ using Rhizomode.SharedKernel;
 using Rhizomode.Graph.Model;
 using UnityEngine;
 
+using Rhizomode.NodeCatalog.Contracts;
 namespace Rhizomode.Nodes.Utility
 {
     /// <summary>
     /// Color入力値をリアルタイム表示するモニターノード。色スウォッチ付き。
     /// </summary>
+    [NodeType("ColorMonitor", "Color Monitor", NodeCategory.Utility)]
     public class ColorMonitorNode : NodeBase, IInlineMonitor
     {
         private Color _value = Color.black;

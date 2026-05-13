@@ -8,12 +8,14 @@ using Rhizomode.Graph.Serialization;
 using Rhizomode.Ableton.Transport;
 using UnityEngine;
 
+using Rhizomode.NodeCatalog.Contracts;
 namespace Rhizomode.Nodes.Ableton
 {
     /// <summary>
     /// Abletonの指定トラックの音量を読み書きするノード。
     /// trackIndexで対象トラックを指定。入力ポートVolume接続時は双方向制御。
     /// </summary>
+    [NodeType("AbletonTrackVolume", "Ableton Track Volume", NodeCategory.Input)]
     public class AbletonTrackVolumeNode : NodeBase
     {
         private const int DefaultTrackIndex = 0;

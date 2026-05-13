@@ -7,12 +7,14 @@ using Rhizomode.Graph.Model;
 using Rhizomode.Ableton.Transport;
 using UnityEngine;
 
+using Rhizomode.NodeCatalog.Contracts;
 namespace Rhizomode.Nodes.Ableton
 {
     /// <summary>
     /// Abletonのトランスポート状態を出力するノード。
     /// IsPlaying: 再生中かどうか(bool)。SongTime: 現在の曲時間(float, beats)。
     /// </summary>
+    [NodeType("AbletonTransport", "Ableton Transport", NodeCategory.Input)]
     public class AbletonTransportNode : NodeBase
     {
         private readonly OutputPort<bool> _isPlayingOut;

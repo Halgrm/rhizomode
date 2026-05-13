@@ -5,11 +5,13 @@ using Rhizomode.SharedKernel;
 using Rhizomode.Graph.Model;
 using UnityEngine;
 
+using Rhizomode.NodeCatalog.Contracts;
 namespace Rhizomode.Nodes.Time
 {
     /// <summary>
     /// 毎フレームTime.timeを出力する時間ソースノード。
     /// </summary>
+    [NodeType("Time", "Time", NodeCategory.Time)]
     public class TimeNode : NodeBase
     {
         private readonly OutputPort<float> _timeOut;

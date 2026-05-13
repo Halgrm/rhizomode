@@ -8,12 +8,14 @@ using Rhizomode.Graph.Serialization;
 using Rhizomode.OscMidi.Transport;
 using UnityEngine;
 
+using Rhizomode.NodeCatalog.Contracts;
 namespace Rhizomode.Nodes.OscMidi
 {
     /// <summary>
     /// 指定MIDI CC番号の値を受信してfloat出力するノード（0-1正規化済み）。
     /// MidiServerシングルトンのObservableを購読する。
     /// </summary>
+    [NodeType("MidiCC", "MIDI CC", NodeCategory.Input)]
     public class MidiCCNode : NodeBase
     {
         private const int DefaultCCNumber = 1;

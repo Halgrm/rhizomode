@@ -7,12 +7,14 @@ using Rhizomode.Graph.Model;
 using Rhizomode.Graph.Serialization;
 using UnityEngine;
 
+using Rhizomode.NodeCatalog.Contracts;
 namespace Rhizomode.Nodes.Time
 {
     /// <summary>
     /// リセット可能なタイマーノード。経過秒数と周期的位相(0-1)を出力する。
     /// Resetの立ち上がりエッジでタイマーをリセットする。
     /// </summary>
+    [NodeType("Timer", "Timer", NodeCategory.Time)]
     public class TimerNode : NodeBase
     {
         private const float DefaultDuration = 1f;

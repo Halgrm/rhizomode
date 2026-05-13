@@ -5,12 +5,14 @@ using Rhizomode.SharedKernel;
 using Rhizomode.Graph.Model;
 using UnityEngine;
 
+using Rhizomode.NodeCatalog.Contracts;
 namespace Rhizomode.Nodes.Audio
 {
     /// <summary>
     /// オーディオスペクトルをノードパネル内にバー表示するモニターノード。
     /// AudioDriverBehaviour が毎フレームスペクトルデータを注入する。
     /// </summary>
+    [NodeType("SpectrumMonitor", "Spectrum Monitor", NodeCategory.Utility)]
     public class SpectrumMonitorNode : NodeBase, IInlineSpectrum
     {
         private const int BufferSize = 64;

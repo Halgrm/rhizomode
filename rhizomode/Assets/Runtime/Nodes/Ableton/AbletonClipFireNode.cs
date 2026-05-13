@@ -8,6 +8,7 @@ using Rhizomode.Graph.Serialization;
 using Rhizomode.Ableton.Transport;
 using UnityEngine;
 
+using Rhizomode.NodeCatalog.Contracts;
 namespace Rhizomode.Nodes.Ableton
 {
     /// <summary>
@@ -15,6 +16,7 @@ namespace Rhizomode.Nodes.Ableton
     /// Track(Float)とScene(Float)入力ポートで対象クリップを動的に指定可能。
     /// Trigger入力のrising edgeでfire送信。
     /// </summary>
+    [NodeType("AbletonClipFire", "Ableton Clip Fire", NodeCategory.Input)]
     public class AbletonClipFireNode : NodeBase
     {
         private const int DefaultTrackIndex = 0;

@@ -7,12 +7,14 @@ using Rhizomode.Graph.Model;
 using Rhizomode.Graph.Serialization;
 using UnityEngine;
 
+using Rhizomode.NodeCatalog.Contracts;
 namespace Rhizomode.Nodes.Time
 {
     /// <summary>
     /// 入力値を指定秒数だけ遅延して出力するノード。
     /// 循環バッファにタイムスタンプ付きで値を記録し、過去の値を再生する。
     /// </summary>
+    [NodeType("Delay", "Delay", NodeCategory.Time)]
     public class DelayNode : NodeBase
     {
         private const float DefaultDelayTime = 0.5f;

@@ -5,11 +5,13 @@ using Rhizomode.SharedKernel;
 using Rhizomode.Graph.Model;
 using UnityEngine;
 
+using Rhizomode.NodeCatalog.Contracts;
 namespace Rhizomode.Nodes.Utility
 {
     /// <summary>
     /// Color入力をH/S/V/Aに変換して出力する。RGB→HSV変換にはUnityEngine.Color.RGBToHSVを使用。
     /// </summary>
+    [NodeType("ColorToHSV", "Color To HSV", NodeCategory.Utility)]
     public class ColorToHSVNode : NodeBase
     {
         private readonly OutputPort<float> _hOut;

@@ -7,12 +7,14 @@ using Rhizomode.Graph.Model;
 using Rhizomode.Graph.Serialization;
 using UnityEngine;
 
+using Rhizomode.NodeCatalog.Contracts;
 namespace Rhizomode.Nodes.Generators
 {
     /// <summary>
     /// 周期的波形を生成するノード。Sin/Saw/Square/Triangleの4モード切替対応。
     /// 位相アキュムレータ方式で周波数変更時の不連続を防止。
     /// </summary>
+    [NodeType("LFO", "LFO", NodeCategory.Time)]
     public class LfoNode : NodeBase, IInlineButton
     {
         private const float DefaultFrequency = 1f;

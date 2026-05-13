@@ -3,6 +3,7 @@
     "rootNamespace": "Rhizomode.Nodes.Scene",
     "references": [
         "Rhizomode.SharedKernel",
+        "Rhizomode.NodeCatalog.Contracts",
         "Rhizomode.Graph.Model",
         "Rhizomode.Graph.Serialization",
         "Rhizomode.Scene.Contracts",

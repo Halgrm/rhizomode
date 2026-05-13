@@ -5,11 +5,13 @@ using Rhizomode.SharedKernel;
 using Rhizomode.Graph.Model;
 using UnityEngine;
 
+using Rhizomode.NodeCatalog.Contracts;
 namespace Rhizomode.Nodes.Utility
 {
     /// <summary>
     /// Color入力をR/G/B/Aの4つのfloat値に分解して出力する。
     /// </summary>
+    [NodeType("ColorToFloats", "Color To Floats", NodeCategory.Utility)]
     public class ColorToFloatsNode : NodeBase
     {
         private readonly OutputPort<float> _rOut;

@@ -4,11 +4,13 @@ using R3;
 using Rhizomode.SharedKernel;
 using Rhizomode.Graph.Model;
 
+using Rhizomode.NodeCatalog.Contracts;
 namespace Rhizomode.Nodes.Math
 {
     /// <summary>
     /// 2つのfloat入力を乗算して出力する。
     /// </summary>
+    [NodeType("Multiply", "Multiply", NodeCategory.Math)]
     public class MultiplyNode : NodeBase
     {
         private readonly OutputPort<float> _resultOut;

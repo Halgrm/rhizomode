@@ -8,6 +8,7 @@ using Rhizomode.Graph.Serialization;
 using Rhizomode.Scene.Contracts;
 using UnityEngine;
 
+using Rhizomode.NodeCatalog.Contracts;
 namespace Rhizomode.Nodes.Scene
 {
     /// <summary>
@@ -15,6 +16,7 @@ namespace Rhizomode.Nodes.Scene
     /// Rectorの BGSceneManager パターンに相当。ベースシーンは常に残り、
     /// 追加シーンだけが入れ替わる。
     /// </summary>
+    [NodeType("SceneSwitch", "Scene Switch", NodeCategory.Scene)]
     public class SceneSwitchNode : NodeBase
     {
         private ISceneLoader? _loader;

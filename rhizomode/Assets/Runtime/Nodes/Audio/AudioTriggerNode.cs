@@ -4,12 +4,14 @@ using R3;
 using Rhizomode.SharedKernel;
 using Rhizomode.Graph.Model;
 
+using Rhizomode.NodeCatalog.Contracts;
 namespace Rhizomode.Nodes.Audio
 {
     /// <summary>
     /// 指定周波数帯のオーディオレベルを監視し、閾値超過でトリガーを発行する。
     /// AudioAnalyzer（Week 4後半）から毎フレーム駆動される想定。
     /// </summary>
+    [NodeType("AudioTrigger", "Audio Trigger", NodeCategory.Input)]
     public class AudioTriggerNode : NodeBase
     {
         private const float DefaultFreqMin = 60f;

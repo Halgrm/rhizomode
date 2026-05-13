@@ -6,12 +6,14 @@ using Rhizomode.Graph.Model;
 using Rhizomode.Graph.Serialization;
 using UnityEngine;
 
+using Rhizomode.NodeCatalog.Contracts;
 namespace Rhizomode.Nodes.Input
 {
     /// <summary>
     /// 固定float値を出力するノード。スライダーUI内蔵。
     /// レンジプリセットをボタンでサイクル切替可能。
     /// </summary>
+    [NodeType("ConstFloat", "Const Float", NodeCategory.Input)]
     public class ConstFloatNode : NodeBase, IInlineSlider, IInlineButton
     {
         private static readonly (float min, float max)[] RangePresets =

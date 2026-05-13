@@ -4,11 +4,13 @@ using R3;
 using Rhizomode.SharedKernel;
 using Rhizomode.Graph.Model;
 
+using Rhizomode.NodeCatalog.Contracts;
 namespace Rhizomode.Nodes.Utility
 {
     /// <summary>
     /// float入力が閾値以上ならtrue、未満ならfalseを出力するゲートノード。
     /// </summary>
+    [NodeType("Threshold", "Threshold", NodeCategory.Utility)]
     public class ThresholdNode : NodeBase
     {
         private const float DefaultThreshold = 0.5f;

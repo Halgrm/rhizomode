@@ -6,11 +6,13 @@ using Rhizomode.Graph.Model;
 using Rhizomode.Graph.Serialization;
 using UnityEngine;
 
+using Rhizomode.NodeCatalog.Contracts;
 namespace Rhizomode.Nodes.Input
 {
     /// <summary>
     /// 固定Color値を出力するノード。HSVカラーピッカーUI内蔵。
     /// </summary>
+    [NodeType("ConstColor", "Const Color", NodeCategory.Input)]
     public class ConstColorNode : NodeBase, IInlineColorPicker
     {
         private static readonly Color DefaultColor = Color.white;

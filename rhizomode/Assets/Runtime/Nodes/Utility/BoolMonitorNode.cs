@@ -5,11 +5,13 @@ using Rhizomode.SharedKernel;
 using Rhizomode.Graph.Model;
 using UnityEngine;
 
+using Rhizomode.NodeCatalog.Contracts;
 namespace Rhizomode.Nodes.Utility
 {
     /// <summary>
     /// Bool入力値をリアルタイム表示するモニターノード。
     /// </summary>
+    [NodeType("BoolMonitor", "Bool Monitor", NodeCategory.Utility)]
     public class BoolMonitorNode : NodeBase, IInlineMonitor
     {
         private bool _value;

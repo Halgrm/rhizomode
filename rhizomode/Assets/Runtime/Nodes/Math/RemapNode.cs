@@ -5,12 +5,14 @@ using Rhizomode.SharedKernel;
 using Rhizomode.Graph.Model;
 using UnityEngine;
 
+using Rhizomode.NodeCatalog.Contracts;
 namespace Rhizomode.Nodes.Math
 {
     /// <summary>
     /// 入力値を[InMin,InMax]から[OutMin,OutMax]へ線形リマップする。
     /// クランプなし（範囲外の外挿を許可）。
     /// </summary>
+    [NodeType("Remap", "Remap", NodeCategory.Math)]
     public class RemapNode : NodeBase
     {
         private readonly OutputPort<float> _resultOut;

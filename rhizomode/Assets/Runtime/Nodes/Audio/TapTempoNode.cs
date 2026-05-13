@@ -5,12 +5,14 @@ using Rhizomode.SharedKernel;
 using Rhizomode.Graph.Model;
 using UnityEngine;
 
+using Rhizomode.NodeCatalog.Contracts;
 namespace Rhizomode.Nodes.Audio
 {
     /// <summary>
     /// コントローラーのタップからBPMを推定する。外部からTap()を呼ぶことで駆動。
     /// BeatDetectorNodeと同じPhase/Beat出力を持つ。
     /// </summary>
+    [NodeType("TapTempo", "Tap Tempo", NodeCategory.Input)]
     public class TapTempoNode : NodeBase, IInlineButton
     {
         private const float DefaultBPM = 120f;

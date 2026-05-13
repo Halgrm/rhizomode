@@ -3,6 +3,7 @@
     "rootNamespace": "Rhizomode.Nodes.Ableton",
     "references": [
         "Rhizomode.SharedKernel",
+        "Rhizomode.NodeCatalog.Contracts",
         "Rhizomode.Graph.Model",
         "Rhizomode.Graph.Serialization",
         "Rhizomode.Ableton.Contracts",

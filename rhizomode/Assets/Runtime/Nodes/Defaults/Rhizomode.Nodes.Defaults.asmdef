@@ -1,22 +1,17 @@
 {
-    "name": "Rhizomode.Nodes.OscMidi",
-    "rootNamespace": "Rhizomode.Nodes.OscMidi",
+    "name": "Rhizomode.Nodes.Defaults",
+    "rootNamespace": "Rhizomode.Nodes.Defaults",
     "references": [
         "Rhizomode.SharedKernel",
         "Rhizomode.NodeCatalog.Contracts",
         "Rhizomode.Graph.Model",
-        "Rhizomode.Graph.Serialization",
-        "Rhizomode.OscMidi.Contracts",
-        "Rhizomode.OscMidi.Transport",
-        "R3.Unity"
+        "Rhizomode.Graph.Runtime"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
     "allowUnsafeCode": false,
-    "overrideReferences": true,
-    "precompiledReferences": [
-        "R3.dll"
-    ],
+    "overrideReferences": false,
+    "precompiledReferences": [],
     "autoReferenced": true,
     "defineConstraints": [],
     "versionDefines": [],

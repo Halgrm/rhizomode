@@ -7,12 +7,14 @@ using Rhizomode.Graph.Model;
 using Rhizomode.Ableton.Transport;
 using UnityEngine;
 
+using Rhizomode.NodeCatalog.Contracts;
 namespace Rhizomode.Nodes.Ableton
 {
     /// <summary>
     /// AbletonのテンポとビートをリアルタイムでFloat出力するノード。
     /// BPM: テンポ値そのまま。Beat: 拍番号（Remap等で正規化して使用）。
     /// </summary>
+    [NodeType("AbletonTempo", "Ableton Tempo", NodeCategory.Input)]
     public class AbletonTempoNode : NodeBase
     {
         private readonly OutputPort<float> _bpmOut;

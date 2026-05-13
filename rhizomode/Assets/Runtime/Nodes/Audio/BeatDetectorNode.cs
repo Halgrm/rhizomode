@@ -5,12 +5,14 @@ using Rhizomode.SharedKernel;
 using Rhizomode.Graph.Model;
 using UnityEngine;
 
+using Rhizomode.NodeCatalog.Contracts;
 namespace Rhizomode.Nodes.Audio
 {
     /// <summary>
     /// トリガー入力からBPMを推定し、Phase(0〜1)とBeatパルスを出力する。
     /// 直近のトリガー間隔からBPMを計算するシンプルな実装。
     /// </summary>
+    [NodeType("BeatDetector", "Beat Detector", NodeCategory.Input)]
     public class BeatDetectorNode : NodeBase
     {
         private const float DefaultBPM = 120f;

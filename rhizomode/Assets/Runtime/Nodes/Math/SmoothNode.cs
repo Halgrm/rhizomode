@@ -7,12 +7,14 @@ using Rhizomode.Graph.Model;
 using Rhizomode.Graph.Serialization;
 using UnityEngine;
 
+using Rhizomode.NodeCatalog.Contracts;
 namespace Rhizomode.Nodes.Math
 {
     /// <summary>
     /// 入力値をスムージングして出力する。Damping値で追従速度を制御。
     /// Lerp / EaseOut の2モード切替対応。
     /// </summary>
+    [NodeType("Smooth", "Smooth", NodeCategory.Math)]
     public class SmoothNode : NodeBase, IInlineButton
     {
         private const float DefaultDamping = 0.1f;

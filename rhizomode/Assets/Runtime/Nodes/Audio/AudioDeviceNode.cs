@@ -6,6 +6,7 @@ using Rhizomode.Graph.Model;
 using Rhizomode.Graph.Serialization;
 using UnityEngine;
 
+using Rhizomode.NodeCatalog.Contracts;
 namespace Rhizomode.Nodes.Audio
 {
     /// <summary>
@@ -13,6 +14,7 @@ namespace Rhizomode.Nodes.Audio
     /// IInlineButtonでデバイスを切り替え、選択中のデバイス名を出力する。
     /// AudioDriverBehaviourが毎フレームこのノードを検出し、AudioAnalyzerのデバイス切り替えを実行する。
     /// </summary>
+    [NodeType("AudioDevice", "Audio Device", NodeCategory.Input)]
     public class AudioDeviceNode : NodeBase, IInlineButton
     {
         private readonly OutputPort<float> _indexOut;

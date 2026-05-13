@@ -5,12 +5,14 @@ using Rhizomode.SharedKernel;
 using Rhizomode.Graph.Model;
 using UnityEngine;
 
+using Rhizomode.NodeCatalog.Contracts;
 namespace Rhizomode.Nodes.Audio
 {
     /// <summary>
     /// オーディオ入力の波形をリアルタイム表示するモニターノード。
     /// AudioDriverBehaviourが毎フレームスペクトルデータを注入する。
     /// </summary>
+    [NodeType("AudioMonitor", "Audio Monitor", NodeCategory.Utility)]
     public class AudioMonitorNode : NodeBase, IInlineWaveform
     {
         private const int BufferSize = 64;

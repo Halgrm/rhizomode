@@ -3,6 +3,7 @@
     "rootNamespace": "Rhizomode.Nodes.Audio",
     "references": [
         "Rhizomode.SharedKernel",
+        "Rhizomode.NodeCatalog.Contracts",
         "Rhizomode.Graph.Model",
         "Rhizomode.Graph.Serialization",
         "Rhizomode.Audio.Contracts",

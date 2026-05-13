@@ -4,11 +4,13 @@ using R3;
 using Rhizomode.SharedKernel;
 using Rhizomode.Graph.Model;
 
+using Rhizomode.NodeCatalog.Contracts;
 namespace Rhizomode.Nodes.Input
 {
     /// <summary>
     /// ボタン押下で1フレームだけtrueを発行するトリガーノード。
     /// </summary>
+    [NodeType("Trigger", "Trigger", NodeCategory.Input)]
     public class TriggerNode : NodeBase, IInlineButton
     {
         private readonly OutputPort<bool> _triggerOut;

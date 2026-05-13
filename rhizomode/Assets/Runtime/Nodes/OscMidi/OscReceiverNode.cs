@@ -8,12 +8,14 @@ using Rhizomode.Graph.Serialization;
 using Rhizomode.OscMidi.Transport;
 using UnityEngine;
 
+using Rhizomode.NodeCatalog.Contracts;
 namespace Rhizomode.Nodes.OscMidi
 {
     /// <summary>
     /// 指定OSCアドレスの値を受信してfloat出力するノード。
     /// OscServerシングルトンのObservableを購読する。
     /// </summary>
+    [NodeType("OscReceiver", "OSC Receiver", NodeCategory.Input)]
     public class OscReceiverNode : NodeBase
     {
         private const string DefaultAddress = "/1/fader1";
