@@ -59,16 +59,15 @@ namespace Rhizomode.Graph.Runtime
         /// </summary>
         /// <remarks>
         /// Plan v5.3 Phase 6 Round C: <see cref="HydrationPlanExecutor"/> から呼ばれる。
-        /// 現状は <see cref="GraphState.TryConnect"/> (legacy) を経由 — edge ID は自動生成 GUID。
-        /// Phase 7 で GraphState に id 指定可能 API を追加し、ここで supplied <paramref name="edgeId"/>
-        /// を honor する設計に切替予定。それまでは supplied id は <see cref="GraphEventBus.EmitEdgeAdded"/>
-        /// の通知 id としてのみ使われる (Snapshot/Undo 整合性のため呼び出し側は元 id を保持)。
+        /// Phase 8 Codex Axis A fix (`b265df1e` 以降): <see cref="GraphState.TryConnect"/> に optional
+        /// edgeId 引数を追加。supplied <paramref name="edgeId"/> を実 edge ID として保持できるため、
+        /// hydration 経路で snapshot/serialization 上の元 id が維持される。projector や Undo の
+        /// edge identity が round-trip で保証される。
         /// </remarks>
         public bool AddEdge(string edgeId, string fromNode, string fromPort, string toNode, string toPort)
         {
-            // Phase 8: GraphState.TryConnect は internal 化。Graph.Runtime は
-            // InternalsVisibleTo 経由でアクセス。Phase 7 で id 指定可能 API に切替予定 (未完了)。
-            var success = _state.TryConnect(fromNode, fromPort, toNode, toPort);
+            // Phase 8 Codex Axis A fix: edgeId を GraphState に渡して edge ID を保持。
+            var success = _state.TryConnect(fromNode, fromPort, toNode, toPort, edgeId);
             if (success)
             {
                 _eventBus.EmitEdgeAdded(edgeId);
