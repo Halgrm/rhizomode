@@ -2,7 +2,7 @@
 
 using Rhizomode.SharedKernel;
 
-namespace Rhizomode.Graph.Model
+namespace Rhizomode.UI.Contracts
 {
     /// <summary>
     /// ノードパネル内に波形表示を描画するためのインターフェース。
