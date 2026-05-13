@@ -29,12 +29,11 @@ namespace Rhizomode.Graph.Mutation
         /// <summary>
         /// メインスレッドからのみ呼び出すこと。queue にある全コマンドを順次 dispatch する。
         /// </summary>
-        public void Tick(System.Func<IGraphCommand, Snapshot.GraphSnapshot> snapshotProvider,
-                         System.Action<IGraphCommand> apply)
+        public void Tick()
         {
             while (_queue.TryDequeue(out var command))
             {
-                _dispatcher.Execute(command, snapshotProvider(command), apply);
+                _dispatcher.Execute(command);
             }
         }
     }
