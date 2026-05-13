@@ -7,6 +7,8 @@ using R3;
 using Rhizomode.Audio.Analysis;
 using Rhizomode.Audio.GraphAdapter;
 using Rhizomode.Cameras;
+using Rhizomode.Graph.Serialization;
+using Rhizomode.Persistence.Json;
 using Rhizomode.Scene.GraphAdapter;
 using Rhizomode.SharedKernel;
 using Rhizomode.Graph.Model;
@@ -134,6 +136,12 @@ namespace Rhizomode.XR
         /// 移行したら本フィールドは削除される。
         /// </summary>
         private Rhizomode.Graph.Events.GraphEventBus? _phase5EventBus;
+
+        /// <summary>
+        /// Phase 7 Round B: GraphSaveLoadManager + WireIntentSink で共有する Composite factory。
+        /// Awake 後の最初の呼び出し時に lazy 構築。Phase 8 で VContainer Installer に移行予定。
+        /// </summary>
+        private Rhizomode.Graph.CatalogBridge.INodeFactory? _sharedFactory;
 
         /// <summary>
         /// Phase 6 Round A: Module/Object3D の Prefab instantiation + IPerformanceModule 注入を
@@ -445,6 +453,10 @@ namespace Rhizomode.XR
             if (graphSaveLoad != null && graphContext != null)
             {
                 graphSaveLoad.Initialize(graphContext);
+
+                // Phase 7 Round B: Persistence + Serialization の依存を注入。
+                // factory / eventBus / nodeRuntime / executor を構築する (WireIntentSink でも使う)。
+                ConfigureSaveLoad();
 
                 // ロード完了後にノード・エッジビジュアルを再構築
                 graphSaveLoad.OnGraphLoaded += OnGraphLoaded;
@@ -1031,18 +1043,9 @@ namespace Rhizomode.XR
         {
             if (graphContext == null) return;
 
-            // 静的 + 動的 factory を合成して Dispatcher に渡す。Round E では Connect/Disconnect/Remove の
-            // 3 種だけ使うため、factory は静的のみで十分 (AddNode は Round F で SceneTrigger/Module 動的
-            // factory を追加してから接続)。
-            var scanner = new Rhizomode.NodeCatalog.Runtime.NodeTypeAttributeScanner();
-            var staticFactory = new Rhizomode.NodeCatalog.Runtime.AttributeScannerNodeFactory(scanner.Scan());
-            var composite = new Rhizomode.NodeCatalog.Runtime.CompositeNodeFactory(
-                new Rhizomode.Graph.CatalogBridge.INodeFactory[] { staticFactory });
-
-            // EventBus は Subject<T> 5 件を保持するため field に保管し OnDestroy で Dispose する。
-            _phase5EventBus = new Rhizomode.Graph.Events.GraphEventBus();
+            EnsureSharedFactoryAndEventBus();
             var applier = new Rhizomode.Graph.Mutation.GraphMutationApplier(
-                graphContext.Context, composite, _phase5EventBus);
+                graphContext.Context, _sharedFactory!, _phase5EventBus!);
             var dispatcher = new Rhizomode.Graph.Mutation.GraphCommandDispatcher(applier);
             var translator = new Rhizomode.Interaction.GraphAdapter.SpatialIntentToCommandTranslator(dispatcher);
 
@@ -1051,6 +1054,44 @@ namespace Rhizomode.XR
             nodeDeleteHandler?.SetIntentSink(translator);
 
             Debug.Log("[GameBootstrap] Phase 5 Round E: IntentSink wired up for 3 handlers.");
+        }
+
+        /// <summary>
+        /// Phase 7 Round B: factory + EventBus を遅延生成 (WireIntentSink と ConfigureSaveLoad で共有)。
+        /// </summary>
+        private void EnsureSharedFactoryAndEventBus()
+        {
+            if (_sharedFactory == null)
+            {
+                var scanner = new Rhizomode.NodeCatalog.Runtime.NodeTypeAttributeScanner();
+                var staticFactory = new Rhizomode.NodeCatalog.Runtime.AttributeScannerNodeFactory(scanner.Scan());
+                _sharedFactory = new Rhizomode.NodeCatalog.Runtime.CompositeNodeFactory(
+                    new Rhizomode.Graph.CatalogBridge.INodeFactory[] { staticFactory });
+            }
+            if (_phase5EventBus == null)
+            {
+                _phase5EventBus = new Rhizomode.Graph.Events.GraphEventBus();
+            }
+        }
+
+        /// <summary>
+        /// Phase 7 Round B: GraphSaveLoadManager に Persistence + Hydrator + Executor + Factory を注入。
+        /// </summary>
+        private void ConfigureSaveLoad()
+        {
+            if (graphSaveLoad == null || graphContext == null) return;
+
+            EnsureSharedFactoryAndEventBus();
+
+            var pathProvider = new JsonSavePathProvider();
+            var repository = new JsonGraphRepository(pathProvider);
+            var hydrator = new GraphHydrator();
+            var nodeRuntime = new NodeRuntime(graphContext.Context, _phase5EventBus!);
+            var executor = new HydrationPlanExecutor(nodeRuntime);
+
+            graphSaveLoad.Configure(repository, hydrator, executor, _sharedFactory!, pathProvider);
+
+            Debug.Log("[GameBootstrap] Phase 7: SaveLoad configured (Repository + Hydrator + Executor).");
         }
 
         private void OnGraphLoaded()

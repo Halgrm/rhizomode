@@ -30,6 +30,8 @@
         "Rhizomode.Scene.Contracts",
         "Rhizomode.Scene.Runtime",
         "Rhizomode.Scene.GraphAdapter",
+        "Rhizomode.Persistence.Contracts",
+        "Rhizomode.Persistence.Json",
         "Rhizomode.Audio.Analysis",
         "Rhizomode.Audio.GraphAdapter",
         "Rhizomode.Ableton.Transport",
