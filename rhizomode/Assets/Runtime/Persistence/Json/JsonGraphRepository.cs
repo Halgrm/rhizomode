@@ -36,7 +36,9 @@ namespace Rhizomode.Persistence.Json
             try
             {
                 if (!Directory.Exists(_pathProvider.SaveDirectoryPath)) return;
-                var orphans = Directory.GetFiles(_pathProvider.SaveDirectoryPath, "*.tmp-*");
+                // Codex loop 5 fix: pattern を *.json.tmp-* に絞り、ユーザーがたまたま
+                // ".tmp-" を含むファイル名を作っても誤削除しないようにする。
+                var orphans = Directory.GetFiles(_pathProvider.SaveDirectoryPath, "*.json.tmp-*");
                 foreach (var f in orphans)
                 {
                     try { File.Delete(f); }
