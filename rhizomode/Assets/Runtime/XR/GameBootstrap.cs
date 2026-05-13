@@ -1041,7 +1041,7 @@ namespace Rhizomode.XR
                 nodeDeleteHandler.Initialize(
                     input, sharedRaycastService, visualManager,
                     graphContext, edgeVisualManager);
-                nodeDeleteHandler.SetDeleteDependencies(edgeDragHandler, this);
+                nodeDeleteHandler.SetDeleteDependencies(edgeDragHandler, DestroyModuleInstance);
             }
 
             if (nodeGrabHandler != null && visualManager != null &&

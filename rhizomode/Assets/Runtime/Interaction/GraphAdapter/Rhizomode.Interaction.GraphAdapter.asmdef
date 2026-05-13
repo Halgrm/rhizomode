@@ -1,14 +1,9 @@
 {
-    "name": "Rhizomode.Audio.GraphAdapter",
-    "rootNamespace": "Rhizomode.Audio.GraphAdapter",
+    "name": "Rhizomode.Interaction.GraphAdapter",
+    "rootNamespace": "Rhizomode.Interaction.GraphAdapter",
     "references": [
         "Rhizomode.SharedKernel",
-        "Rhizomode.Audio.Contracts",
-        "Rhizomode.Audio.Analysis",
-        "Rhizomode.Graph.Model",
-        "Rhizomode.Nodes.Audio",
-        "Rhizomode.UI",
-        "Rhizomode.UI.Presentation"
+        "Rhizomode.Interaction.Contracts"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

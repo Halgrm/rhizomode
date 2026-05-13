@@ -1,15 +1,21 @@
 {
-    "name": "Rhizomode.UI",
+    "name": "Rhizomode.UI.GraphAdapter",
     "rootNamespace": "Rhizomode.UI",
     "references": [
         "Rhizomode.SharedKernel",
+        "Rhizomode.UI",
+        "Rhizomode.UI.Contracts",
+        "Rhizomode.UI.Presentation",
         "Rhizomode.NodeCatalog.Contracts",
         "Rhizomode.NodeCatalog.Runtime",
         "Rhizomode.Input.Contracts",
         "Rhizomode.Graph.Model",
         "Rhizomode.Graph.Serialization",
+        "Rhizomode.Cameras",
+        "Unity.Cinemachine",
         "R3.Unity",
-        "Unity.InputSystem"
+        "Unity.InputSystem",
+        "Unity.TextMeshPro"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

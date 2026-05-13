@@ -22,7 +22,7 @@ namespace Rhizomode.XR
         private GraphContextBehaviour? _graphContext;
         private EdgeVisualManager? _edgeVisualManager;
         private EdgeDragHandler? _edgeDragHandler;
-        private GameBootstrap? _gameBootstrap;
+        private Action<string>? _destroyModuleAction;
         private IDisposable? _deleteSubscription;
 
         private string? _selectedNodeId;
@@ -57,12 +57,12 @@ namespace Rhizomode.XR
         }
 
         /// <summary>
-        /// EdgeDragHandlerとGameBootstrapの参照を設定する（ノード削除時の連携用）。
+        /// EdgeDragHandlerとモジュール破棄コールバックを設定する（ノード削除時の連携用）。
         /// </summary>
-        public void SetDeleteDependencies(EdgeDragHandler? edgeDragHandler, GameBootstrap? gameBootstrap)
+        public void SetDeleteDependencies(EdgeDragHandler? edgeDragHandler, Action<string>? destroyModuleAction)
         {
             _edgeDragHandler = edgeDragHandler;
-            _gameBootstrap = gameBootstrap;
+            _destroyModuleAction = destroyModuleAction;
         }
 
         private void Update()
@@ -129,7 +129,7 @@ namespace Rhizomode.XR
                 _graphContext.Context.RemoveNode(nodeId);
 
                 // モジュールPrefabインスタンスの破棄（リーク防止）
-                _gameBootstrap?.DestroyModuleInstance(nodeId);
+                _destroyModuleAction?.Invoke(nodeId);
 
                 // ノードVisual破棄
                 _visualManager.DestroyNodeVisual(nodeId);

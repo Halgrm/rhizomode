@@ -1,35 +1,26 @@
 {
-    "name": "Rhizomode.XR",
-    "rootNamespace": "Rhizomode.XR",
+    "name": "Rhizomode.UI.Presentation",
+    "rootNamespace": "Rhizomode.UI",
     "references": [
         "Rhizomode.SharedKernel",
+        "Rhizomode.UI",
+        "Rhizomode.UI.Contracts",
         "Rhizomode.NodeCatalog.Contracts",
         "Rhizomode.NodeCatalog.Runtime",
         "Rhizomode.Input.Contracts",
-        "Rhizomode.Interaction.Contracts",
-        "Rhizomode.Interaction",
         "Rhizomode.Graph.Model",
         "Rhizomode.Graph.Serialization",
-        "Rhizomode.Nodes.Standard",
-        "Rhizomode.Nodes.Audio",
-        "Rhizomode.Nodes.OscMidi",
-        "Rhizomode.Nodes.Ableton",
-        "Rhizomode.Nodes.Scene",
-        "Rhizomode.Modules",
-        "Rhizomode.UI",
-        "Rhizomode.UI.Presentation",
-        "Rhizomode.UI.GraphAdapter",
         "Rhizomode.Cameras",
-        "Rhizomode.Audio.Analysis",
-        "Rhizomode.Audio.GraphAdapter",
         "Rhizomode.Ableton.Transport",
         "Rhizomode.Ableton.Session",
         "Rhizomode.Ableton.GraphAdapter",
-        "Rhizomode.OscMidi.Transport",
+        "Unity.Cinemachine",
         "R3.Unity",
         "Unity.InputSystem",
-        "Unity.XR.Interaction.Toolkit",
-        "Unity.XR.CoreUtils"
+        "Unity.RenderPipelines.Universal.Runtime",
+        "Unity.TextMeshPro",
+        "GUID:7cdfac5ef1f961d4ebfe51361a2020bd",
+        "GUID:b59f669f136310547b59ad72df53b42f"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
@@ -38,6 +29,17 @@
     "precompiledReferences": [],
     "autoReferenced": true,
     "defineConstraints": [],
-    "versionDefines": [],
+    "versionDefines": [
+        {
+            "name": "jp.keijiro.klak.spout",
+            "expression": "",
+            "define": "KLAK_SPOUT"
+        },
+        {
+            "name": "jp.keijiro.klak.ndi",
+            "expression": "",
+            "define": "KLAK_NDI"
+        }
+    ],
     "noEngineReferences": false
 }
