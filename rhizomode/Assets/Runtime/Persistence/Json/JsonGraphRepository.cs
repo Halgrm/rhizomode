@@ -25,6 +25,33 @@ namespace Rhizomode.Persistence.Json
         public JsonGraphRepository(ISavePathProvider pathProvider)
         {
             _pathProvider = pathProvider;
+            // Codex loop 4 fix: 前回起動中のクラッシュ等で残った unique tmp ファイル
+            // (例: foo.json.tmp-{guid}) を起動時に sweep する。
+            // 失敗してもアプリ起動は続行 (defensive runtime 原則)。
+            SweepOrphanTmpFiles();
+        }
+
+        private void SweepOrphanTmpFiles()
+        {
+            try
+            {
+                if (!Directory.Exists(_pathProvider.SaveDirectoryPath)) return;
+                var orphans = Directory.GetFiles(_pathProvider.SaveDirectoryPath, "*.tmp-*");
+                foreach (var f in orphans)
+                {
+                    try { File.Delete(f); }
+                    catch (Exception e)
+                    {
+                        Debug.LogWarning($"[JsonGraphRepository] Failed to sweep tmp file: {f} — {e.Message}");
+                    }
+                }
+                if (orphans.Length > 0)
+                    Debug.Log($"[JsonGraphRepository] Swept {orphans.Length} orphan tmp file(s).");
+            }
+            catch (Exception e)
+            {
+                Debug.LogWarning($"[JsonGraphRepository] Tmp sweep failed — {e.Message}");
+            }
         }
 
         public bool SaveGraph(string fileName, GraphData data)
