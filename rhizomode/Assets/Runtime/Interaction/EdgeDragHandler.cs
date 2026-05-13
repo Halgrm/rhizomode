@@ -1,15 +1,12 @@
 #nullable enable
 
 using System;
-using System.Collections.Generic;
 using R3;
 using Rhizomode.Interaction.Contracts;
 using Rhizomode.SharedKernel;
 using Rhizomode.Graph.Model;
 using UnityEngine;
 
-using Rhizomode.NodeCatalog.Contracts;
-using Rhizomode.NodeCatalog.Runtime;
 using Rhizomode.Input.Contracts;
 
 namespace Rhizomode.UI
@@ -19,7 +16,14 @@ namespace Rhizomode.UI
     /// トリガー2回クリックで接続を完了する。ドラッグ不要。
     /// Idle → SourceSelected（プレビューライン表示）→ 接続 or キャンセル → Idle
     /// </summary>
-    public class EdgeDragHandler : MonoBehaviour
+    /// <remarks>
+    /// Phase 9 Round D で partial class に分割:
+    /// - <c>EdgeDragHandler.cs</c> (本ファイル): 公開 API / Initialize / Update / state machine entry / OnDestroy / フィールド
+    /// - <c>EdgeDragHandler.PortSelection.cs</c>: 出力/入力ポートの最近傍探索
+    /// - <c>EdgeDragHandler.Preview.cs</c>: プレビューライン (LineRenderer) の生成 / 破棄 / 更新
+    /// - <c>EdgeDragHandler.Highlight.cs</c>: ハイライトの状態管理
+    /// </remarks>
+    public partial class EdgeDragHandler : MonoBehaviour
     {
         [Header("エッジ接続設定")]
         [SerializeField, Range(0.001f, 0.01f), Tooltip("プレビューラインの幅（メートル）")]
@@ -115,6 +119,11 @@ namespace Rhizomode.UI
                 .Where(pressed => pressed)
                 .Subscribe(_ => OnTriggerPressed());
         }
+
+        /// <summary>
+        /// Plan v5.3 Phase 5: 空間操作 intent の発行先を注入する。
+        /// </summary>
+        public void SetIntentSink(IIntentSink intentSink) => _intentSink = intentSink;
 
         private void Update()
         {
@@ -223,72 +232,6 @@ namespace Rhizomode.UI
             ResetState();
         }
 
-        private (string? portName, ParamType type) FindNearestOutputPort(
-            NodeVisualController nodeVisual, Vector3 hitPoint)
-        {
-            if (nodeVisual.Node == null) return (null, ParamType.Float);
-
-            string? closestPort = null;
-            var closestDist = float.MaxValue;
-            var closestType = ParamType.Float;
-
-            foreach (var port in nodeVisual.Node.GetPortDefinitions())
-            {
-                if (port.direction != PortDirection.Output) continue;
-
-                var portPos = nodeVisual.GetPortWorldPosition(port.name);
-                var dist = Vector3.Distance(portPos, hitPoint);
-                if (dist < closestDist)
-                {
-                    closestDist = dist;
-                    closestPort = port.name;
-                    closestType = port.type;
-                }
-            }
-
-            // ポートから遠すぎる場合はUI操作を優先（スライダー等）
-            if (closestDist > portSelectThreshold)
-                return (null, ParamType.Float);
-
-            return (closestPort, closestType);
-        }
-
-        private (string? portName, ParamType type) FindNearestCompatibleInputPort(
-            NodeVisualController nodeVisual, Vector3 hitPoint)
-        {
-            if (nodeVisual.Node == null) return (null, ParamType.Float);
-
-            string? closestPort = null;
-            var closestDist = float.MaxValue;
-            var closestType = ParamType.Float;
-
-            foreach (var port in nodeVisual.Node.GetPortDefinitions())
-            {
-                if (port.direction != PortDirection.Input) continue;
-                if (port.type != _sourceParamType) continue;
-
-                var portPos = nodeVisual.GetPortWorldPosition(port.name);
-                var dist = Vector3.Distance(portPos, hitPoint);
-                if (dist < closestDist)
-                {
-                    closestDist = dist;
-                    closestPort = port.name;
-                    closestType = port.type;
-                }
-            }
-
-            // ポートから遠すぎる場合は選択しない（FindNearestOutputPortと同じ閾値チェック）
-            if (closestDist > portSelectThreshold)
-                return (null, ParamType.Float);
-
-            return (closestPort, closestType);
-        }
-
-        /// <summary>
-        /// Plan v5.3 Phase 5: 空間操作 intent の発行先を注入する。
-        /// </summary>
-        public void SetIntentSink(IIntentSink intentSink) => _intentSink = intentSink;
-
         private void TryConnect(string targetNodeId, string targetPort)
         {
             if (_graphContext == null || _edgeVisualManager == null) return;
@@ -332,157 +275,6 @@ namespace Rhizomode.UI
             _state = EdgeConnectionState.Idle;
             _sourceNodeId = null;
             _sourcePortName = null;
-        }
-
-        private void UpdatePreviewLine()
-        {
-            if (_previewLine == null || _rayProvider == null || _visualManager == null) return;
-            if (_sourceNodeId == null || _sourcePortName == null) return;
-
-            var fromVisual = _visualManager.GetVisual(_sourceNodeId);
-            if (fromVisual == null) return;
-
-            var startPos = fromVisual.GetPortWorldPosition(_sourcePortName);
-            var endPos = _rayProvider.RayOrigin + _rayProvider.RayDirection * defaultRayEndDistance;
-
-            // スナップ先があればそこに引く
-            if (_highlightedNodeId != null && _highlightedNodeId != _sourceNodeId &&
-                _highlightedPortName != null)
-            {
-                var targetVisual = _visualManager.GetVisual(_highlightedNodeId);
-                if (targetVisual != null)
-                {
-                    endPos = targetVisual.GetPortWorldPosition(_highlightedPortName);
-                }
-            }
-
-            _previewLine.SetPosition(0, startPos);
-            _previewLine.SetPosition(1, endPos);
-        }
-
-        private void UpdateSnapHighlight()
-        {
-            if (_sharedRaycast == null || _visualManager == null) return;
-
-            if (!_sharedRaycast.HasHit)
-            {
-                // ソースポートのハイライトは残す
-                ClearTargetHighlight();
-                return;
-            }
-
-            var hit = _sharedRaycast.CurrentHit;
-            var nodeVisual = _visualManager.GetVisualByCollider(hit.collider);
-            if (nodeVisual?.Node == null || nodeVisual.Node.Id == _sourceNodeId)
-            {
-                ClearTargetHighlight();
-                return;
-            }
-
-            // ターゲットノードの互換ポートをハイライト
-            var (portName, _) = FindNearestCompatibleInputPort(nodeVisual, hit.point);
-            if (portName == null)
-            {
-                ClearTargetHighlight();
-                return;
-            }
-
-            // 前回と同じなら何もしない
-            if (_highlightedNodeId == nodeVisual.Node.Id && _highlightedPortName == portName)
-                return;
-
-            ClearTargetHighlight();
-            nodeVisual.SetPortHighlight(portName, true);
-            _highlightedNodeId = nodeVisual.Node.Id;
-            _highlightedPortName = portName;
-        }
-
-        private void ClearTargetHighlight()
-        {
-            // ソースポート以外のハイライトをクリア
-            if (_highlightedNodeId != null && _highlightedPortName != null &&
-                _highlightedNodeId != _sourceNodeId && _visualManager != null)
-            {
-                var visual = _visualManager.GetVisual(_highlightedNodeId);
-                visual?.SetPortHighlight(_highlightedPortName, false);
-            }
-
-            // ソースのハイライトに戻す
-            if (_sourceNodeId != null && _sourcePortName != null)
-            {
-                _highlightedNodeId = _sourceNodeId;
-                _highlightedPortName = _sourcePortName;
-            }
-            else
-            {
-                _highlightedNodeId = null;
-                _highlightedPortName = null;
-            }
-        }
-
-        private void ClearHighlight()
-        {
-            if (_highlightedNodeId != null && _highlightedPortName != null && _visualManager != null)
-            {
-                var visual = _visualManager.GetVisual(_highlightedNodeId);
-                visual?.SetPortHighlight(_highlightedPortName, false);
-            }
-            _highlightedNodeId = null;
-            _highlightedPortName = null;
-        }
-
-        private void CreatePreviewLine(ParamType paramType)
-        {
-            _previewGo = new GameObject("EdgePreview");
-            _previewLine = _previewGo.AddComponent<LineRenderer>();
-            ConfigurePreviewLine(_previewLine, paramType);
-        }
-
-        private void DestroyPreview()
-        {
-            if (_previewMaterial != null)
-            {
-                Destroy(_previewMaterial);
-                _previewMaterial = null;
-            }
-            if (_previewGo != null)
-            {
-                Destroy(_previewGo);
-                _previewGo = null;
-                _previewLine = null;
-            }
-        }
-
-        private void ConfigurePreviewLine(LineRenderer line, ParamType paramType)
-        {
-            line.positionCount = 2;
-            line.useWorldSpace = true;
-            line.startWidth = previewLineWidth;
-            line.endWidth = previewLineWidth;
-            line.numCapVertices = 4;
-
-            var color = paramType switch
-            {
-                ParamType.Float => new Color(0.63f, 0.82f, 0.94f, 0.6f),
-                ParamType.Color => new Color(0.94f, 0.78f, 0.39f, 0.6f),
-                ParamType.Bool => new Color(0.94f, 0.55f, 0.55f, 0.6f),
-                _ => new Color(0.63f, 0.82f, 0.94f, 0.6f)
-            };
-
-            line.startColor = color;
-            line.endColor = color;
-
-            if (CachedPreviewShader == null)
-            {
-                CachedPreviewShader = Shader.Find("Universal Render Pipeline/Unlit")
-                                      ?? Shader.Find("Unlit/Color");
-            }
-            if (CachedPreviewShader != null)
-            {
-                _previewMaterial = new Material(CachedPreviewShader);
-                _previewMaterial.color = color;
-                line.material = _previewMaterial;
-            }
         }
 
         private void OnDestroy()
