@@ -20,7 +20,6 @@
         "Rhizomode.UI.Contracts",
         "Rhizomode.UI.Presentation",
         "Rhizomode.UI.GraphAdapter",
-        "Rhizomode.XR",
         "Rhizomode.Audio.Analysis",
         "Rhizomode.Audio.GraphAdapter",
         "Rhizomode.Ableton.Transport",

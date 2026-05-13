@@ -202,10 +202,15 @@ namespace Rhizomode.XR
 
             // Phase 6 Round A: ModuleLifecycleProcessor を初期化
             // (RegisterObject3DTypes で _object3DPrefabMap が populate された後)。
+            // Phase 9 prereq: 旧 private nested adapter classes (BootstrapModulePlacement /
+            // BootstrapObject3DRegistry) を Rhizomode.Bootstrap asmdef に移送し、Func/Action
+            // provider 経由で MonoBehaviour state を遅延解決する形に refactor (F-8.2, F-8.7 resolve)。
             _moduleProcessor = new ModuleLifecycleProcessor(
                 _object3DPrefabMap,
-                new BootstrapModulePlacement(this),
-                new BootstrapObject3DRegistry(this));
+                new Rhizomode.Bootstrap.BootstrapModulePlacement(() => _activeInput),
+                new Rhizomode.Bootstrap.BootstrapObject3DRegistry(
+                    proxy => object3DGrabHandler?.Register(proxy),
+                    proxy => object3DGrabHandler?.Unregister(proxy)));
 
             // Phase 6 Round B: SceneLoaderLifecycleProcessor を初期化。
             // sceneLoader は [SerializeField] で MonoBehaviour に注入される。
@@ -245,40 +250,6 @@ namespace Rhizomode.XR
             InitializeSystems();
             InitializeVerticalSliceSystems();
             RegisterSceneObjects();
-        }
-
-        /// <summary>
-        /// Phase 6 Round A 用 placement adapter。<see cref="_activeInput"/> から head pose を取り、
-        /// FreshSpawn は head+forward*offset、Deserialize は node.Position を返す。
-        /// VFX は offset=1.5、Object3D は offset=1.0 (旧コード保持の意図)。
-        /// </summary>
-        private sealed class BootstrapModulePlacement : IModulePlacementService
-        {
-            private readonly GameBootstrap _owner;
-            public BootstrapModulePlacement(GameBootstrap owner) { _owner = owner; }
-
-            public Vector3 GetSpawnPosition(NodeBase node, NodeInitMode mode)
-            {
-                if (mode != NodeInitMode.FreshSpawn || _owner._activeInput == null)
-                    return node.Position;
-
-                var headPos = _owner._activeInput.HeadPosition;
-                var headFwd = _owner._activeInput.HeadForward;
-                var offset = node is Object3DNode ? 1.0f : 1.5f;
-                return headPos + headFwd * offset;
-            }
-        }
-
-        /// <summary>
-        /// Phase 6 Round A 用 Object3DProxy registry adapter。<see cref="object3DGrabHandler"/> に転送する。
-        /// </summary>
-        private sealed class BootstrapObject3DRegistry : IObject3DProxyRegistry
-        {
-            private readonly GameBootstrap _owner;
-            public BootstrapObject3DRegistry(GameBootstrap owner) { _owner = owner; }
-
-            public void Register(Object3DProxy proxy) => _owner.object3DGrabHandler?.Register(proxy);
-            public void Unregister(Object3DProxy proxy) => _owner.object3DGrabHandler?.Unregister(proxy);
         }
 
         /// <summary>
