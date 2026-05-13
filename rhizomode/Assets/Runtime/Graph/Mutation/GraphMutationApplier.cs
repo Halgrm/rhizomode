@@ -15,8 +15,9 @@ namespace Rhizomode.Graph.Mutation
     /// Snapshot 取得・GraphState 操作・EventBus 発火を一手に引き受ける。
     /// </summary>
     /// <remarks>
-    /// Plan v5.3 Phase 3: Dispatcher が本 applier を経由してのみ mutation を実行する。
-    /// これにより GraphState.RegisterNode/RemoveNode/... の直接呼び出しは [Obsolete] 化される。
+    /// Plan v5.3 Phase 8: Dispatcher が本 applier を経由してのみ mutation を実行する。
+    /// GraphState の mutation メソッドは internal 化済 — Graph.Mutation は InternalsVisibleTo で
+    /// 許可された正規 consumer。
     ///
     /// 各 command の適用は <see cref="Apply"/> で switch される。失敗時は何もしない (Plan v5.3
     /// "Video must never stop" 原則: 受信側で再 fetch すれば最新が分かる)。

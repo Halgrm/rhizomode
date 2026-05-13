@@ -14,8 +14,9 @@ namespace Rhizomode.Graph.Model
     /// ノードグラフの中核管理クラス。ノード登録・エッジ接続・信号フロー仲介・シリアライズを担う。
     /// </summary>
     /// <remarks>
-    /// Plan v5.3 Phase 8: ミューテーション 5 メソッド (RegisterNode/RemoveNode/TryConnect/Disconnect/Clear)
-    /// は <c>internal</c>。public API は <c>IGraphCommand</c> + <c>GraphCommandDispatcher</c> 経由のみ。
+    /// Plan v5.3 Phase 8: ミューテーション系メソッド (RegisterNode/RemoveNode/TryConnect/Disconnect/
+    /// Clear/Deserialize/MergePreset) は全て <c>internal</c>。public API は
+    /// <c>IGraphCommand</c> + <c>GraphCommandDispatcher</c> 経由のみ。
     /// 正規 consumer は <c>Graph.Mutation</c> / <c>Graph.Runtime</c> / <c>Graph.Tests</c>
     /// (transitional: XR / UI.GraphAdapter / Interaction — 各 caller を Phase 8 で migrate)。
     /// 詳細は <see cref="InternalsVisibleTo"/> 宣言 (Assets/Runtime/Graph/Model/InternalsVisibleTo.cs)。
@@ -270,7 +271,7 @@ namespace Rhizomode.Graph.Model
         /// DTOからグラフを復元する。既存のグラフはクリアされる。
         /// ノードファクトリが未登録の型はスキップされる。
         /// </summary>
-        public void Deserialize(GraphData data)
+        internal void Deserialize(GraphData data)
         {
             if (!string.IsNullOrEmpty(data.version) && data.version != "1.0")
             {
@@ -351,7 +352,7 @@ namespace Rhizomode.Graph.Model
         /// <param name="presetGraph">プリセットのグラフデータ</param>
         /// <param name="spawnOffset">スポーン位置オフセット</param>
         /// <returns>追加されたノードIDのリスト</returns>
-        public List<string> MergePreset(GraphData presetGraph, Vector3 spawnOffset)
+        internal List<string> MergePreset(GraphData presetGraph, Vector3 spawnOffset)
         {
             var addedNodeIds = new List<string>();
             var idMap = new Dictionary<string, string>();
