@@ -1,5 +1,6 @@
 #nullable enable
 
+using System;
 using R3;
 
 namespace Rhizomode.Graph.Events
@@ -17,8 +18,11 @@ namespace Rhizomode.Graph.Events
     /// - <see cref="OnGraphChanged"/>: <see cref="GraphChangeSet"/> 全体 (scope batched)
     ///
     /// MutationScope 内では個別イベントを抑制し、Dispose 時に OnGraphChanged で一括通知する。
+    ///
+    /// Codex review fix: 内部 5 Subject の dispose 漏れ防止のため <see cref="IDisposable"/> を実装。
+    /// 所有者 (Bootstrap / Installer) は OnDestroy / Lifetime 終了時に必ず Dispose を呼ぶ。
     /// </remarks>
-    public sealed class GraphEventBus
+    public sealed class GraphEventBus : IDisposable
     {
         private readonly Subject<string> _onNodeAdded = new();
         private readonly Subject<string> _onNodeRemoved = new();
@@ -37,5 +41,14 @@ namespace Rhizomode.Graph.Events
         public void EmitEdgeAdded(string edgeId) => _onEdgeAdded.OnNext(edgeId);
         public void EmitEdgeRemoved(string edgeId) => _onEdgeRemoved.OnNext(edgeId);
         public void EmitGraphChanged(GraphChangeSet changeSet) => _onGraphChanged.OnNext(changeSet);
+
+        public void Dispose()
+        {
+            _onNodeAdded.Dispose();
+            _onNodeRemoved.Dispose();
+            _onEdgeAdded.Dispose();
+            _onEdgeRemoved.Dispose();
+            _onGraphChanged.Dispose();
+        }
     }
 }

@@ -89,7 +89,14 @@ namespace Rhizomode.XR
             {
                 // Plan v5.3 Phase 5: GraphState.Disconnect 直接呼び出しを intent emit に置換。
                 // Translator が DisconnectEdgeCommand を Origin=Interaction で発行 → Dispatcher 経由で適用。
-                _intentSink?.Emit(new DisconnectEdgeIntent(_highlightedEdgeId));
+                // Codex review fix: Emit の bool 戻り値で visual cleanup を gate (失敗時の orphan 防止)。
+                var emitted = _intentSink?.Emit(new DisconnectEdgeIntent(_highlightedEdgeId)) ?? false;
+                if (!emitted)
+                {
+                    Debug.LogWarning($"[EdgeCutHandler] Disconnect intent rejected: {_highlightedEdgeId}");
+                    _highlightedEdgeId = null;
+                    return;
+                }
                 _edgeVisualManager.DestroyEdgeVisual(_highlightedEdgeId);
             }
             catch (Exception e)

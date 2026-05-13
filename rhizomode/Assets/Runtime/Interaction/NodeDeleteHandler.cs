@@ -117,7 +117,7 @@ namespace Rhizomode.XR
                 // EdgeDragHandlerが削除対象ノードを参照中ならリセット
                 _edgeDragHandler?.CancelIfInvolves(nodeId);
 
-                // 関連エッジVisualを先に削除（LINQ不使用、GC allocなし）
+                // 関連エッジを収集（visual 削除は intent 成功後）。LINQ不使用、GC allocなし。
                 _edgeIdBuffer.Clear();
                 foreach (var e in _graphContext.Context.Edges)
                 {
@@ -125,14 +125,22 @@ namespace Rhizomode.XR
                         _edgeIdBuffer.Add(e.Id);
                 }
 
+                // Plan v5.3 Phase 5: GraphState.RemoveNode 直接呼び出しを intent emit に置換。
+                // Translator が RemoveNodeCommand (Origin=Interaction) を Dispatcher 経由で実行。
+                // Codex review fix: Emit 失敗時は visual/module cleanup をスキップして orphan を防ぐ。
+                var emitted = _intentSink?.Emit(new DeleteNodeIntent(nodeId)) ?? false;
+                if (!emitted)
+                {
+                    Debug.LogWarning($"[NodeDeleteHandler] Delete intent rejected: {nodeId}");
+                    _selectedNodeId = null;
+                    return;
+                }
+
+                // intent 成功後に visual/module を順次破棄
                 foreach (var edgeId in _edgeIdBuffer)
                 {
                     _edgeVisualManager.DestroyEdgeVisual(edgeId);
                 }
-
-                // Plan v5.3 Phase 5: GraphState.RemoveNode 直接呼び出しを intent emit に置換。
-                // Translator が RemoveNodeCommand (Origin=Interaction) を Dispatcher 経由で実行。
-                _intentSink?.Emit(new DeleteNodeIntent(nodeId));
 
                 // モジュールPrefabインスタンスの破棄（リーク防止）
                 _destroyModuleAction?.Invoke(nodeId);

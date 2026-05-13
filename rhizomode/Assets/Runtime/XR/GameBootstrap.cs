@@ -132,6 +132,13 @@ namespace Rhizomode.XR
         /// <summary>Object3Dプレハブ名→元プレハブの逆引き。Instantiate用。</summary>
         private readonly Dictionary<string, GameObject> _object3DPrefabMap = new();
 
+        /// <summary>
+        /// Phase 5 Round E で WireIntentSink が作る EventBus。Subject<T> 5 件を保持するため
+        /// OnDestroy で Dispose 必須 (Codex review fix #8)。Phase 8 で VContainer Installer に
+        /// 移行したら本フィールドは削除される。
+        /// </summary>
+        private Rhizomode.Graph.Events.GraphEventBus? _phase5EventBus;
+
         private static readonly Dictionary<string, Func<string, NodeBase>> NodeFactoryMap = new()
         {
             ["ConstFloat"] = id => new ConstFloatNode(id),
@@ -1104,9 +1111,10 @@ namespace Rhizomode.XR
             var composite = new Rhizomode.NodeCatalog.Runtime.CompositeNodeFactory(
                 new Rhizomode.Graph.CatalogBridge.INodeFactory[] { staticFactory });
 
-            var eventBus = new Rhizomode.Graph.Events.GraphEventBus();
+            // EventBus は Subject<T> 5 件を保持するため field に保管し OnDestroy で Dispose する。
+            _phase5EventBus = new Rhizomode.Graph.Events.GraphEventBus();
             var applier = new Rhizomode.Graph.Mutation.GraphMutationApplier(
-                graphContext.Context, composite, eventBus);
+                graphContext.Context, composite, _phase5EventBus);
             var dispatcher = new Rhizomode.Graph.Mutation.GraphCommandDispatcher(applier);
             var translator = new Rhizomode.Interaction.GraphAdapter.SpatialIntentToCommandTranslator(dispatcher);
 
@@ -1232,6 +1240,11 @@ namespace Rhizomode.XR
 
             // モジュールPrefabインスタンスの破棄
             CleanupModuleInstances();
+
+            // Phase 5 Round E で構築した EventBus を解放 (Codex review fix #8)。
+            // applier / dispatcher / translator は IDisposable ではないため EventBus のみで OK。
+            _phase5EventBus?.Dispose();
+            _phase5EventBus = null;
         }
 
         private void OnScrollMenuNodeSelected(string nodeType)
