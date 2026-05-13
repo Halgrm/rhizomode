@@ -5,7 +5,7 @@ using Rhizomode.SharedKernel;
 using Rhizomode.Graph.Model;
 using UnityEngine;
 
-namespace Rhizomode.Nodes.Utility
+namespace Rhizomode.Nodes.Audio
 {
     /// <summary>
     /// オーディオ入力の波形をリアルタイム表示するモニターノード。

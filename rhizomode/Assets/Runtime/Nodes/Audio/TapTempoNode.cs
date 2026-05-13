@@ -5,7 +5,7 @@ using Rhizomode.SharedKernel;
 using Rhizomode.Graph.Model;
 using UnityEngine;
 
-namespace Rhizomode.Nodes.Input
+namespace Rhizomode.Nodes.Audio
 {
     /// <summary>
     /// コントローラーのタップからBPMを推定する。外部からTap()を呼ぶことで駆動。

@@ -8,7 +8,11 @@
         "Rhizomode.NodeCatalog.Contracts",
         "Rhizomode.NodeCatalog.Runtime",
         "Rhizomode.Bootstrap",
-        "Rhizomode.Nodes",
+        "Rhizomode.Nodes.Standard",
+        "Rhizomode.Nodes.Audio",
+        "Rhizomode.Nodes.OscMidi",
+        "Rhizomode.Nodes.Ableton",
+        "Rhizomode.Nodes.Scene",
         "Rhizomode.Modules",
         "R3.Unity"
     ],

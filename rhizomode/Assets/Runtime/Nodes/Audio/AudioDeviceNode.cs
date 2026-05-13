@@ -6,7 +6,7 @@ using Rhizomode.Graph.Model;
 using Rhizomode.Graph.Serialization;
 using UnityEngine;
 
-namespace Rhizomode.Nodes.Input
+namespace Rhizomode.Nodes.Audio
 {
     /// <summary>
     /// オーディオ入力デバイスを選択するノード。

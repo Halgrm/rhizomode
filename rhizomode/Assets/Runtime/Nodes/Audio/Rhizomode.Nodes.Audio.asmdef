@@ -1,12 +1,11 @@
 {
-    "name": "Rhizomode.Nodes",
-    "rootNamespace": "Rhizomode.Nodes",
+    "name": "Rhizomode.Nodes.Audio",
+    "rootNamespace": "Rhizomode.Nodes.Audio",
     "references": [
         "Rhizomode.SharedKernel",
         "Rhizomode.Graph.Model",
         "Rhizomode.Graph.Serialization",
-        "Rhizomode.OscMidi.Transport",
-        "Rhizomode.Ableton.Transport",
+        "Rhizomode.Audio.Contracts",
         "R3.Unity"
     ],
     "includePlatforms": [],

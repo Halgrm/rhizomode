@@ -6,7 +6,7 @@ using Rhizomode.SharedKernel;
 using Rhizomode.Graph.Model;
 using UnityEngine;
 
-namespace Rhizomode.Nodes.Utility
+namespace Rhizomode.Nodes.Scene
 {
     /// <summary>
     /// Bool入力 "Trigger" の立ち上がりで、固定インデックスのシーンをAdditiveロードするノード。

@@ -3,7 +3,7 @@
 using Rhizomode.SharedKernel;
 using Rhizomode.Graph.Model;
 
-namespace Rhizomode.Nodes.Input
+namespace Rhizomode.Nodes.Audio
 {
     /// <summary>
     /// LASP フィルタベースの帯域レベル (Level/Low/Mid/High) を出力する。

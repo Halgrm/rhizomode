@@ -4,7 +4,7 @@ using R3;
 using Rhizomode.SharedKernel;
 using Rhizomode.Graph.Model;
 
-namespace Rhizomode.Nodes.Input
+namespace Rhizomode.Nodes.Audio
 {
     /// <summary>
     /// 指定周波数帯のオーディオレベルを監視し、閾値超過でトリガーを発行する。

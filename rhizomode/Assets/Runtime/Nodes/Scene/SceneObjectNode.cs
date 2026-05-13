@@ -7,7 +7,7 @@ using Rhizomode.Graph.Model;
 using Rhizomode.Graph.Serialization;
 using UnityEngine;
 
-namespace Rhizomode.Nodes.Utility
+namespace Rhizomode.Nodes.Scene
 {
     /// <summary>
     /// シーン上のGameObjectのTransformプロパティをノードグラフから制御する。

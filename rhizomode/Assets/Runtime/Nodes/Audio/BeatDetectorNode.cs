@@ -5,7 +5,7 @@ using Rhizomode.SharedKernel;
 using Rhizomode.Graph.Model;
 using UnityEngine;
 
-namespace Rhizomode.Nodes.Input
+namespace Rhizomode.Nodes.Audio
 {
     /// <summary>
     /// トリガー入力からBPMを推定し、Phase(0〜1)とBeatパルスを出力する。

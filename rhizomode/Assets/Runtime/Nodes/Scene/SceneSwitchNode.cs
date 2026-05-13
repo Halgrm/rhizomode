@@ -7,7 +7,7 @@ using Rhizomode.Graph.Model;
 using Rhizomode.Graph.Serialization;
 using UnityEngine;
 
-namespace Rhizomode.Nodes.Utility
+namespace Rhizomode.Nodes.Scene
 {
     /// <summary>
     /// Float入力 "Index" に応じて登録済みシーンをAdditive切り替えするノード。

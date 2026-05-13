@@ -14,6 +14,8 @@ using Rhizomode.Ableton.Session;
 using Rhizomode.Ableton.GraphAdapter;
 using Rhizomode.Nodes.Ableton;
 using Rhizomode.Nodes.OscMidi;
+using Rhizomode.Nodes.Audio;
+using Rhizomode.Nodes.Scene;
 using Rhizomode.Modules;
 using Rhizomode.Nodes.Generators;
 using Rhizomode.Nodes.Input;

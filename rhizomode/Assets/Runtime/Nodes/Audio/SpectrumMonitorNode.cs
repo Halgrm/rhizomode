@@ -5,7 +5,7 @@ using Rhizomode.SharedKernel;
 using Rhizomode.Graph.Model;
 using UnityEngine;
 
-namespace Rhizomode.Nodes.Utility
+namespace Rhizomode.Nodes.Audio
 {
     /// <summary>
     /// オーディオスペクトルをノードパネル内にバー表示するモニターノード。

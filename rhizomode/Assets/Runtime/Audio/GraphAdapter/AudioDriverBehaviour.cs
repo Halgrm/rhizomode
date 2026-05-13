@@ -4,8 +4,7 @@ using System.Collections.Generic;
 using Rhizomode.Audio.Analysis;
 using Rhizomode.SharedKernel;
 using Rhizomode.Graph.Model;
-using Rhizomode.Nodes.Input;
-using Rhizomode.Nodes.Utility;
+using Rhizomode.Nodes.Audio;
 using Rhizomode.UI;
 using UnityEngine;
 
