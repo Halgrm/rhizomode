@@ -357,13 +357,13 @@ namespace Rhizomode.Graph.Model
             var addedNodeIds = new List<string>();
             var idMap = new Dictionary<string, string>();
 
-            // Phase 1: 全ノードIDをリマップ（新GUID生成）
+            // ステップ 1: 全ノードIDをリマップ（新GUID生成）
             foreach (var nodeData in presetGraph.nodes)
             {
                 idMap[nodeData.id] = Guid.NewGuid().ToString();
             }
 
-            // Phase 2: ノードを生成・登録
+            // ステップ 2: ノードを生成・登録
             foreach (var nodeData in presetGraph.nodes)
             {
                 var newId = idMap[nodeData.id];
@@ -389,7 +389,7 @@ namespace Rhizomode.Graph.Model
                 }
             }
 
-            // Phase 3: エッジをリマップして接続
+            // ステップ 3: エッジをリマップして接続 (MergePreset 内部処理の 3 段目)
             foreach (var edgeData in presetGraph.edges)
             {
                 if (!idMap.TryGetValue(edgeData.from, out var newFrom) ||
