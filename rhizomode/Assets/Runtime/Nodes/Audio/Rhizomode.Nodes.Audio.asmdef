@@ -4,6 +4,7 @@
     "references": [
         "Rhizomode.SharedKernel",
         "Rhizomode.NodeCatalog.Contracts",
+        "Rhizomode.UI.Contracts",
         "Rhizomode.Graph.Model",
         "Rhizomode.Graph.Serialization",
         "Rhizomode.Audio.Contracts",

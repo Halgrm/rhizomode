@@ -4,7 +4,7 @@ using UnityEngine;
 
 using Rhizomode.SharedKernel;
 
-namespace Rhizomode.Graph.Model
+namespace Rhizomode.UI.Contracts
 {
     /// <summary>
     /// ノードパネル内にHSVカラーピッカーUIを表示するためのインターフェース。

@@ -2,7 +2,7 @@
 
 using Rhizomode.SharedKernel;
 
-namespace Rhizomode.Graph.Model
+namespace Rhizomode.UI.Contracts
 {
     /// <summary>
     /// ノードパネル内にスペクトル（バー表示）を描画するためのインターフェース。
