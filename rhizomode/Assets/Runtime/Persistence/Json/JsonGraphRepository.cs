@@ -38,11 +38,18 @@ namespace Rhizomode.Persistence.Json
                 var json = JsonUtility.ToJson(data, true);
                 File.WriteAllText(tmpPath, json);
 
-                // .NET Standard 2.1 では File.Move(overwrite:) overload なし。
-                // Replace は別 volume だと失敗するため、existing を消してから rename する 2 段階。
-                // 失敗ウィンドウ (delete 成功 + move 失敗) では tmp が残るが、次回 SaveGraph で上書きされる。
-                if (File.Exists(path)) File.Delete(path);
-                File.Move(tmpPath, path);
+                // Codex re-review #7: File.Delete → File.Move の 2 段階だと delete 成功 + move 失敗で
+                // 既存セーブが失われる failure window があった。File.Replace は同一 volume で atomic swap、
+                // backup ファイルも自動生成されるため復旧可能。
+                // 初回 SaveGraph (path 未存在) は Replace が IOException になるので Move に分岐。
+                if (File.Exists(path))
+                {
+                    File.Replace(tmpPath, path, path + ".bak");
+                }
+                else
+                {
+                    File.Move(tmpPath, path);
+                }
                 Debug.Log($"[JsonGraphRepository] Saved: {path}");
                 return true;
             }
