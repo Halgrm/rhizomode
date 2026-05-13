@@ -125,6 +125,11 @@ namespace Rhizomode.UI
         public void Dispose()
         {
             _subscriptions.Dispose();
+            _onNodeAdded.Dispose();
+            _onNodeRemoved.Dispose();
+            _onEdgeAdded.Dispose();
+            _onEdgeRemoved.Dispose();
+            _onGraphChanged.Dispose();
         }
     }
 }

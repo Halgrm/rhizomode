@@ -1,7 +1,6 @@
 #nullable enable
 
 using Rhizomode.SharedKernel;
-using Rhizomode.Graph.Model;
 using UnityEngine;
 
 using Rhizomode.NodeCatalog.Contracts;
