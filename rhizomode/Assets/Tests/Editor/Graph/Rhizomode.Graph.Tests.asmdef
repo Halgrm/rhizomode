@@ -11,6 +11,8 @@
         "Rhizomode.Graph.Runtime",
         "Rhizomode.Graph.Serialization",
         "Rhizomode.Graph.Mutation",
+        "Rhizomode.Interaction.Contracts",
+        "Rhizomode.Interaction.GraphAdapter",
         "R3.Unity"
     ],
     "includePlatforms": [

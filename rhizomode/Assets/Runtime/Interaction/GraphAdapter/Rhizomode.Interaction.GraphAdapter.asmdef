@@ -3,7 +3,10 @@
     "rootNamespace": "Rhizomode.Interaction.GraphAdapter",
     "references": [
         "Rhizomode.SharedKernel",
-        "Rhizomode.Interaction.Contracts"
+        "Rhizomode.Interaction.Contracts",
+        "Rhizomode.Graph.Mutation",
+        "Rhizomode.Graph.Snapshot",
+        "Rhizomode.NodeCatalog.Contracts"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
