@@ -13,8 +13,7 @@ using System.Runtime.CompilerServices;
 // Transitional consumers (Phase 8 終了までに dispatcher/runtime 経由に移行):
 //   - Rhizomode.XR: GameBootstrap が SceneObject 自動登録 + ScrollMenu Spawn 等で直接呼び出し
 //   - Rhizomode.UI.GraphAdapter: GraphSaveLoadManager が LoadGraph 時に Clear を直接呼び出し
-//   - Rhizomode.Interaction: NodeCreationHandler が直接 RegisterNode
-//   これら 3 つは Phase 8 後段で NodeSpawnService / LoadGraphCommand / SpawnNodeIntent 経由に置換予定。
+//   - (Rhizomode.Interaction は Round B で NodeCreationHandler 削除により撤去済)
 
 [assembly: InternalsVisibleTo("Rhizomode.Graph.Mutation")]
 [assembly: InternalsVisibleTo("Rhizomode.Graph.Runtime")]
@@ -22,4 +21,3 @@ using System.Runtime.CompilerServices;
 [assembly: InternalsVisibleTo("Rhizomode.Core.Tests")]  // legacy Core test asmdef (Phase 1 で renamed 残り)
 [assembly: InternalsVisibleTo("Rhizomode.XR")]
 [assembly: InternalsVisibleTo("Rhizomode.UI.GraphAdapter")]
-[assembly: InternalsVisibleTo("Rhizomode.Interaction")]

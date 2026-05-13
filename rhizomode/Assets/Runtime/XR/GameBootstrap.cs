@@ -147,14 +147,22 @@ namespace Rhizomode.XR
         /// Phase 6 Round A: Module/Object3D の Prefab instantiation + IPerformanceModule 注入を
         /// 担当する LifecycleProcessor。InstantiateVFXModule / InstantiateShaderModule /
         /// InstantiateObject3D / DestroyModuleInstance / CleanupModuleInstances は本 processor に集約。
-        /// Phase 8 で NodeRuntime + EventBus 経由の自動駆動に切替予定 (現状は GameBootstrap が手動呼び出し)。
+        /// Phase 8 Round B で NodeRuntime の processors リストに登録 — AfterSetup 自動駆動化。
         /// </summary>
         private ModuleLifecycleProcessor? _moduleProcessor;
 
         /// <summary>
         /// Phase 6 Round B: ISceneLoaderConsumer に ISceneLoader を注入する LifecycleProcessor。
+        /// Phase 8 Round B で NodeRuntime の processors リストに登録 — BeforeSetup 自動駆動化。
         /// </summary>
         private SceneLoaderLifecycleProcessor? _sceneLoaderProcessor;
+
+        /// <summary>
+        /// Phase 8 Round B: GraphState ミューテーション (RegisterNode / AddEdge) の唯一窓口。
+        /// Awake 時に eager 構築し、processors 経由で BeforeSetup → Setup → AfterSetup を駆動。
+        /// 旧 ctx.RegisterNode / ctx.TryConnect 直接呼び出しを置換。
+        /// </summary>
+        private Rhizomode.Graph.Runtime.NodeRuntime? _nodeRuntime;
 
         private static readonly Dictionary<string, Func<string, NodeBase>> NodeFactoryMap = new()
         {
@@ -217,6 +225,22 @@ namespace Rhizomode.XR
             // Phase 6 Round B: SceneLoaderLifecycleProcessor を初期化。
             // sceneLoader は [SerializeField] で MonoBehaviour に注入される。
             _sceneLoaderProcessor = new SceneLoaderLifecycleProcessor(sceneLoader);
+
+            // Phase 8 Round B: NodeRuntime を eager 構築。EventBus + factory も lift して field 化。
+            // processors 順序: SceneLoaderLifecycleProcessor (BeforeSetup で Loader 注入) →
+            //                  ModuleLifecycleProcessor (AfterSetup で Prefab + Module 注入)
+            // この設計で ScrollMenu Spawn / SceneObject 自動登録 / SpawnInputNodes 全てが
+            // 自動的に Lifecycle を駆動する (旧来の手動 InjectModuleIfNeeded 呼び出しを撤廃)。
+            if (graphContext != null)
+            {
+                EnsureSharedFactoryAndEventBus();
+                _nodeRuntime = new Rhizomode.Graph.Runtime.NodeRuntime(
+                    graphContext.Context, _phase5EventBus!,
+                    new Rhizomode.Graph.Runtime.INodeLifecycleProcessor[]
+                    {
+                        _sceneLoaderProcessor, _moduleProcessor
+                    });
+            }
 
             InitializeSystems();
             InitializeVerticalSliceSystems();
@@ -424,7 +448,9 @@ namespace Rhizomode.XR
                     node.SetTarget(bridge.transform);
                     bridge.NodeId = nodeId;
 
-                    graphContext.Context.RegisterNode(node);
+                    // Phase 8 Round B: NodeRuntime 経由で lifecycle hook を駆動 (SceneObject に
+                    // ISceneLoaderConsumer / IPerformanceModule は無いため processors は no-op)。
+                    _nodeRuntime?.RegisterNode(node, Rhizomode.Graph.Runtime.NodeInitMode.FreshSpawn);
 
                     // 対象オブジェクトの上方にノードを生成
                     var spawnPos = bridge.transform.position + Vector3.up * 0.3f;
@@ -1076,18 +1102,17 @@ namespace Rhizomode.XR
 
         /// <summary>
         /// Phase 7 Round B: GraphSaveLoadManager に Persistence + Hydrator + Executor + Factory を注入。
+        /// Phase 8 Round B: NodeRuntime は Awake で eager 構築済み (processors 含む) — 本メソッドは
+        /// その _nodeRuntime を Executor に渡すだけ。
         /// </summary>
         private void ConfigureSaveLoad()
         {
-            if (graphSaveLoad == null || graphContext == null) return;
-
-            EnsureSharedFactoryAndEventBus();
+            if (graphSaveLoad == null || graphContext == null || _nodeRuntime == null) return;
 
             var pathProvider = new JsonSavePathProvider();
             var repository = new JsonGraphRepository(pathProvider);
             var hydrator = new GraphHydrator();
-            var nodeRuntime = new NodeRuntime(graphContext.Context, _phase5EventBus!);
-            var executor = new HydrationPlanExecutor(nodeRuntime);
+            var executor = new HydrationPlanExecutor(_nodeRuntime);
 
             graphSaveLoad.Configure(repository, hydrator, executor, _sharedFactory!, pathProvider);
 
@@ -1103,8 +1128,15 @@ namespace Rhizomode.XR
             // 旧モジュールインスタンスを破棄（グラフ切替時のリーク防止）
             _moduleProcessor?.CleanupAll();
 
-            // デシリアライズされたモジュールノードにPrefab・IPerformanceModuleを再注入
-            ReinjectModulesAfterLoad(ctx);
+            // Phase 8 Round B: HydrationPlanExecutor が _nodeRuntime 経由で processors を自動駆動
+            // (SceneLoaderLifecycleProcessor.BeforeSetup + ModuleLifecycleProcessor.AfterSetup) するため、
+            // 旧 ReinjectModulesAfterLoad の手動 processor 呼び出しは不要。Object3D の GraphState 観測
+            // bind のみ本クラス側で実施 (Module 層に GraphState 依存を持ち込まないため)。
+            foreach (var node in ctx.Nodes.Values)
+            {
+                if (node is Object3DNode object3DNode)
+                    BindObject3DProxyObservables(object3DNode);
+            }
 
             // ノードビジュアルを再構築
             visualManager?.RebuildAllVisuals(ctx);
@@ -1124,37 +1156,6 @@ namespace Rhizomode.XR
                         var pos = visual.transform.position;
                         visual.transform.rotation = Quaternion.LookRotation(pos - headPos);
                     }
-                }
-            }
-        }
-
-        /// <summary>
-        /// グラフロード後、ModuleNodeBaseのModule未設定ノードにPrefabを再生成・注入する。
-        /// ファクトリ経由のCreateNodeでは注入済みだが、デシリアライズ復元時は未設定のため。
-        /// </summary>
-        private void ReinjectModulesAfterLoad(GraphState ctx)
-        {
-            if (_moduleProcessor == null) return;
-
-            foreach (var node in ctx.Nodes.Values)
-            {
-                try
-                {
-                    // Phase 6 Round B: ISceneLoaderConsumer (Scene Switch/Trigger) への注入は
-                    // SceneLoaderLifecycleProcessor.BeforeSetup が担う。
-                    _sceneLoaderProcessor?.BeforeSetup(node, NodeInitMode.Deserialize);
-
-                    // Module/Object3D は LifecycleProcessor で instantiation + IPerformanceModule 注入
-                    _moduleProcessor.AfterSetup(node, NodeInitMode.Deserialize);
-
-                    // Proxy 観測の bind は GraphState を持つ層 (本クラス) で実施
-                    if (node is Object3DNode object3DNode)
-                        BindObject3DProxyObservables(object3DNode);
-                }
-                catch (Exception e)
-                {
-                    Debug.LogError(
-                        $"[GameBootstrap] Module re-injection failed for node '{node.Id}': {e.Message}");
                 }
             }
         }
@@ -1212,18 +1213,16 @@ namespace Rhizomode.XR
             var spawnPos = headPos + _activeInput!.HeadForward * 0.3f;
             node.Position = spawnPos;
 
-            // Phase 6 Round B: Scene loader 注入は SceneLoaderLifecycleProcessor.BeforeSetup
-            _sceneLoaderProcessor?.BeforeSetup(node, NodeInitMode.FreshSpawn);
+            Debug.Log($"[GameBootstrap] Node created: {node.Id} type={node.NodeType} inputPorts={node.InputPorts.Count}");
 
-            // Phase 6 Round A: Module/Object3D の Prefab 生成 + IPerformanceModule 注入
-            _moduleProcessor?.AfterSetup(node, NodeInitMode.FreshSpawn);
+            // Phase 8 Round B: NodeRuntime.RegisterNode が processors を自動駆動。
+            // SceneLoaderLifecycleProcessor.BeforeSetup → state.RegisterNode (Setup 内蔵) →
+            // ModuleLifecycleProcessor.AfterSetup の順で実行される。
+            _nodeRuntime?.RegisterNode(node, NodeInitMode.FreshSpawn);
 
             // Object3D は GraphState を持つ層 (本クラス) で proxy 観測を bind
             if (node is Object3DNode obj3d) BindObject3DProxyObservables(obj3d);
 
-            Debug.Log($"[GameBootstrap] Node created: {node.Id} type={node.NodeType} inputPorts={node.InputPorts.Count}");
-
-            ctx.RegisterNode(node);
             var visual = visualManager.CreateNodeVisual(node, spawnPos);
             if (visual != null)
                 visual.transform.rotation = Quaternion.LookRotation(spawnPos - headPos);
@@ -1296,13 +1295,15 @@ namespace Rhizomode.XR
                     startOffset.z);
                 sourceNode.Position = pos;
 
-                ctx.RegisterNode(sourceNode);
+                // Phase 8 Round B: NodeRuntime 経由 (Const/Toggle は Module/Scene 関係ないため processors は no-op)
+                _nodeRuntime?.RegisterNode(sourceNode, NodeInitMode.FreshSpawn);
                 var visual = visualManager.CreateNodeVisual(sourceNode, pos);
                 if (visual != null)
                     visual.transform.rotation = Quaternion.LookRotation(pos - headPos);
 
+                var edgeId = Guid.NewGuid().ToString();
                 var outputPort = sourceNode is ToggleNode ? "State" : "Value";
-                if (ctx.TryConnect(sourceNode.Id, outputPort, targetNode.Id, portName))
+                if (_nodeRuntime != null && _nodeRuntime.AddEdge(edgeId, sourceNode.Id, outputPort, targetNode.Id, portName))
                 {
                     // 接続後に初期値を再発行（Subject<T>はリプレイしないため）
                     if (sourceNode is ConstFloatNode constFloat)
@@ -1330,12 +1331,14 @@ namespace Rhizomode.XR
                     var triggerPos = pos - nodeRight * 0.3f;
                     triggerNode.Position = triggerPos;
 
-                    ctx.RegisterNode(triggerNode);
+                    // Phase 8 Round B: NodeRuntime 経由
+                    _nodeRuntime?.RegisterNode(triggerNode, NodeInitMode.FreshSpawn);
                     var triggerVisual = visualManager.CreateNodeVisual(triggerNode, triggerPos);
                     if (triggerVisual != null)
                         triggerVisual.transform.rotation = Quaternion.LookRotation(triggerPos - headPos);
 
-                    if (ctx.TryConnect(triggerNode.Id, "Trigger", toggleNode.Id, "Trigger"))
+                    var triggerEdgeId = Guid.NewGuid().ToString();
+                    if (_nodeRuntime != null && _nodeRuntime.AddEdge(triggerEdgeId, triggerNode.Id, "Trigger", toggleNode.Id, "Trigger"))
                     {
                         var triggerEdges = ctx.Edges;
                         for (var k = triggerEdges.Count - 1; k >= 0; k--)
