@@ -5,7 +5,7 @@
         "Rhizomode.SharedKernel",
         "Rhizomode.Graph.Model",
         "Rhizomode.Graph.Serialization",
-        "Rhizomode.Modules",
+        "Rhizomode.Modules.Runtime",
         "Unity.VisualEffectGraph.Runtime",
         "Unity.RenderPipelines.Core.Runtime"
     ],

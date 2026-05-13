@@ -3,7 +3,8 @@
     "rootNamespace": "Rhizomode.Graph.Serialization",
     "references": [
         "Rhizomode.SharedKernel",
-        "Rhizomode.Graph.Snapshot"
+        "Rhizomode.Graph.Snapshot",
+        "Rhizomode.Graph.CatalogBridge"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
