@@ -170,6 +170,11 @@ namespace Rhizomode.XR
         /// </summary>
         private NodeSpawnService? _nodeSpawnService;
 
+        /// <summary>
+        /// Phase 8 Round D: SceneObjectBridge スキャン + SceneObjectNode 自動 spawn を集約。
+        /// </summary>
+        private SceneObjectRegistrationService? _sceneObjectService;
+
         private static readonly Dictionary<string, Func<string, NodeBase>> NodeFactoryMap = new()
         {
             ["ConstFloat"] = id => new ConstFloatNode(id),
@@ -249,6 +254,13 @@ namespace Rhizomode.XR
 
                 // Phase 8 Round C: NodeSpawnService を初期化 (Plan v5.3 F-8.2 抽出 1/N)。
                 _nodeSpawnService = new NodeSpawnService(graphContext.Context, _nodeRuntime);
+
+                // Phase 8 Round D: SceneObjectRegistrationService を初期化 (F-8.2 抽出 2/N)。
+                if (_typeRegistry != null)
+                {
+                    _sceneObjectService = new SceneObjectRegistrationService(
+                        _typeRegistry, graphContext.Context, _nodeRuntime);
+                }
             }
 
             InitializeSystems();
@@ -432,57 +444,25 @@ namespace Rhizomode.XR
         }
 
         /// <summary>
-        /// シーン上のSceneObjectBridgeを全検出し、対応するノードを自動生成する。
+        /// シーン上の SceneObjectBridge を全検出し、対応するノードを自動生成する。
+        /// Phase 8 Round D: graph 操作は SceneObjectRegistrationService に委譲、visual は本クラスで生成。
         /// </summary>
         private void RegisterSceneObjects()
         {
-            if (_typeRegistry == null || graphContext == null || visualManager == null) return;
-            // Phase 8 Codex review fix #4: _nodeRuntime が未構築なら spawn は不可。
-            // silent no-op (visual だけ作成して ghost 化) を防ぐため fail-fast する。
-            if (_nodeRuntime == null)
-            {
-                Debug.LogError("[GameBootstrap] RegisterSceneObjects aborted — _nodeRuntime not initialized.");
-                return;
-            }
+            if (visualManager == null || _sceneObjectService == null) return;
 
-            // SceneObjectタイプをレジストリに登録（Sceneカテゴリ）
-            _typeRegistry.Register(new NodeTypeInfo("SceneObject", "Scene Object", NodeCategory.Utility));
-
-            // デシリアライズ用ファクトリ登録
-            graphContext.Context.RegisterNodeFactory("SceneObject", id =>
-                new SceneObjectNode(id, "Restored", true, true, true));
+            _sceneObjectService.RegisterTypeAndFactory();
 
             var bridges = FindObjectsByType<SceneObjectBridge>(FindObjectsSortMode.None);
-            foreach (var bridge in bridges)
+            var results = _sceneObjectService.RegisterBridges(bridges);
+
+            foreach (var r in results)
             {
-                try
+                var visual = visualManager.CreateNodeVisual(r.Node, r.SpawnPosition);
+                if (visual != null && controllerInput != null)
                 {
-                    var nodeId = Guid.NewGuid().ToString();
-                    var node = new SceneObjectNode(
-                        nodeId, bridge.gameObject.name,
-                        bridge.ExposePosition, bridge.ExposeRotation, bridge.ExposeScale);
-                    node.SetTarget(bridge.transform);
-                    bridge.NodeId = nodeId;
-
-                    // Phase 8 Round B: NodeRuntime 経由で lifecycle hook を駆動 (SceneObject に
-                    // ISceneLoaderConsumer / IPerformanceModule は無いため processors は no-op)。
-                    // Codex review fix #4: 上の fail-fast で _nodeRuntime は non-null と保証済。
-                    _nodeRuntime.RegisterNode(node, Rhizomode.Graph.Runtime.NodeInitMode.FreshSpawn);
-
-                    // 対象オブジェクトの上方にノードを生成
-                    var spawnPos = bridge.transform.position + Vector3.up * 0.3f;
-                    var visual = visualManager.CreateNodeVisual(node, spawnPos);
-
-                    // プレイヤー方向を向ける
-                    if (visual != null && controllerInput != null)
-                    {
-                        var headPos = _activeInput!.HeadPosition;
-                        visual.transform.rotation = Quaternion.LookRotation(spawnPos - headPos);
-                    }
-                }
-                catch (Exception e)
-                {
-                    Debug.LogError($"[GameBootstrap] SceneObject setup failed for '{bridge.gameObject.name}': {e.Message}");
+                    var headPos = _activeInput!.HeadPosition;
+                    visual.transform.rotation = Quaternion.LookRotation(r.SpawnPosition - headPos);
                 }
             }
         }
