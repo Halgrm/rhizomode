@@ -1,6 +1,7 @@
 #nullable enable
 
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
@@ -12,31 +13,22 @@ using UnityEngine;
 namespace Rhizomode.Editor
 {
     /// <summary>
-    /// Phase 0.5 雛形 (Plan v5.3) — Boundary CI の Editor 同等チェック。
-    ///
-    /// 実 rules は Phase 1G で有効化する (`EnableRealChecks = true`)。
-    /// それまでは Build pre-process / Asset postprocessor で skeleton mode 動作 (常に成功)。
+    /// Phase 4F Round D: Boundary CI の Editor 同等チェック (限定有効化)。
     ///
     /// scripts/verify-asmdef-boundaries.sh と同等の検証を Unity Editor 内でも実行することで:
     /// - CI を待たずに Editor 上で違反を即検出
     /// - Build 直前に最終チェック
     ///
-    /// 検出対象:
-    /// - SharedKernel が UnityEngine / R3 を参照していないか
-    /// - NodeCatalog.Contracts が UnityEngine を参照していないか
-    /// - Audio.* が Ableton/OscMidi/Scene/UI を参照していないか
-    /// - Interaction が Graph.* を参照していないか
-    /// - UI.Presentation が Graph.* / NodeCatalog.Runtime を参照していないか
-    /// - Nodes.Defaults が Nodes.* を参照していないか
-    /// - VContainer は Bootstrap のみ
-    /// - CommandOrigin の整合性 (Phase 5 以降に追加)
+    /// 限定有効化 (Plan v5.3 Phase 1G 全 rule は Phase 5/7 で違反解消後):
+    /// - 現状違反なし のルールのみ enable
+    /// - Phase 5 で Graph.Model→Serialization 解消後、Phase 7 で UI/Interaction→Graph 解消後に追加 rule 有効化
     /// </summary>
     internal sealed class BoundaryViolationValidator : IPreprocessBuildWithReport
     {
         /// <summary>
-        /// Phase 1G で true に切り替え。それまでは雛形モード (常に成功)。
+        /// Round D で true に切り替え (限定ルールのみ)。Phase 5/7 で違反解消後に追加 rule。
         /// </summary>
-        private const bool EnableRealChecks = false;
+        private const bool EnableRealChecks = true;
 
         public int callbackOrder => 0;
 
@@ -44,7 +36,7 @@ namespace Rhizomode.Editor
         {
             if (!EnableRealChecks)
             {
-                Debug.Log("[BoundaryValidator] Skeleton mode (Phase 0.5). Real checks disabled until Phase 1G.");
+                Debug.Log("[BoundaryValidator] Skeleton mode. Real checks disabled.");
                 return;
             }
 
@@ -55,6 +47,7 @@ namespace Rhizomode.Editor
                     $"[BoundaryValidator] {violations.Length} boundary violation(s) found:\n" +
                     string.Join("\n", violations));
             }
+            Debug.Log($"[BoundaryValidator] All {EnabledRuleCount} boundary rules pass.");
         }
 
         [MenuItem("Tools/rhizomode/Validate Asmdef Boundaries")]
@@ -63,55 +56,123 @@ namespace Rhizomode.Editor
             var violations = ValidateAll();
             if (violations.Length == 0)
             {
-                Debug.Log("[BoundaryValidator] All boundary rules pass.");
+                Debug.Log($"[BoundaryValidator] All {EnabledRuleCount} boundary rules pass.");
                 EditorUtility.DisplayDialog(
                     "Asmdef Boundary Validation",
-                    "All boundary rules pass.",
+                    $"All {EnabledRuleCount} boundary rules pass.",
                     "OK");
                 return;
             }
 
-            var msg = string.Join("\n", violations);
-            Debug.LogError($"[BoundaryValidator] Violations:\n{msg}");
+            Debug.LogError($"[BoundaryValidator] {violations.Length} violation(s) found:");
+            foreach (var v in violations)
+            {
+                Debug.LogError($"[BoundaryValidator]   • {v}");
+            }
+            // モーダル dialog は MCP 経由実行で session を切るため Editor 専用に切替
+            if (UnityEngine.Application.isBatchMode) return;
             EditorUtility.DisplayDialog(
                 "Asmdef Boundary Validation",
-                $"{violations.Length} violation(s):\n\n{msg}",
+                $"{violations.Length} violation(s) — see Console for details.",
                 "OK");
         }
 
         // ---------------------------------------------------------------
-        // Rule implementations
+        // Rule implementations (限定有効化、現状違反なし)
         // ---------------------------------------------------------------
+
+        private const int EnabledRuleCount = 7;
 
         private static string[] ValidateAll()
         {
-            // Phase 0.5 雛形: 実 rules は Phase 1G 以降で実装。
-            // ここに各 rule check method を追加していく。
-            //
-            // 例 (Phase 1G で有効化):
-            //   var violations = new List<string>();
-            //   violations.AddRange(CheckSharedKernelNoUnityEngine());
-            //   violations.AddRange(CheckSharedKernelNoR3());
-            //   violations.AddRange(CheckNodeCatalogContractsNoUnityEngine());
-            //   violations.AddRange(CheckAudioCrossSystem());
-            //   violations.AddRange(CheckAbletonContractsNoOscMidi());
-            //   violations.AddRange(CheckInteractionNoGraph());
-            //   violations.AddRange(CheckUIPresentationNoGraph());
-            //   violations.AddRange(CheckNodesDefaultsBoundary());
-            //   violations.AddRange(CheckVContainerOnlyBootstrap());
-            //   violations.AddRange(CheckCommandOriginConsistency());
-            //   return violations.ToArray();
+            var violations = new List<string>();
 
-            return Array.Empty<string>();
+            // Rule 1: SharedKernel must not reference UnityEngine.* (noEngineReferences=true で保証されるが念のため)
+            violations.AddRange(CheckNoReferences(
+                "Rhizomode.SharedKernel",
+                forbidden: new[] { "UnityEngine.CoreModule", "Unity.InputSystem", "Unity.Cinemachine" }));
+
+            // Rule 2: SharedKernel must not reference R3
+            violations.AddRange(CheckNoReferences(
+                "Rhizomode.SharedKernel",
+                forbidden: new[] { "R3.Unity" }));
+
+            // Rule 3: NodeCatalog.Contracts must not reference UnityEngine 系 / Graph.* (pure contract)
+            violations.AddRange(CheckNoReferences(
+                "Rhizomode.NodeCatalog.Contracts",
+                forbidden: new[] { "Rhizomode.Graph.Model", "Rhizomode.Graph.Serialization", "R3.Unity" }));
+
+            // Rule 4: Audio.Contracts ⊄ Ableton/OscMidi/Scene/UI
+            violations.AddRange(CheckNoReferences(
+                "Rhizomode.Audio.Contracts",
+                forbidden: new[]
+                {
+                    "Rhizomode.Ableton.Contracts", "Rhizomode.Ableton.Transport", "Rhizomode.Ableton.Session",
+                    "Rhizomode.OscMidi.Contracts", "Rhizomode.OscMidi.Transport",
+                    "Rhizomode.Scene.Contracts", "Rhizomode.Scene.Runtime",
+                    "Rhizomode.UI", "Rhizomode.UI.Presentation", "Rhizomode.UI.Contracts"
+                }));
+
+            // Rule 5: Ableton.Contracts ⊄ OscMidi (clear DDD boundary)
+            violations.AddRange(CheckNoReferences(
+                "Rhizomode.Ableton.Contracts",
+                forbidden: new[] { "Rhizomode.OscMidi.Transport", "Rhizomode.OscMidi.GraphAdapter" }));
+
+            // Rule 6: Nodes.Defaults ⊄ Nodes.* concrete asmdefs (Plan v5.3-2 boundary)
+            violations.AddRange(CheckNoReferences(
+                "Rhizomode.Nodes.Defaults",
+                forbidden: new[]
+                {
+                    "Rhizomode.Nodes.Standard", "Rhizomode.Nodes.Audio", "Rhizomode.Nodes.OscMidi",
+                    "Rhizomode.Nodes.Ableton", "Rhizomode.Nodes.Scene"
+                }));
+
+            // Rule 7: Bootstrap is the ONLY asmdef referencing VContainer
+            violations.AddRange(CheckVContainerOnlyBootstrap());
+
+            return violations.ToArray();
         }
 
         // ---------------------------------------------------------------
-        // Future: rule helper methods (Phase 1G 以降に実装)
+        // Rule helpers
         // ---------------------------------------------------------------
+
+        private static IEnumerable<string> CheckNoReferences(string asmdefName, string[] forbidden)
+        {
+            var path = FindAsmdef(asmdefName);
+            if (path == null) yield break; // asmdef がまだ存在しない (Phase 進行中) は OK
+
+            var refs = GetReferences(path);
+            foreach (var forbiddenRef in forbidden)
+            {
+                if (refs.Contains(forbiddenRef))
+                {
+                    yield return $"{asmdefName} references {forbiddenRef} (forbidden)";
+                }
+            }
+        }
+
+        private static IEnumerable<string> CheckVContainerOnlyBootstrap()
+        {
+            // Rhizomode.* の asmdef のみを対象 (package の VContainer.Editor 等は除外)
+            var guids = AssetDatabase.FindAssets("t:asmdef");
+            foreach (var guid in guids)
+            {
+                var path = AssetDatabase.GUIDToAssetPath(guid);
+                var name = Path.GetFileNameWithoutExtension(path);
+                if (!name.StartsWith("Rhizomode.", StringComparison.Ordinal)) continue;
+                if (name == "Rhizomode.Bootstrap") continue; // Bootstrap のみ許可
+
+                var refs = GetReferences(path);
+                if (refs.Contains("VContainer") || refs.Contains("VContainer.Unity"))
+                {
+                    yield return $"{name} references VContainer (only Bootstrap is allowed)";
+                }
+            }
+        }
 
         /// <summary>
         /// Asset Database から指定名の asmdef ファイルパスを取得する。
-        /// 例: FindAsmdef("Rhizomode.SharedKernel") → "Assets/Runtime/SharedKernel/Rhizomode.SharedKernel.asmdef"
         /// </summary>
         private static string? FindAsmdef(string asmdefName)
         {
@@ -133,7 +194,6 @@ namespace Rhizomode.Editor
             if (!File.Exists(asmdefPath)) return Array.Empty<string>();
             var json = File.ReadAllText(asmdefPath);
 
-            // "references": [...] の中身を正規表現で抽出
             var match = Regex.Match(json, @"""references""\s*:\s*\[([^\]]*)\]", RegexOptions.Singleline);
             if (!match.Success) return Array.Empty<string>();
 
@@ -142,21 +202,6 @@ namespace Rhizomode.Editor
                 .Cast<Match>()
                 .Select(m => m.Groups[1].Value)
                 .ToArray();
-        }
-
-        /// <summary>
-        /// 指定 asmdef が forbidden を参照していないか検証。違反があればメッセージを返す。
-        /// </summary>
-        private static string? CheckNoReference(string asmdefName, string forbiddenRef)
-        {
-            var path = FindAsmdef(asmdefName);
-            if (path == null) return null; // asmdef がまだ存在しない (Phase 進行中) は OK
-
-            var refs = GetReferences(path);
-            if (refs.Contains(forbiddenRef))
-                return $"{asmdefName} references {forbiddenRef} (forbidden)";
-
-            return null;
         }
     }
 }

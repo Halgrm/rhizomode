@@ -191,44 +191,22 @@ namespace Rhizomode.XR
         {
             if (_typeRegistry == null) return;
 
-            _typeRegistry.Register(new NodeTypeInfo("ConstFloat", "Const Float", NodeCategory.Input));
-            _typeRegistry.Register(new NodeTypeInfo("AudioDevice", "Audio Device", NodeCategory.Input));
-            _typeRegistry.Register(new NodeTypeInfo("AudioTrigger", "Audio Trigger", NodeCategory.Input));
-            _typeRegistry.Register(new NodeTypeInfo("AudioBand", "Audio Band", NodeCategory.Input));
-            _typeRegistry.Register(new NodeTypeInfo("BeatDetector", "Beat Detector", NodeCategory.Input));
-            _typeRegistry.Register(new NodeTypeInfo("TapTempo", "Tap Tempo", NodeCategory.Input));
-            _typeRegistry.Register(new NodeTypeInfo("Trigger", "Trigger", NodeCategory.Input));
-            _typeRegistry.Register(new NodeTypeInfo("Multiply", "Multiply", NodeCategory.Math));
-            _typeRegistry.Register(new NodeTypeInfo("Smooth", "Smooth", NodeCategory.Math));
-            _typeRegistry.Register(new NodeTypeInfo("Time", "Time", NodeCategory.Time));
-            _typeRegistry.Register(new NodeTypeInfo("Threshold", "Threshold", NodeCategory.Utility));
-            _typeRegistry.Register(new NodeTypeInfo("Toggle", "Toggle", NodeCategory.Utility));
-            _typeRegistry.Register(new NodeTypeInfo("FloatMonitor", "Float Monitor", NodeCategory.Utility));
-            _typeRegistry.Register(new NodeTypeInfo("BoolMonitor", "Bool Monitor", NodeCategory.Utility));
-            _typeRegistry.Register(new NodeTypeInfo("ColorMonitor", "Color Monitor", NodeCategory.Utility));
-            _typeRegistry.Register(new NodeTypeInfo("AudioMonitor", "Audio Monitor", NodeCategory.Utility));
-            _typeRegistry.Register(new NodeTypeInfo("SpectrumMonitor", "Spectrum Monitor", NodeCategory.Utility));
-            _typeRegistry.Register(new NodeTypeInfo("ConstColor", "Const Color", NodeCategory.Input));
-            _typeRegistry.Register(new NodeTypeInfo("LFO", "LFO", NodeCategory.Time));
-            _typeRegistry.Register(new NodeTypeInfo("Noise", "Noise", NodeCategory.Time));
-            _typeRegistry.Register(new NodeTypeInfo("OscReceiver", "OSC Receiver", NodeCategory.Input));
-            _typeRegistry.Register(new NodeTypeInfo("MidiCC", "MIDI CC", NodeCategory.Input));
-            _typeRegistry.Register(new NodeTypeInfo("Add", "Add", NodeCategory.Math));
-            _typeRegistry.Register(new NodeTypeInfo("Remap", "Remap", NodeCategory.Math));
-            _typeRegistry.Register(new NodeTypeInfo("Delay", "Delay", NodeCategory.Time));
-            _typeRegistry.Register(new NodeTypeInfo("Timer", "Timer", NodeCategory.Time));
-            _typeRegistry.Register(new NodeTypeInfo("ColorToFloats", "Color → Floats", NodeCategory.Utility));
-            _typeRegistry.Register(new NodeTypeInfo("FloatsToColor", "Floats → Color", NodeCategory.Utility));
-            _typeRegistry.Register(new NodeTypeInfo("ColorToHSV", "Color → HSV", NodeCategory.Utility));
-            _typeRegistry.Register(new NodeTypeInfo("HSVToColor", "HSV → Color", NodeCategory.Utility));
-            _typeRegistry.Register(new NodeTypeInfo("SceneSwitch", "Scene Switch", NodeCategory.Scene));
+            // Phase 4F Round D: 静的 NodeTypeInfo の手動登録 (旧 38 行) は撤去。
+            // [NodeType] 属性付きクラスを Scanner で発見し、NodeTypeRegistry に流し込む
+            // (Catalog 二重 source-of-truth 解消、Codex Issue 3)。
+            var scanner = new NodeTypeAttributeScanner();
+            foreach (var registration in scanner.Scan())
+            {
+                var d = registration.Display;
+                _typeRegistry.Register(new NodeTypeInfo(d.TypeName, d.Label, d.Category));
+            }
+
+            // 動的 SceneTrigger 3 件は Phase 5 で SceneTriggerCatalog SO + 動的 INodeTypeProvider 経由に
+            // 置換するまでハードコードで残置。SceneTriggerNodeFactory は既に動的 INodeFactory として
+            // 実装済 (Phase 4F Round B)。UI menu 表示用の NodeTypeInfo 登録のみここで補う。
             _typeRegistry.Register(new NodeTypeInfo("SceneDark", "Dark", NodeCategory.Scene));
             _typeRegistry.Register(new NodeTypeInfo("SceneWhite", "White", NodeCategory.Scene));
             _typeRegistry.Register(new NodeTypeInfo("SceneNature", "Nature", NodeCategory.Scene));
-            _typeRegistry.Register(new NodeTypeInfo("AbletonTempo", "Ableton Tempo", NodeCategory.Input));
-            _typeRegistry.Register(new NodeTypeInfo("AbletonTransport", "Ableton Transport", NodeCategory.Input));
-            _typeRegistry.Register(new NodeTypeInfo("AbletonTrackVolume", "Ableton Track Vol", NodeCategory.Input));
-            _typeRegistry.Register(new NodeTypeInfo("AbletonClipFire", "Ableton Clip Fire", NodeCategory.Input));
         }
 
         private void RegisterFactories()
