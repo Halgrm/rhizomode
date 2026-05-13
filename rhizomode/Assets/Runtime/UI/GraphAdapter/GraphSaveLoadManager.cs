@@ -38,6 +38,17 @@ namespace Rhizomode.UI
         /// <summary>グラフ保存完了時に発火するイベント。引数はファイル名。</summary>
         public event Action<string>? OnGraphSaved;
 
+        /// <summary>
+        /// グラフ読み込み開始時 (state.Clear() / hydrator.Build / executor.Execute の直前) に発火する。
+        /// </summary>
+        /// <remarks>
+        /// Phase 8 Codex review fix #1+#3: 旧来 OnGraphLoaded 内で <c>ModuleLifecycleProcessor.CleanupAll</c>
+        /// を呼んでいたが、その時点では既に Executor が新 module を attach 済 → 新 module まで破棄される
+        /// バグがあった。本イベントを load 開始時に発火させることで CleanupAll を正しく "旧 module の破棄"
+        /// にできる。
+        /// </remarks>
+        public event Action? OnGraphLoading;
+
         /// <summary>グラフ読み込み完了時に発火するイベント。</summary>
         public event Action? OnGraphLoaded;
 
@@ -98,6 +109,11 @@ namespace Rhizomode.UI
             var resolved = EnsureExtension(fileName);
             var data = _repository.LoadGraph(resolved);
             if (data == null) return false;
+
+            // Phase 8 Codex review fix #1+#3: load 開始通知。subscriber (例: GameBootstrap) が
+            // 旧 module instance の破棄を行う。state.Clear() より前に呼ぶ — Executor が新 module を
+            // attach した後の OnGraphLoaded で CleanupAll すると新 module まで巻き込み破棄してしまう。
+            OnGraphLoading?.Invoke();
 
             // Codex review fix #3: 部分適用 orphan を避けるため Clear 前に backup を取り、
             // Executor 失敗時は backup から復元する (旧 GraphState.Deserialize の安全網パターン)。

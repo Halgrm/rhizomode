@@ -428,6 +428,13 @@ namespace Rhizomode.XR
         private void RegisterSceneObjects()
         {
             if (_typeRegistry == null || graphContext == null || visualManager == null) return;
+            // Phase 8 Codex review fix #4: _nodeRuntime が未構築なら spawn は不可。
+            // silent no-op (visual だけ作成して ghost 化) を防ぐため fail-fast する。
+            if (_nodeRuntime == null)
+            {
+                Debug.LogError("[GameBootstrap] RegisterSceneObjects aborted — _nodeRuntime not initialized.");
+                return;
+            }
 
             // SceneObjectタイプをレジストリに登録（Sceneカテゴリ）
             _typeRegistry.Register(new NodeTypeInfo("SceneObject", "Scene Object", NodeCategory.Utility));
@@ -450,7 +457,8 @@ namespace Rhizomode.XR
 
                     // Phase 8 Round B: NodeRuntime 経由で lifecycle hook を駆動 (SceneObject に
                     // ISceneLoaderConsumer / IPerformanceModule は無いため processors は no-op)。
-                    _nodeRuntime?.RegisterNode(node, Rhizomode.Graph.Runtime.NodeInitMode.FreshSpawn);
+                    // Codex review fix #4: 上の fail-fast で _nodeRuntime は non-null と保証済。
+                    _nodeRuntime.RegisterNode(node, Rhizomode.Graph.Runtime.NodeInitMode.FreshSpawn);
 
                     // 対象オブジェクトの上方にノードを生成
                     var spawnPos = bridge.transform.position + Vector3.up * 0.3f;
@@ -484,6 +492,9 @@ namespace Rhizomode.XR
                 // factory / eventBus / nodeRuntime / executor を構築する (WireIntentSink でも使う)。
                 ConfigureSaveLoad();
 
+                // Phase 8 Codex review fix #1+#3: load 開始時に旧 module instance を破棄
+                // (OnGraphLoaded 内で CleanupAll すると Executor が attach した新 module まで巻き込む)。
+                graphSaveLoad.OnGraphLoading += OnGraphLoadingHandler;
                 // ロード完了後にノード・エッジビジュアルを再構築
                 graphSaveLoad.OnGraphLoaded += OnGraphLoaded;
             }
@@ -1119,19 +1130,27 @@ namespace Rhizomode.XR
             Debug.Log("[GameBootstrap] Phase 7: SaveLoad configured (Repository + Hydrator + Executor).");
         }
 
+        /// <summary>
+        /// Phase 8 Codex review fix #1+#3: load 開始時に旧 module instance を破棄。
+        /// この時点では Executor が新 module を attach する前なので、_moduleProcessor.Instances には
+        /// 旧 graph の entry のみが存在する → 安全に全破棄できる。
+        /// </summary>
+        private void OnGraphLoadingHandler()
+        {
+            _moduleProcessor?.CleanupAll();
+        }
+
         private void OnGraphLoaded()
         {
             if (graphContext == null) return;
 
             var ctx = graphContext.Context;
 
-            // 旧モジュールインスタンスを破棄（グラフ切替時のリーク防止）
-            _moduleProcessor?.CleanupAll();
-
             // Phase 8 Round B: HydrationPlanExecutor が _nodeRuntime 経由で processors を自動駆動
             // (SceneLoaderLifecycleProcessor.BeforeSetup + ModuleLifecycleProcessor.AfterSetup) するため、
             // 旧 ReinjectModulesAfterLoad の手動 processor 呼び出しは不要。Object3D の GraphState 観測
             // bind のみ本クラス側で実施 (Module 層に GraphState 依存を持ち込まないため)。
+            // 旧 module instance の破棄は OnGraphLoadingHandler (load 開始時) で完了済。
             foreach (var node in ctx.Nodes.Values)
             {
                 if (node is Object3DNode object3DNode)
@@ -1164,7 +1183,10 @@ namespace Rhizomode.XR
         {
             // イベント購読解除
             if (graphSaveLoad != null)
+            {
+                graphSaveLoad.OnGraphLoading -= OnGraphLoadingHandler;
                 graphSaveLoad.OnGraphLoaded -= OnGraphLoaded;
+            }
 
             if (scrollMenuVisual != null)
                 scrollMenuVisual.OnNodeTypeSelected -= OnScrollMenuNodeSelected;
@@ -1182,7 +1204,9 @@ namespace Rhizomode.XR
             _macroValueListenerSub?.Dispose();
             _macroValueListenerSub = null;
 
-            // モジュールPrefabインスタンスの破棄
+            // Phase 8: dispose 順序 — subscribers (processor) を先に dispose し、source (EventBus) を後に。
+            // 将来 ModuleLifecycleProcessor が GraphEventBus.OnNodeRemoved を購読した場合に、
+            // 逆順だと disposed Subject に処理が走る race を防ぐ。
             _moduleProcessor?.Dispose();
             _moduleProcessor = null;
 
@@ -1195,6 +1219,12 @@ namespace Rhizomode.XR
         private void OnScrollMenuNodeSelected(string nodeType)
         {
             if (graphContext == null || visualManager == null || controllerInput == null) return;
+            // Phase 8 Codex review fix #4: _nodeRuntime が null だと visual だけ作成され ghost 化する。
+            if (_nodeRuntime == null)
+            {
+                Debug.LogError($"[GameBootstrap] OnScrollMenuNodeSelected aborted ({nodeType}) — _nodeRuntime not initialized.");
+                return;
+            }
 
             Debug.Log($"[GameBootstrap] OnScrollMenuNodeSelected: {nodeType}");
 
@@ -1218,7 +1248,8 @@ namespace Rhizomode.XR
             // Phase 8 Round B: NodeRuntime.RegisterNode が processors を自動駆動。
             // SceneLoaderLifecycleProcessor.BeforeSetup → state.RegisterNode (Setup 内蔵) →
             // ModuleLifecycleProcessor.AfterSetup の順で実行される。
-            _nodeRuntime?.RegisterNode(node, NodeInitMode.FreshSpawn);
+            // Codex review fix #4: 冒頭の fail-fast で _nodeRuntime は non-null と保証済。
+            _nodeRuntime.RegisterNode(node, NodeInitMode.FreshSpawn);
 
             // Object3D は GraphState を持つ層 (本クラス) で proxy 観測を bind
             if (node is Object3DNode obj3d) BindObject3DProxyObservables(obj3d);
@@ -1240,6 +1271,13 @@ namespace Rhizomode.XR
         private void SpawnInputNodes(NodeBase targetNode, Vector3 nodePos, Vector3 headPos)
         {
             if (graphContext == null || visualManager == null || edgeVisualManager == null) return;
+            // Phase 8 Codex review fix #4: _nodeRuntime が null だと auto-spawn が visual だけ作って
+            // GraphState 未登録の ghost 化する。fail-fast。
+            if (_nodeRuntime == null)
+            {
+                Debug.LogError("[GameBootstrap] SpawnInputNodes aborted — _nodeRuntime not initialized.");
+                return;
+            }
 
             var ctx = graphContext.Context;
             var inputPorts = targetNode.InputPorts;
@@ -1296,14 +1334,15 @@ namespace Rhizomode.XR
                 sourceNode.Position = pos;
 
                 // Phase 8 Round B: NodeRuntime 経由 (Const/Toggle は Module/Scene 関係ないため processors は no-op)
-                _nodeRuntime?.RegisterNode(sourceNode, NodeInitMode.FreshSpawn);
+                // Codex review fix #4: 冒頭 fail-fast で _nodeRuntime non-null 保証済。
+                _nodeRuntime.RegisterNode(sourceNode, NodeInitMode.FreshSpawn);
                 var visual = visualManager.CreateNodeVisual(sourceNode, pos);
                 if (visual != null)
                     visual.transform.rotation = Quaternion.LookRotation(pos - headPos);
 
                 var edgeId = Guid.NewGuid().ToString();
                 var outputPort = sourceNode is ToggleNode ? "State" : "Value";
-                if (_nodeRuntime != null && _nodeRuntime.AddEdge(edgeId, sourceNode.Id, outputPort, targetNode.Id, portName))
+                if (_nodeRuntime.AddEdge(edgeId, sourceNode.Id, outputPort, targetNode.Id, portName))
                 {
                     // 接続後に初期値を再発行（Subject<T>はリプレイしないため）
                     if (sourceNode is ConstFloatNode constFloat)
@@ -1331,14 +1370,14 @@ namespace Rhizomode.XR
                     var triggerPos = pos - nodeRight * 0.3f;
                     triggerNode.Position = triggerPos;
 
-                    // Phase 8 Round B: NodeRuntime 経由
-                    _nodeRuntime?.RegisterNode(triggerNode, NodeInitMode.FreshSpawn);
+                    // Phase 8 Round B: NodeRuntime 経由 (fail-fast 済で non-null)
+                    _nodeRuntime.RegisterNode(triggerNode, NodeInitMode.FreshSpawn);
                     var triggerVisual = visualManager.CreateNodeVisual(triggerNode, triggerPos);
                     if (triggerVisual != null)
                         triggerVisual.transform.rotation = Quaternion.LookRotation(triggerPos - headPos);
 
                     var triggerEdgeId = Guid.NewGuid().ToString();
-                    if (_nodeRuntime != null && _nodeRuntime.AddEdge(triggerEdgeId, triggerNode.Id, "Trigger", toggleNode.Id, "Trigger"))
+                    if (_nodeRuntime.AddEdge(triggerEdgeId, triggerNode.Id, "Trigger", toggleNode.Id, "Trigger"))
                     {
                         var triggerEdges = ctx.Edges;
                         for (var k = triggerEdges.Count - 1; k >= 0; k--)
