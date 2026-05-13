@@ -31,6 +31,7 @@ Plan v5.3 Phase 1 (asmdef 大改修、6 日、7 sub-step) の各 sub-step ごと
 | 1E | UI 3 分割 + Interaction.GraphAdapter + Cameras | 1d | `7db66461` | (不要) | 2026-05-13 |
 | 1F | Scene/Modules/Persistence/Observability + Input.XR/Desktop | 1d | `4c2a39cf` | (不要) | 2026-05-13 |
 | 1G | XR refs 整理 + Boundary CI 有効化 | 0.5d | **Phase 2 に併合** | (Phase 2 開始時に必須) | 2026-05-13 (決定) |
+| **Phase 2** | Graph 8 asmdef 内部実装 + Snapshot 確立 | 3d | `181148f1` + `1e7cf2da` fix | `[player-build: pass]` | 2026-05-13 |
 
 ---
 
@@ -235,6 +236,51 @@ XR/ ディレクトリ整理後の残存: GameBootstrap.cs, XRRigSetup.cs のみ
 
 一時的 Plan v5.3 違反: Input.XR が UI / UI.Presentation / Interaction を参照
 (UIRaycastDriver の SharedRaycastService + WorldPanelRayBridge 使用、Phase 5 で再配置)。
+
+---
+
+## Phase 2 詳細 (2026-05-13 完了)
+
+**Commits**:
+- `181148f1 refactor(phase-2): Graph 8 asmdef 内部実装 + Snapshot 確立 + SharedKernel Rz*` (44 file, +1571/-10)
+- `1e7cf2da fix(phase-2): C# 9 互換修正 + Boundary cycle 解消 + テスト修正` (62 file, +264/-20)
+
+SharedKernel (`noEngineReferences=true` 復帰):
+- `RzColor` / `RzVector3` / `RzVector2` / `RzQuaternion` (readonly struct + IEquatable<T>)
+- `RzMath` (Approximately + IsFinite のみホワイトリスト、Plan v5.3-3)
+- `ParamValue` (discriminated union、Float/Color/Bool variant)
+- `INodeParamAccessor` contract
+- `ParamDefaults` を RzColor 使用に refactor
+
+Graph (8 asmdef すべてに content):
+- Snapshot: NodeSnapshot/EdgeSnapshot/GraphSnapshot record
+- Model: EdgeIndex (O(1) lookup) + CycleDetector (DFS)
+- Events: GraphEventBus + GraphChangeSet + GraphMutationScope
+- Query: GraphReadModel + GraphIndex
+- CatalogBridge: INodeFactory/INodeTypeProvider/INodeTypeAliasResolver/IPortAliasResolver
+- Runtime: NodeInitMode + INodeLifecycleProcessor + NodeRuntime + HydrationPlanExecutor skeleton
+- Serialization: HydrationPlan DTO (field whitelist)
+- Mutation: CommandOrigin + IGraphCommand + 7 record (AddNode/RemoveNode/ConnectPorts/DisconnectEdge/MoveNode/SetNodeParam/LoadGraph) + Dispatcher (Undo via Snapshot) + AuditLog + MainThreadGraphCommandQueue + HistoryConfig SO
+
+Tests (新規 `Rhizomode.Graph.Tests.asmdef`、6 class 20 件):
+- EdgeIndexTests / CycleDetectorTests / GraphMutationScopeTests
+- GraphSnapshotRoundTripTests / GraphCommandRecordTests / SharedKernelValueTypeTests
+
+C# 9 互換 (Unity 6 default langversion):
+- `readonly record struct` → `readonly struct + IEquatable<T>` (record struct は C# 10 必須)
+- record class の init setter 用に `IsExternalInit` polyfill を 5 asmdef (SharedKernel + Graph.Snapshot / Events / Serialization / Mutation) に配置
+
+Boundary cycle 解消:
+- Graph.CatalogBridge.asmdef から Graph.Serialization 参照削除 (Phase 1A 不要 ref 整理)
+- Graph.Serialization.asmdef から Graph.CatalogBridge 参照削除 (Phase 2.7 で予防的に追加したが現状未使用、Phase 7 で再追加予定)
+
+検証 (MCP 経由):
+- ✅ Compile errors 0
+- ✅ EditMode tests 71/71 pass (Graph.Tests 20 件 + 既存 51 件)
+- ✅ PlayMode tests 1/1 pass
+- ✅ Standalone Player build succeeded (94秒、694MB、errors 0)
+
+Phase 2 完了時点で未解消の Plan v5.3 一時違反は `project_refactor_v4.md` メモリに記録。
 
 ---
 
