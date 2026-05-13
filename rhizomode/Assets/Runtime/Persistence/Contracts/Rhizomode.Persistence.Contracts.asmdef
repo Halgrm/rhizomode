@@ -1,0 +1,17 @@
+{
+    "name": "Rhizomode.Persistence.Contracts",
+    "rootNamespace": "Rhizomode.Persistence.Contracts",
+    "references": [
+        "Rhizomode.SharedKernel",
+        "Rhizomode.Graph.Serialization"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

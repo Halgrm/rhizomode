@@ -1,0 +1,18 @@
+{
+    "name": "Rhizomode.Persistence.Json",
+    "rootNamespace": "Rhizomode.Persistence.Json",
+    "references": [
+        "Rhizomode.SharedKernel",
+        "Rhizomode.Persistence.Contracts",
+        "Rhizomode.Graph.Serialization"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

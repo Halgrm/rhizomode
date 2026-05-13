@@ -1,0 +1,21 @@
+{
+    "name": "Rhizomode.Input.Desktop",
+    "rootNamespace": "Rhizomode.Input.Desktop",
+    "references": [
+        "Rhizomode.SharedKernel",
+        "Rhizomode.Input.Contracts",
+        "Rhizomode.NodeCatalog.Contracts",
+        "Rhizomode.NodeCatalog.Runtime",
+        "R3.Unity",
+        "Unity.InputSystem"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

@@ -1,20 +1,16 @@
 {
-    "name": "Rhizomode.Nodes.Scene",
-    "rootNamespace": "Rhizomode.Nodes.Scene",
+    "name": "Rhizomode.Scene.GraphAdapter",
+    "rootNamespace": "Rhizomode.Scene.GraphAdapter",
     "references": [
         "Rhizomode.SharedKernel",
-        "Rhizomode.Graph.Model",
-        "Rhizomode.Graph.Serialization",
         "Rhizomode.Scene.Contracts",
-        "R3.Unity"
+        "Rhizomode.Graph.Model"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
     "allowUnsafeCode": false,
-    "overrideReferences": true,
-    "precompiledReferences": [
-        "R3.dll"
-    ],
+    "overrideReferences": false,
+    "precompiledReferences": [],
     "autoReferenced": true,
     "defineConstraints": [],
     "versionDefines": [],

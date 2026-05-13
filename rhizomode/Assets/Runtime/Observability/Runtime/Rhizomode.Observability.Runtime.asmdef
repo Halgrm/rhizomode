@@ -1,11 +1,9 @@
 {
-    "name": "Rhizomode.Nodes.Scene",
-    "rootNamespace": "Rhizomode.Nodes.Scene",
+    "name": "Rhizomode.Observability.Runtime",
+    "rootNamespace": "Rhizomode.Observability.Runtime",
     "references": [
         "Rhizomode.SharedKernel",
-        "Rhizomode.Graph.Model",
-        "Rhizomode.Graph.Serialization",
-        "Rhizomode.Scene.Contracts",
+        "Rhizomode.Observability.Contracts",
         "R3.Unity"
     ],
     "includePlatforms": [],
@@ -18,5 +16,5 @@
     "autoReferenced": true,
     "defineConstraints": [],
     "versionDefines": [],
-    "noEngineReferences": false
+    "noEngineReferences": true
 }

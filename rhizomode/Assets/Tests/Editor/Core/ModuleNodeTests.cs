@@ -4,6 +4,7 @@ using System.Linq;
 using NUnit.Framework;
 using Rhizomode.SharedKernel;
 using Rhizomode.Graph.Model;
+using Rhizomode.Modules;
 using Rhizomode.Nodes.Modules;
 using UnityEngine;
 

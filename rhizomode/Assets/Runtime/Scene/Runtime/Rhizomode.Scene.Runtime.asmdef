@@ -1,0 +1,21 @@
+{
+    "name": "Rhizomode.Scene.Runtime",
+    "rootNamespace": "Rhizomode.Scene.Runtime",
+    "references": [
+        "Rhizomode.SharedKernel",
+        "Rhizomode.Scene.Contracts",
+        "Rhizomode.NodeCatalog.Contracts",
+        "Rhizomode.NodeCatalog.Runtime",
+        "Rhizomode.Input.Contracts",
+        "Rhizomode.Graph.Model"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

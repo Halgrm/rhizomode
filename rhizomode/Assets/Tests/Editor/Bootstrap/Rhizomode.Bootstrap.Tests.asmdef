@@ -13,7 +13,7 @@
         "Rhizomode.Nodes.OscMidi",
         "Rhizomode.Nodes.Ableton",
         "Rhizomode.Nodes.Scene",
-        "Rhizomode.Modules",
+        "Rhizomode.Modules.Runtime",
         "R3.Unity"
     ],
     "includePlatforms": [

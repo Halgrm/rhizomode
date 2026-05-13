@@ -1,0 +1,16 @@
+{
+    "name": "Rhizomode.Observability.Contracts",
+    "rootNamespace": "Rhizomode.Observability.Contracts",
+    "references": [
+        "Rhizomode.SharedKernel"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

@@ -29,6 +29,11 @@ using UnityEngine;
 using Rhizomode.NodeCatalog.Contracts;
 using Rhizomode.NodeCatalog.Runtime;
 using Rhizomode.Input.Contracts;
+using Rhizomode.Input.XR;
+using Rhizomode.Input.Desktop;
+using Rhizomode.Scene.Contracts;
+using Rhizomode.Scene.Runtime;
+using Rhizomode.Interaction;
 
 namespace Rhizomode.XR
 {

@@ -1,0 +1,24 @@
+{
+    "name": "Rhizomode.Modules.Runtime",
+    "rootNamespace": "Rhizomode.Modules",
+    "references": [
+        "Rhizomode.SharedKernel",
+        "Rhizomode.NodeCatalog.Contracts",
+        "Rhizomode.NodeCatalog.Runtime",
+        "Rhizomode.Input.Contracts",
+        "Rhizomode.Graph.Model",
+        "Rhizomode.Graph.Serialization",
+        "R3.Unity",
+        "Unity.VisualEffectGraph.Runtime",
+        "Unity.Cinemachine"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

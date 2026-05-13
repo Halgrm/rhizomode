@@ -10,6 +10,8 @@
         "Rhizomode.Nodes.OscMidi",
         "Rhizomode.Nodes.Ableton",
         "Rhizomode.Nodes.Scene",
+        "Rhizomode.Modules.Runtime",
+        "Rhizomode.Scene.Contracts",
         "Rhizomode.UI",
         "Rhizomode.UI.Contracts",
         "Rhizomode.UI.Presentation",

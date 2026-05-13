@@ -5,6 +5,7 @@ using R3;
 using Rhizomode.SharedKernel;
 using Rhizomode.Graph.Model;
 using Rhizomode.Graph.Serialization;
+using Rhizomode.Scene.Contracts;
 using UnityEngine;
 
 namespace Rhizomode.Nodes.Scene

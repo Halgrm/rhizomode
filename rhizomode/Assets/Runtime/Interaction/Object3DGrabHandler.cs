@@ -3,6 +3,7 @@
 using System;
 using System.Collections.Generic;
 using R3;
+using Rhizomode.Modules;
 using Rhizomode.UI;
 using UnityEngine;
 
