@@ -29,6 +29,9 @@ namespace Rhizomode.Graph.Events
         private readonly Subject<string> _onEdgeAdded = new();
         private readonly Subject<string> _onEdgeRemoved = new();
         private readonly Subject<GraphChangeSet> _onGraphChanged = new();
+        // Phase 8 Codex Axis B fix: Dispose 後の Emit を idempotent に。
+        // _isDisposed flag で early return することで ObjectDisposedException を防ぐ。
+        private bool _isDisposed;
 
         public Observable<string> OnNodeAdded => _onNodeAdded;
         public Observable<string> OnNodeRemoved => _onNodeRemoved;
@@ -36,14 +39,16 @@ namespace Rhizomode.Graph.Events
         public Observable<string> OnEdgeRemoved => _onEdgeRemoved;
         public Observable<GraphChangeSet> OnGraphChanged => _onGraphChanged;
 
-        public void EmitNodeAdded(string nodeId) => _onNodeAdded.OnNext(nodeId);
-        public void EmitNodeRemoved(string nodeId) => _onNodeRemoved.OnNext(nodeId);
-        public void EmitEdgeAdded(string edgeId) => _onEdgeAdded.OnNext(edgeId);
-        public void EmitEdgeRemoved(string edgeId) => _onEdgeRemoved.OnNext(edgeId);
-        public void EmitGraphChanged(GraphChangeSet changeSet) => _onGraphChanged.OnNext(changeSet);
+        public void EmitNodeAdded(string nodeId) { if (_isDisposed) return; _onNodeAdded.OnNext(nodeId); }
+        public void EmitNodeRemoved(string nodeId) { if (_isDisposed) return; _onNodeRemoved.OnNext(nodeId); }
+        public void EmitEdgeAdded(string edgeId) { if (_isDisposed) return; _onEdgeAdded.OnNext(edgeId); }
+        public void EmitEdgeRemoved(string edgeId) { if (_isDisposed) return; _onEdgeRemoved.OnNext(edgeId); }
+        public void EmitGraphChanged(GraphChangeSet changeSet) { if (_isDisposed) return; _onGraphChanged.OnNext(changeSet); }
 
         public void Dispose()
         {
+            if (_isDisposed) return;
+            _isDisposed = true;
             _onNodeAdded.Dispose();
             _onNodeRemoved.Dispose();
             _onEdgeAdded.Dispose();

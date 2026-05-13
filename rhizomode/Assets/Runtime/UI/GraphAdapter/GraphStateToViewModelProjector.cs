@@ -34,6 +34,8 @@ namespace Rhizomode.UI
         private readonly Subject<GraphChangeSet> _onGraphChanged = new();
 
         private readonly CompositeDisposable _subscriptions = new();
+        // Phase 8 Codex Axis B fix: Dispose 後の OnNext を idempotent に。
+        private bool _isDisposed;
 
         public Observable<NodeViewModel> OnNodeAdded => _onNodeAdded;
         public Observable<string> OnNodeRemoved => _onNodeRemoved;
@@ -46,11 +48,13 @@ namespace Rhizomode.UI
             _readModel = readModel;
             _eventBus = eventBus;
 
+            // Phase 8 Codex Axis B fix: Dispose 後にも EventBus からの emit が来る可能性があるため、
+            // 各 Subscribe で _isDisposed guard を入れる (subjects.OnNext は disposed 後 throw する)。
             _subscriptions.Add(_eventBus.OnNodeAdded.Subscribe(OnNodeAddedFromBus));
-            _subscriptions.Add(_eventBus.OnNodeRemoved.Subscribe(id => _onNodeRemoved.OnNext(id)));
+            _subscriptions.Add(_eventBus.OnNodeRemoved.Subscribe(id => { if (!_isDisposed) _onNodeRemoved.OnNext(id); }));
             _subscriptions.Add(_eventBus.OnEdgeAdded.Subscribe(OnEdgeAddedFromBus));
-            _subscriptions.Add(_eventBus.OnEdgeRemoved.Subscribe(id => _onEdgeRemoved.OnNext(id)));
-            _subscriptions.Add(_eventBus.OnGraphChanged.Subscribe(cs => _onGraphChanged.OnNext(cs)));
+            _subscriptions.Add(_eventBus.OnEdgeRemoved.Subscribe(id => { if (!_isDisposed) _onEdgeRemoved.OnNext(id); }));
+            _subscriptions.Add(_eventBus.OnGraphChanged.Subscribe(cs => { if (!_isDisposed) _onGraphChanged.OnNext(cs); }));
         }
 
         /// <summary>現在の GraphState からノード全件の ViewModel を構築する (初期化用)。</summary>
@@ -77,6 +81,7 @@ namespace Rhizomode.UI
 
         private void OnNodeAddedFromBus(string nodeId)
         {
+            if (_isDisposed) return;
             var node = _readModel.GetNode(nodeId);
             if (node == null) return;
             _onNodeAdded.OnNext(BuildNodeViewModel(node));
@@ -84,6 +89,7 @@ namespace Rhizomode.UI
 
         private void OnEdgeAddedFromBus(string edgeId)
         {
+            if (_isDisposed) return;
             foreach (var edge in _readModel.Edges)
             {
                 if (edge.Id == edgeId)
@@ -124,6 +130,8 @@ namespace Rhizomode.UI
 
         public void Dispose()
         {
+            if (_isDisposed) return;
+            _isDisposed = true;
             _subscriptions.Dispose();
             _onNodeAdded.Dispose();
             _onNodeRemoved.Dispose();

@@ -107,8 +107,10 @@ namespace Rhizomode.Graph.Model
         /// <summary>
         /// ノード間のエッジ接続を試行する。型が不一致の場合はfalseを返す。
         /// </summary>
+        /// <param name="edgeId">supplied edge id (Phase 8 Codex Axis A fix)。null/empty なら GUID 自動生成。
+        /// Hydration 経路で snapshot/serialization 上の元 ID を保持するために使う。</param>
         /// <returns>接続成功でtrue。型不一致またはポート未発見でfalse。</returns>
-        internal bool TryConnect(string fromNodeId, string fromPort, string toNodeId, string toPort)
+        internal bool TryConnect(string fromNodeId, string fromPort, string toNodeId, string toPort, string? edgeId = null)
         {
             // 自己接続はグラフの循環を起こすため禁止
             if (fromNodeId == toNodeId)
@@ -163,7 +165,7 @@ namespace Rhizomode.Graph.Model
                 }
 
                 var edge = new Edge(
-                    Guid.NewGuid().ToString(),
+                    string.IsNullOrEmpty(edgeId) ? Guid.NewGuid().ToString() : edgeId!,
                     fromNodeId, fromPort,
                     toNodeId, toPort
                 );
