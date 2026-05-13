@@ -57,7 +57,9 @@ namespace Rhizomode.Graph.Mutation
         }
 
         /// <summary>command を解釈して <see cref="GraphState"/> に適用する。</summary>
-#pragma warning disable CS0618 // GraphState legacy API (Phase 8 で削除予定)
+        /// <remarks>Phase 8: GraphState の mutation メソッド (RegisterNode/RemoveNode/TryConnect/
+        /// Disconnect/Clear) は internal 化。Graph.Mutation は InternalsVisibleTo で許可された
+        /// 正規 consumer。</remarks>
         public void Apply(IGraphCommand command)
         {
             switch (command)
@@ -166,7 +168,6 @@ namespace Rhizomode.Graph.Mutation
                                   edgeSnap.ToNodeId, edgeSnap.ToPortName);
             }
         }
-#pragma warning restore CS0618
 
         private static IReadOnlyDictionary<string, ParamValue> CaptureNodeParams(NodeBase node)
         {

@@ -66,9 +66,9 @@ namespace Rhizomode.Graph.Runtime
         /// </remarks>
         public bool AddEdge(string edgeId, string fromNode, string fromPort, string toNode, string toPort)
         {
-#pragma warning disable CS0618
+            // Phase 8: GraphState.TryConnect は internal 化。Graph.Runtime は
+            // InternalsVisibleTo 経由でアクセス。Phase 7 で id 指定可能 API に切替予定 (未完了)。
             var success = _state.TryConnect(fromNode, fromPort, toNode, toPort);
-#pragma warning restore CS0618
             if (success)
             {
                 _eventBus.EmitEdgeAdded(edgeId);

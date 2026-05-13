@@ -78,9 +78,7 @@ namespace Rhizomode.UI
             }
 
             var resolved = ResolveFileName(fileName);
-#pragma warning disable CS0618 // GraphState.Serialize は Phase 8 で internal 化予定
             var data = _graphContext.Context.Serialize();
-#pragma warning restore CS0618
 
             if (!_repository.SaveGraph(resolved, data)) return false;
             OnGraphSaved?.Invoke(resolved);
@@ -103,10 +101,9 @@ namespace Rhizomode.UI
 
             // Codex review fix #3: 部分適用 orphan を避けるため Clear 前に backup を取り、
             // Executor 失敗時は backup から復元する (旧 GraphState.Deserialize の安全網パターン)。
-#pragma warning disable CS0618 // GraphState.Serialize/Clear は Phase 8 で internal 化予定
+            // Phase 8: Clear は internal 化 (UI.GraphAdapter は InternalsVisibleTo で許可、transitional)。
             var backup = _graphContext.Context.Serialize();
             _graphContext.Context.Clear();
-#pragma warning restore CS0618
 
             try
             {
@@ -134,9 +131,7 @@ namespace Rhizomode.UI
             if (_graphContext == null || _hydrator == null || _executor == null || _factory == null) return;
             try
             {
-#pragma warning disable CS0618
                 _graphContext.Context.Clear();
-#pragma warning restore CS0618
                 var plan = _hydrator.Build(backup);
                 _executor.Execute(plan, _factory);
                 Debug.LogWarning($"[GraphSaveLoadManager] Rolled back to backup ({backup.nodes.Count} nodes).");

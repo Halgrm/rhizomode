@@ -14,11 +14,12 @@ namespace Rhizomode.Graph.Model
     /// ノードグラフの中核管理クラス。ノード登録・エッジ接続・信号フロー仲介・シリアライズを担う。
     /// </summary>
     /// <remarks>
-    /// Plan v5.3 Phase 3: ミューテーション 5 メソッド (RegisterNode/RemoveNode/TryConnect/Disconnect/Clear)
-    /// は <c>[Obsolete]</c> でマーク済。新規呼び出しは <c>IGraphCommand</c> + <c>GraphCommandDispatcher</c>
-    /// 経由に書き換えること。Phase 8 で [Obsolete] を削除し internal 化する。
+    /// Plan v5.3 Phase 8: ミューテーション 5 メソッド (RegisterNode/RemoveNode/TryConnect/Disconnect/Clear)
+    /// は <c>internal</c>。public API は <c>IGraphCommand</c> + <c>GraphCommandDispatcher</c> 経由のみ。
+    /// 正規 consumer は <c>Graph.Mutation</c> / <c>Graph.Runtime</c> / <c>Graph.Tests</c>
+    /// (transitional: XR / UI.GraphAdapter / Interaction — 各 caller を Phase 8 で migrate)。
+    /// 詳細は <see cref="InternalsVisibleTo"/> 宣言 (Assets/Runtime/Graph/Model/InternalsVisibleTo.cs)。
     /// </remarks>
-#pragma warning disable CS0618 // クラス内部での自己呼び出しの warning を抑制 (Phase 3-8 transitional)
     public class GraphState : IDisposable
     {
         private readonly Dictionary<string, NodeBase> _nodes = new();
@@ -57,9 +58,7 @@ namespace Rhizomode.Graph.Model
         /// <summary>
         /// ノードを登録し、Setup()を呼び出す。
         /// </summary>
-        [System.Obsolete("Phase 3: Use IGraphCommand + GraphCommandDispatcher.Execute(AddNodeCommand). " +
-                         "Direct calls will be removed in Phase 8.")]
-        public void RegisterNode(NodeBase node)
+        internal void RegisterNode(NodeBase node)
         {
             _nodes[node.Id] = node;
             try
@@ -75,9 +74,7 @@ namespace Rhizomode.Graph.Model
         /// <summary>
         /// ノードを削除し、関連するエッジをすべて切断する。
         /// </summary>
-        [System.Obsolete("Phase 3: Use IGraphCommand + GraphCommandDispatcher.Execute(RemoveNodeCommand). " +
-                         "Direct calls will be removed in Phase 8.")]
-        public void RemoveNode(string nodeId)
+        internal void RemoveNode(string nodeId)
         {
             if (!_nodes.TryGetValue(nodeId, out var node))
             {
@@ -110,9 +107,7 @@ namespace Rhizomode.Graph.Model
         /// ノード間のエッジ接続を試行する。型が不一致の場合はfalseを返す。
         /// </summary>
         /// <returns>接続成功でtrue。型不一致またはポート未発見でfalse。</returns>
-        [System.Obsolete("Phase 3: Use IGraphCommand + GraphCommandDispatcher.Execute(ConnectPortsCommand). " +
-                         "Direct calls will be removed in Phase 8.")]
-        public bool TryConnect(string fromNodeId, string fromPort, string toNodeId, string toPort)
+        internal bool TryConnect(string fromNodeId, string fromPort, string toNodeId, string toPort)
         {
             // 自己接続はグラフの循環を起こすため禁止
             if (fromNodeId == toNodeId)
@@ -185,9 +180,7 @@ namespace Rhizomode.Graph.Model
         /// <summary>
         /// 指定されたエッジを切断する。
         /// </summary>
-        [System.Obsolete("Phase 3: Use IGraphCommand + GraphCommandDispatcher.Execute(DisconnectEdgeCommand). " +
-                         "Direct calls will be removed in Phase 8.")]
-        public void Disconnect(string fromNodeId, string fromPort, string toNodeId, string toPort)
+        internal void Disconnect(string fromNodeId, string fromPort, string toNodeId, string toPort)
         {
             var edge = _edges.Find(e =>
                 e.FromNodeId == fromNodeId && e.FromPort == fromPort &&
@@ -418,9 +411,7 @@ namespace Rhizomode.Graph.Model
         /// <summary>
         /// 全ノード・全エッジを破棄する。
         /// </summary>
-        [System.Obsolete("Phase 3: Use IGraphCommand + GraphCommandDispatcher.Execute(LoadGraphCommand(empty)). " +
-                         "Direct calls will be removed in Phase 8.")]
-        public void Clear()
+        internal void Clear()
         {
             foreach (var edge in _edges)
                 edge.Subscription?.Dispose();
@@ -442,5 +433,4 @@ namespace Rhizomode.Graph.Model
             Clear();
         }
     }
-#pragma warning restore CS0618
 }
