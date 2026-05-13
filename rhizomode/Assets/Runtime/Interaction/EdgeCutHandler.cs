@@ -2,6 +2,7 @@
 
 using System;
 using R3;
+using Rhizomode.Interaction.Contracts;
 using Rhizomode.UI;
 using UnityEngine;
 
@@ -19,6 +20,7 @@ namespace Rhizomode.XR
         private IRayProvider? _rayProvider;
         private EdgeVisualManager? _edgeVisualManager;
         private GraphContextBehaviour? _graphContext;
+        private IIntentSink? _intentSink;
         private IDisposable? _cutSubscription;
 
         private string? _highlightedEdgeId;
@@ -48,6 +50,12 @@ namespace Rhizomode.XR
             _cutSubscription = controllerInput.OnCutEdge
                 .Subscribe(_ => CutHighlightedEdge());
         }
+
+        /// <summary>
+        /// Plan v5.3 Phase 5: 空間操作 intent の発行先を注入する。
+        /// GameBootstrap が SpatialIntentToCommandTranslator を渡す。
+        /// </summary>
+        public void SetIntentSink(IIntentSink intentSink) => _intentSink = intentSink;
 
         private void Update()
         {
@@ -79,9 +87,9 @@ namespace Rhizomode.XR
 
             try
             {
-                _graphContext.Context.Disconnect(
-                    visual.FromNodeId, visual.FromPort,
-                    visual.ToNodeId, visual.ToPort);
+                // Plan v5.3 Phase 5: GraphState.Disconnect 直接呼び出しを intent emit に置換。
+                // Translator が DisconnectEdgeCommand を Origin=Interaction で発行 → Dispatcher 経由で適用。
+                _intentSink?.Emit(new DisconnectEdgeIntent(_highlightedEdgeId));
                 _edgeVisualManager.DestroyEdgeVisual(_highlightedEdgeId);
             }
             catch (Exception e)

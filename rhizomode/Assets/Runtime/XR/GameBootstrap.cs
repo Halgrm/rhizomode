@@ -1086,6 +1086,35 @@ namespace Rhizomode.XR
                     clipFireHandler?.SetEnabled(isIdle);
                 });
             }
+
+            // Plan v5.3 Phase 5 Round E: SpatialIntentToCommandTranslator wiring。
+            // 3 handler (EdgeDrag / EdgeCut / NodeDelete) を intent emit に切替。
+            WireIntentSink();
+        }
+
+        private void WireIntentSink()
+        {
+            if (graphContext == null) return;
+
+            // 静的 + 動的 factory を合成して Dispatcher に渡す。Round E では Connect/Disconnect/Remove の
+            // 3 種だけ使うため、factory は静的のみで十分 (AddNode は Round F で SceneTrigger/Module 動的
+            // factory を追加してから接続)。
+            var scanner = new Rhizomode.NodeCatalog.Runtime.NodeTypeAttributeScanner();
+            var staticFactory = new Rhizomode.NodeCatalog.Runtime.AttributeScannerNodeFactory(scanner.Scan());
+            var composite = new Rhizomode.NodeCatalog.Runtime.CompositeNodeFactory(
+                new Rhizomode.Graph.CatalogBridge.INodeFactory[] { staticFactory });
+
+            var eventBus = new Rhizomode.Graph.Events.GraphEventBus();
+            var applier = new Rhizomode.Graph.Mutation.GraphMutationApplier(
+                graphContext.Context, composite, eventBus);
+            var dispatcher = new Rhizomode.Graph.Mutation.GraphCommandDispatcher(applier);
+            var translator = new Rhizomode.Interaction.GraphAdapter.SpatialIntentToCommandTranslator(dispatcher);
+
+            edgeDragHandler?.SetIntentSink(translator);
+            edgeCutHandler?.SetIntentSink(translator);
+            nodeDeleteHandler?.SetIntentSink(translator);
+
+            Debug.Log("[GameBootstrap] Phase 5 Round E: IntentSink wired up for 3 handlers.");
         }
 
         private void OnGraphLoaded()

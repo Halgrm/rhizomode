@@ -18,7 +18,7 @@ namespace Rhizomode.Interaction.GraphAdapter
     /// Dispatcher → GraphMutationApplier が行う。Interaction 層は intent 発火、ここで command 変換、
     /// Mutation 層で適用、と責務が階層化される。
     /// </remarks>
-    public sealed class SpatialIntentToCommandTranslator
+    public sealed class SpatialIntentToCommandTranslator : IIntentSink
     {
         private readonly GraphCommandDispatcher _dispatcher;
         private readonly Func<string> _nodeIdProvider;
@@ -33,6 +33,11 @@ namespace Rhizomode.Interaction.GraphAdapter
             _nodeIdProvider = nodeIdProvider ?? (() => Guid.NewGuid().ToString());
             _edgeIdProvider = edgeIdProvider ?? (() => Guid.NewGuid().ToString());
         }
+
+        /// <summary>
+        /// <see cref="IIntentSink.Emit"/> の実装 (= <see cref="Translate"/> と等価)。
+        /// </summary>
+        public bool Emit(IInteractionIntent intent) => Translate(intent);
 
         /// <summary>
         /// intent を解釈して該当する <see cref="IGraphCommand"/> を構築し、Dispatcher で実行する。

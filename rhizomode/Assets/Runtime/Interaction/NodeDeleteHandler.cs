@@ -3,6 +3,7 @@
 using System;
 using System.Collections.Generic;
 using R3;
+using Rhizomode.Interaction.Contracts;
 using Rhizomode.UI;
 using UnityEngine;
 
@@ -23,6 +24,7 @@ namespace Rhizomode.XR
         private EdgeVisualManager? _edgeVisualManager;
         private EdgeDragHandler? _edgeDragHandler;
         private Action<string>? _destroyModuleAction;
+        private IIntentSink? _intentSink;
         private IDisposable? _deleteSubscription;
 
         private string? _selectedNodeId;
@@ -64,6 +66,9 @@ namespace Rhizomode.XR
             _edgeDragHandler = edgeDragHandler;
             _destroyModuleAction = destroyModuleAction;
         }
+
+        /// <summary>Plan v5.3 Phase 5: 空間操作 intent の発行先を注入する。</summary>
+        public void SetIntentSink(IIntentSink intentSink) => _intentSink = intentSink;
 
         private void Update()
         {
@@ -125,8 +130,9 @@ namespace Rhizomode.XR
                     _edgeVisualManager.DestroyEdgeVisual(edgeId);
                 }
 
-                // GraphContextからノード削除（エッジSubscription破棄含む）
-                _graphContext.Context.RemoveNode(nodeId);
+                // Plan v5.3 Phase 5: GraphState.RemoveNode 直接呼び出しを intent emit に置換。
+                // Translator が RemoveNodeCommand (Origin=Interaction) を Dispatcher 経由で実行。
+                _intentSink?.Emit(new DeleteNodeIntent(nodeId));
 
                 // モジュールPrefabインスタンスの破棄（リーク防止）
                 _destroyModuleAction?.Invoke(nodeId);

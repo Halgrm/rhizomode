@@ -3,6 +3,7 @@
 using System;
 using System.Collections.Generic;
 using R3;
+using Rhizomode.Interaction.Contracts;
 using Rhizomode.SharedKernel;
 using Rhizomode.Graph.Model;
 using UnityEngine;
@@ -38,6 +39,7 @@ namespace Rhizomode.UI
         private GraphContextBehaviour? _graphContext;
         private EdgeVisualManager? _edgeVisualManager;
         private SharedRaycastService? _sharedRaycast;
+        private IIntentSink? _intentSink;
         private IDisposable? _selectSubscription;
 
         // メニューオープン中やグラブ中など外部から無効化する用
@@ -282,19 +284,29 @@ namespace Rhizomode.UI
             return (closestPort, closestType);
         }
 
+        /// <summary>
+        /// Plan v5.3 Phase 5: 空間操作 intent の発行先を注入する。
+        /// </summary>
+        public void SetIntentSink(IIntentSink intentSink) => _intentSink = intentSink;
+
         private void TryConnect(string targetNodeId, string targetPort)
         {
             if (_graphContext == null || _edgeVisualManager == null) return;
+            if (_intentSink == null) return;
             if (_sourceNodeId == null || _sourcePortName == null) return;
 
-            var context = _graphContext.Context;
-            if (!context.TryConnect(_sourceNodeId, _sourcePortName, targetNodeId, targetPort))
+            // Plan v5.3 Phase 5: GraphState.TryConnect 直接呼び出しを intent emit に置換。
+            var intent = new ConnectPortsIntent(
+                _sourceNodeId, _sourcePortName, targetNodeId, targetPort);
+            if (!_intentSink.Emit(intent))
             {
-                Debug.LogWarning($"[EdgeDragHandler] Connection failed: {_sourceNodeId}.{_sourcePortName} → {targetNodeId}.{targetPort}");
+                Debug.LogWarning($"[EdgeDragHandler] Connection emit failed: {_sourceNodeId}.{_sourcePortName} → {targetNodeId}.{targetPort}");
                 return;
             }
 
-            // 接続成功: エッジVisualを生成
+            // 接続成功: 新規 Edge を GraphState から読んで visual 生成
+            // (Round G で GraphStateToViewModelProjector.OnEdgeAdded 経由に置換予定)
+            var context = _graphContext.Context;
             var edges = context.Edges;
             for (var i = edges.Count - 1; i >= 0; i--)
             {
