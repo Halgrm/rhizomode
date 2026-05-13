@@ -1,6 +1,7 @@
 #nullable enable
 
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using Rhizomode.Graph.Model;
 using Rhizomode.SharedKernel;
 using Rhizomode.UI.Contracts;
@@ -19,22 +20,25 @@ namespace Rhizomode.UI
     public sealed class NodeViewAdapter : INodeView
     {
         private readonly NodeBase _node;
-        private readonly List<PortViewModel> _inputs = new();
-        private readonly List<PortViewModel> _outputs = new();
+        private readonly ReadOnlyCollection<PortViewModel> _inputs;
+        private readonly ReadOnlyCollection<PortViewModel> _outputs;
 
         public NodeViewAdapter(NodeBase node)
         {
             _node = node;
+            var inputs = new List<PortViewModel>();
+            var outputs = new List<PortViewModel>();
             foreach (var p in node.GetPortDefinitions())
             {
                 var vm = new PortViewModel(p.name, p.type, IsConnected: false);
-                if (p.direction == PortDirection.Input) _inputs.Add(vm);
-                else _outputs.Add(vm);
+                if (p.direction == PortDirection.Input) inputs.Add(vm);
+                else outputs.Add(vm);
             }
+            // Codex E review (Criterion 3): backing List ではなく ReadOnlyCollection を保持し、
+            // caller が cast で書き込み可能な List に到達できないようにする。
+            _inputs = new ReadOnlyCollection<PortViewModel>(inputs);
+            _outputs = new ReadOnlyCollection<PortViewModel>(outputs);
         }
-
-        /// <summary>wrap した NodeBase (Interaction 層が IIntent や hit テスト用に参照)。</summary>
-        public NodeBase UnderlyingNode => _node;
 
         public string NodeId => _node.Id;
         public string TypeName => _node.NodeType;
