@@ -52,9 +52,10 @@ namespace Rhizomode.UI.Contracts
             return hash.ToHashCode();
         }
 
-        private static bool SequenceEqual<T>(IReadOnlyList<T> a, IReadOnlyList<T> b)
+        private static bool SequenceEqual<T>(IReadOnlyList<T>? a, IReadOnlyList<T>? b)
         {
             if (ReferenceEquals(a, b)) return true;
+            if (a is null || b is null) return false;
             if (a.Count != b.Count) return false;
             for (int i = 0; i < a.Count; i++)
             {
