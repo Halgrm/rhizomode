@@ -4,7 +4,8 @@
     "references": [
         "Rhizomode.SharedKernel",
         "Rhizomode.Scene.Contracts",
-        "Rhizomode.Graph.Model"
+        "Rhizomode.Graph.Model",
+        "Rhizomode.Graph.Runtime"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

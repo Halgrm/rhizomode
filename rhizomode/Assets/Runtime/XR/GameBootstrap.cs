@@ -7,6 +7,7 @@ using R3;
 using Rhizomode.Audio.Analysis;
 using Rhizomode.Audio.GraphAdapter;
 using Rhizomode.Cameras;
+using Rhizomode.Scene.GraphAdapter;
 using Rhizomode.SharedKernel;
 using Rhizomode.Graph.Model;
 using Rhizomode.Graph.Runtime;
@@ -142,6 +143,11 @@ namespace Rhizomode.XR
         /// </summary>
         private ModuleLifecycleProcessor? _moduleProcessor;
 
+        /// <summary>
+        /// Phase 6 Round B: ISceneLoaderConsumer に ISceneLoader を注入する LifecycleProcessor。
+        /// </summary>
+        private SceneLoaderLifecycleProcessor? _sceneLoaderProcessor;
+
         private static readonly Dictionary<string, Func<string, NodeBase>> NodeFactoryMap = new()
         {
             ["ConstFloat"] = id => new ConstFloatNode(id),
@@ -199,6 +205,10 @@ namespace Rhizomode.XR
                 _object3DPrefabMap,
                 new BootstrapModulePlacement(this),
                 new BootstrapObject3DRegistry(this));
+
+            // Phase 6 Round B: SceneLoaderLifecycleProcessor を初期化。
+            // sceneLoader は [SerializeField] で MonoBehaviour に注入される。
+            _sceneLoaderProcessor = new SceneLoaderLifecycleProcessor(sceneLoader);
 
             InitializeSystems();
             InitializeVerticalSliceSystems();
@@ -1089,22 +1099,16 @@ namespace Rhizomode.XR
             {
                 try
                 {
+                    // Phase 6 Round B: ISceneLoaderConsumer (Scene Switch/Trigger) への注入は
+                    // SceneLoaderLifecycleProcessor.BeforeSetup が担う。
+                    _sceneLoaderProcessor?.BeforeSetup(node, NodeInitMode.Deserialize);
+
                     // Module/Object3D は LifecycleProcessor で instantiation + IPerformanceModule 注入
                     _moduleProcessor.AfterSetup(node, NodeInitMode.Deserialize);
 
-                    switch (node)
-                    {
-                        case SceneSwitchNode sceneNode:
-                            sceneNode.Loader = sceneLoader;
-                            break;
-                        case SceneTriggerNode triggerNode:
-                            triggerNode.Loader = sceneLoader;
-                            break;
-                        case Object3DNode object3DNode:
-                            // Proxy 観測の bind は GraphState を持つ層 (本クラス) で実施
-                            BindObject3DProxyObservables(object3DNode);
-                            break;
-                    }
+                    // Proxy 観測の bind は GraphState を持つ層 (本クラス) で実施
+                    if (node is Object3DNode object3DNode)
+                        BindObject3DProxyObservables(object3DNode);
                 }
                 catch (Exception e)
                 {
@@ -1167,16 +1171,14 @@ namespace Rhizomode.XR
             var spawnPos = headPos + _activeInput!.HeadForward * 0.3f;
             node.Position = spawnPos;
 
-            // モジュールノードの場合、Prefabインスタンスを生成してModule注入
-            // Phase 6 Round A: LifecycleProcessor に委譲。Scene loader 注入と Object3D の
-            // GraphState binding は本クラスが残りの責務として処理 (Phase 8 で Installer に移譲)。
+            // Phase 6 Round B: Scene loader 注入は SceneLoaderLifecycleProcessor.BeforeSetup
+            _sceneLoaderProcessor?.BeforeSetup(node, NodeInitMode.FreshSpawn);
+
+            // Phase 6 Round A: Module/Object3D の Prefab 生成 + IPerformanceModule 注入
             _moduleProcessor?.AfterSetup(node, NodeInitMode.FreshSpawn);
-            switch (node)
-            {
-                case SceneSwitchNode sceneNode: sceneNode.Loader = sceneLoader; break;
-                case SceneTriggerNode triggerNode: triggerNode.Loader = sceneLoader; break;
-                case Object3DNode obj3d: BindObject3DProxyObservables(obj3d); break;
-            }
+
+            // Object3D は GraphState を持つ層 (本クラス) で proxy 観測を bind
+            if (node is Object3DNode obj3d) BindObject3DProxyObservables(obj3d);
 
             Debug.Log($"[GameBootstrap] Node created: {node.Id} type={node.NodeType} inputPorts={node.InputPorts.Count}");
 

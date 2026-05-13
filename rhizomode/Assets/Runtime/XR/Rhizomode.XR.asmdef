@@ -29,6 +29,7 @@
         "Rhizomode.Cameras",
         "Rhizomode.Scene.Contracts",
         "Rhizomode.Scene.Runtime",
+        "Rhizomode.Scene.GraphAdapter",
         "Rhizomode.Audio.Analysis",
         "Rhizomode.Audio.GraphAdapter",
         "Rhizomode.Ableton.Transport",

@@ -17,7 +17,7 @@ namespace Rhizomode.Nodes.Scene
     /// 追加シーンだけが入れ替わる。
     /// </summary>
     [NodeType("SceneSwitch", "Scene Switch", NodeCategory.Scene)]
-    public class SceneSwitchNode : NodeBase
+    public class SceneSwitchNode : NodeBase, ISceneLoaderConsumer
     {
         private ISceneLoader? _loader;
         private int _currentIndex = -1;

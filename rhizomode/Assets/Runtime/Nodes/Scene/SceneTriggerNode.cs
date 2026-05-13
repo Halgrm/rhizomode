@@ -13,7 +13,7 @@ namespace Rhizomode.Nodes.Scene
     /// Bool入力 "Trigger" の立ち上がりで、固定インデックスのシーンをAdditiveロードするノード。
     /// シーンごとに1ノードとしてメニューに登録される（例: "Dark", "White", "Nature"）。
     /// </summary>
-    public class SceneTriggerNode : NodeBase
+    public class SceneTriggerNode : NodeBase, ISceneLoaderConsumer
     {
         private readonly int _sceneIndex;
         private ISceneLoader? _loader;
