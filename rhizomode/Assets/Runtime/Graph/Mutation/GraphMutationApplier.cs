@@ -103,7 +103,10 @@ namespace Rhizomode.Graph.Mutation
 
         private void ApplyConnect(ConnectPortsCommand cmd)
         {
-            if (_state.TryConnect(cmd.FromNodeId, cmd.FromPortName, cmd.ToNodeId, cmd.ToPortName))
+            // Phase 8 Codex Axis A fix (re-review): cmd.EdgeId を実 edge.Id として保持。
+            // 旧コードは TryConnect が新 GUID を生成しつつ bus.EmitEdgeAdded(cmd.EdgeId) で異なる id を
+            // 通知していたため、projector / Undo / Snapshot の edge identity 不整合が発生していた。
+            if (_state.TryConnect(cmd.FromNodeId, cmd.FromPortName, cmd.ToNodeId, cmd.ToPortName, cmd.EdgeId))
             {
                 _bus.EmitEdgeAdded(cmd.EdgeId);
             }
@@ -165,8 +168,9 @@ namespace Rhizomode.Graph.Mutation
 
             foreach (var edgeSnap in snapshot.Edges)
             {
+                // Phase 8 Codex Axis A fix (re-review): Undo/Redo の Snapshot 復元時も edge id を保持。
                 _state.TryConnect(edgeSnap.FromNodeId, edgeSnap.FromPortName,
-                                  edgeSnap.ToNodeId, edgeSnap.ToPortName);
+                                  edgeSnap.ToNodeId, edgeSnap.ToPortName, edgeSnap.EdgeId);
             }
         }
 
