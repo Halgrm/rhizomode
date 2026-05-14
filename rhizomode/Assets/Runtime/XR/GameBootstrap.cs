@@ -8,8 +8,6 @@ using Rhizomode.Audio.Analysis;
 using Rhizomode.Audio.GraphAdapter;
 using Rhizomode.Observability.Runtime;
 using Rhizomode.Cameras;
-using Rhizomode.Graph.Serialization;
-using Rhizomode.Persistence.Json;
 using Rhizomode.Scene.GraphAdapter;
 using Rhizomode.SharedKernel;
 using Rhizomode.Graph.Model;
@@ -149,17 +147,12 @@ namespace Rhizomode.XR
         private readonly Dictionary<string, GameObject> _object3DPrefabMap = new();
 
         /// <summary>
-        /// Phase 5 Round E で WireIntentSink が作る EventBus。Subject<T> 5 件を保持するため
-        /// OnDestroy で Dispose 必須 (Codex review fix #8)。Phase 8 で VContainer Installer に
-        /// 移行したら本フィールドは削除される。
+        /// GraphEventBus。V2b で GraphInstaller が構築・container 登録するようになり、本フィールドは
+        /// LaunchCompositionRoot で <see cref="CompositionRoot.EventBus"/> から受け取る。NodeRuntime
+        /// ctor へ渡し、OnDestroy で Dispose する (Subject を複数保持するため Dispose 必須)。
+        /// 所有を container 側へ完全移管するのは V3 (NodeRuntime の Installer 化と同時)。
         /// </summary>
         private Rhizomode.Graph.Events.GraphEventBus? _phase5EventBus;
-
-        /// <summary>
-        /// Phase 7 Round B: GraphSaveLoadManager + WireIntentSink で共有する Composite factory。
-        /// Awake 後の最初の呼び出し時に lazy 構築。Phase 8 で VContainer Installer に移行予定。
-        /// </summary>
-        private Rhizomode.Graph.CatalogBridge.INodeFactory? _sharedFactory;
 
         /// <summary>
         /// Phase 6 Round A: Module/Object3D の Prefab instantiation + IPerformanceModule 注入を
@@ -233,30 +226,16 @@ namespace Rhizomode.XR
         /// </summary>
         private SceneObjectRegistrationService? _sceneObjectService;
 
-        /// <summary>
-        /// Phase 8 Round F3: GraphAdapter (Translator + EventBus + Persistence) 統合 wiring。
-        /// EnsureSharedFactoryAndEventBus + WireIntentSink + ConfigureSaveLoad の 3 ヘルパーを集約。
-        /// </summary>
-        private GraphAdapterWiring? _graphAdapterWiring;
-
         // Phase 8 Round E: NodeFactoryMap + RegisterNodeTypes + RegisterFactories +
         // RegisterModuleTypes + RegisterObject3DTypes は NodeRegistrationOrchestrator に移送済 (F-8.2 抽出 3/N)。
+        // V2b: GraphAdapter wiring (旧 GraphAdapterWiring) は GraphInstaller / PersistenceInstaller に
+        // 吸収。GameBootstrap は CompositionRoot 経由で resolve 済サービスを受け取る。
 
         private void Awake()
         {
-            // V2a: GraphAdapterWiring は引き続き GameBootstrap が new する (Installer 化は V2b)。
-            // 産物の MainThreadGraphCommandQueue が EntryPointsInstaller の依存なので、composition
-            // root を起動する前に構築しておく。
-            if (graphContext != null)
-            {
-                _graphAdapterWiring = new GraphAdapterWiring(graphContext.Context);
-                _sharedFactory = _graphAdapterWiring.Factory;
-                _phase5EventBus = _graphAdapterWiring.EventBus;
-            }
-
-            // V2a: VContainer composition root を Awake 序盤で起動。CatalogInstaller /
-            // ObservabilityInstaller / EntryPointsInstaller が pure-C# サービスを構築し、container
-            // から resolve して _typeRegistry / _healthAggregator / _object3DPrefabMap に束ねる。
+            // V2b: VContainer composition root を Awake 序盤で起動。Graph / Catalog / Persistence /
+            // Observability / EntryPoints の各 Installer が pure-C# サービスを構築し、container から
+            // resolve して _compositionRoot 経由で各 field に束ねる。
             LaunchCompositionRoot();
 
             // Phase 6 Round A: ModuleLifecycleProcessor を初期化
@@ -292,11 +271,11 @@ namespace Rhizomode.XR
             //                  ModuleLifecycleProcessor (AfterSetup で Prefab + Module 注入)
             // この設計で ScrollMenu Spawn / SceneObject 自動登録 / SpawnInputNodes 全てが
             // 自動的に Lifecycle を駆動する (旧来の手動 InjectModuleIfNeeded 呼び出しを撤廃)。
-            // V2a: GraphAdapterWiring の構築は Awake 序盤に前倒し済 (composition root 起動前)。
-            if (graphContext != null && _graphAdapterWiring != null)
+            // V2b: EventBus は GraphInstaller 産を CompositionRoot 経由で受け取る。
+            if (graphContext != null && _compositionRoot != null)
             {
                 _nodeRuntime = new Rhizomode.Graph.Runtime.NodeRuntime(
-                    graphContext.Context, _graphAdapterWiring.EventBus,
+                    graphContext.Context, _compositionRoot.EventBus,
                     new Rhizomode.Graph.Runtime.INodeLifecycleProcessor[]
                     {
                         _sceneLoaderProcessor, _oscMidiTransportProcessor,
@@ -327,10 +306,10 @@ namespace Rhizomode.XR
         }
 
         /// <summary>
-        /// Plan v5.4 §15 (V2a): VContainer composition root を起動し、CatalogInstaller /
-        /// ObservabilityInstaller / EntryPointsInstaller が構築した pure-C# サービスを container から
-        /// resolve して field (<see cref="_typeRegistry"/> / <see cref="_healthAggregator"/> /
-        /// <see cref="_object3DPrefabMap"/>) に束ねる。
+        /// Plan v5.4 §15 (V2b): VContainer composition root を起動し、Graph / Catalog / Persistence /
+        /// Observability / EntryPoints の各 Installer が構築した pure-C# サービスを container から
+        /// resolve して各 field (_typeRegistry / _healthAggregator / _phase5EventBus /
+        /// _object3DPrefabMap) に束ねる。
         /// </summary>
         /// <remarks>
         /// VContainer 型には触れず、Bootstrap asmdef の <see cref="EntryPointBootstrapper"/> に scene
@@ -341,25 +320,26 @@ namespace Rhizomode.XR
         ///
         /// graphContext 未設定の degraded 起動では scope を起動せず、空の NodeTypeRegistry のみ
         /// fallback で確保する (旧 Awake が常に new NodeTypeRegistry() していた挙動を保つ)。
+        /// NodeFactory / IntentTranslator / GraphRepository 等は <c>_compositionRoot</c> 経由で
+        /// 後段の WireIntentSink / ConfigureSaveLoad / NodeRuntime 構築から参照する。
         /// </remarks>
         private void LaunchCompositionRoot()
         {
-            var commandQueue = _graphAdapterWiring?.CommandQueue;
-            if (commandQueue == null)
+            if (graphContext == null)
             {
                 Debug.LogWarning(
-                    "[GameBootstrap] LaunchCompositionRoot skipped — GraphAdapterWiring 未構築 (graphContext 未設定)。");
+                    "[GameBootstrap] LaunchCompositionRoot skipped — graphContext 未設定 (degraded 起動)。");
                 _typeRegistry = new NodeTypeRegistry();
                 return;
             }
 
             _compositionRoot = EntryPointBootstrapper.Launch(
-                transform, commandQueue, audioDriver,
-                graphContext != null ? graphContext.Context : null,
+                transform, audioDriver, graphContext.Context,
                 moduleDefinitions, object3DPrefabs);
 
             _typeRegistry = _compositionRoot.TypeRegistry;
             _healthAggregator = _compositionRoot.HealthAggregator;
+            _phase5EventBus = _compositionRoot.EventBus;
 
             // Object3D prefab map は ModuleLifecycleProcessor の dependency として利用。
             if (_compositionRoot.Object3DPrefabMap != null)
@@ -424,23 +404,34 @@ namespace Rhizomode.XR
         }
 
 
-        /// <summary>Phase 8 Round F3: GraphAdapterWiring.Translator を 3 handler に注入する薄い wrapper。</summary>
+        /// <summary>V2b: GraphInstaller 産の IntentTranslator を 3 handler に注入する薄い wrapper。</summary>
         private void WireIntentSink()
         {
-            if (_graphAdapterWiring == null) return;
-            var translator = _graphAdapterWiring.Translator;
+            if (_compositionRoot == null) return;
+            var translator = _compositionRoot.IntentTranslator;
             edgeDragHandler?.SetIntentSink(translator);
             edgeCutHandler?.SetIntentSink(translator);
             nodeDeleteHandler?.SetIntentSink(translator);
-            Debug.Log("[GameBootstrap] Phase 5 Round E: IntentSink wired up for 3 handlers.");
+            Debug.Log("[GameBootstrap] IntentSink wired up for 3 handlers.");
         }
 
-        /// <summary>Phase 8 Round F3: GraphAdapterWiring.ConfigureSaveLoad に delegate する薄い wrapper。</summary>
+        /// <summary>
+        /// V2b: PersistenceInstaller 産の Repository / Hydrator / SavePathProvider と GraphInstaller 産の
+        /// NodeFactory を GraphSaveLoadManager に注入する。HydrationPlanExecutor のみ scene-ref 依存の
+        /// NodeRuntime を要するためここで構築する (Installer 化は V3)。
+        /// </summary>
         private void ConfigureSaveLoad()
         {
-            if (graphSaveLoad == null || _graphAdapterWiring == null || _nodeRuntime == null) return;
-            _graphAdapterWiring.ConfigureSaveLoad(graphSaveLoad, _nodeRuntime);
-            Debug.Log("[GameBootstrap] Phase 7: SaveLoad configured (Repository + Hydrator + Executor).");
+            if (graphSaveLoad == null || _compositionRoot == null || _nodeRuntime == null) return;
+
+            var executor = new Rhizomode.Graph.Runtime.HydrationPlanExecutor(_nodeRuntime);
+            graphSaveLoad.Configure(
+                _compositionRoot.GraphRepository,
+                _compositionRoot.GraphHydrator,
+                executor,
+                _compositionRoot.NodeFactory,
+                _compositionRoot.SavePathProvider);
+            Debug.Log("[GameBootstrap] SaveLoad configured (Repository + Hydrator + Executor).");
         }
 
         /// <summary>

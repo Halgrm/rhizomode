@@ -2,11 +2,15 @@
 
 using System.Collections.Generic;
 using Rhizomode.Audio.GraphAdapter;
+using Rhizomode.Graph.CatalogBridge;
+using Rhizomode.Graph.Events;
 using Rhizomode.Graph.Model;
-using Rhizomode.Graph.Mutation;
+using Rhizomode.Graph.Serialization;
+using Rhizomode.Interaction.GraphAdapter;
 using Rhizomode.Modules;
 using Rhizomode.NodeCatalog.Runtime;
 using Rhizomode.Observability.Runtime;
+using Rhizomode.Persistence.Contracts;
 using UnityEngine;
 using VContainer;
 
@@ -20,7 +24,7 @@ namespace Rhizomode.Bootstrap
     /// のみ。GameBootstrap (XR asmdef) は VContainer 型に一切触れず、本 factory に scene 由来の値を
     /// 渡し、戻り値の <see cref="CompositionRoot"/> から型付きでサービスを受け取るだけ。
     ///
-    /// V2a transitional shape: GameBootstrap が scene MonoBehaviour 由来の値を集めて <see cref="Launch"/>
+    /// V2b transitional shape: GameBootstrap が scene MonoBehaviour 由来の値を集めて <see cref="Launch"/>
     /// を呼ぶ。子 GameObject を「非アクティブ生成 → AddComponent → SetHosts → アクティブ化」の順で
     /// 構築するため、<c>SetActive(true)</c> 直後 (= VContainer Build 完了後) に container から
     /// resolve できる。MonoBehaviour 実行順序に依存しない。V3/V-final で GameBootstrap を解体したら、
@@ -37,12 +41,15 @@ namespace Rhizomode.Bootstrap
         /// サービスを resolve する。<see cref="NodeRegistrationOrchestrator.RegisterAll"/> は
         /// GraphState を mutate する副作用を持つため Installer.Install 内ではなく、Build 完了後の
         /// 本メソッドで明示的に駆動する (= composition root の eager initialization step)。
+        ///
+        /// <paramref name="graphState"/> は非 null 必須 — composition root は有効な graph を前提と
+        /// する。degraded 起動 (graphContext 未配置) の判定は呼び出し元 (GameBootstrap) が行い、
+        /// その場合は本メソッドを呼ばない。
         /// </remarks>
         public static CompositionRoot Launch(
             Transform parent,
-            MainThreadGraphCommandQueue commandQueue,
             AudioDriverBehaviour? audioDriver,
-            GraphState? graphState,
+            GraphState graphState,
             ModuleDefinition[]? moduleDefinitions,
             Object3DPrefabList? object3DPrefabs)
         {
@@ -50,25 +57,26 @@ namespace Rhizomode.Bootstrap
             scopeGo.transform.SetParent(parent, false);
             scopeGo.SetActive(false);
             var rootScope = scopeGo.AddComponent<RootLifetimeScope>();
-            rootScope.SetHosts(commandQueue, audioDriver, graphState, moduleDefinitions, object3DPrefabs);
+            rootScope.SetHosts(audioDriver, graphState, moduleDefinitions, object3DPrefabs);
             scopeGo.SetActive(true);
 
             var container = rootScope.Container;
 
-            IReadOnlyDictionary<string, GameObject>? object3DPrefabMap = null;
-            if (graphState != null)
-            {
-                // Build 後の明示的な eager registration step (GraphState への factory 登録)。
-                var orchestrator = container.Resolve<NodeRegistrationOrchestrator>();
-                orchestrator.RegisterAll();
-                object3DPrefabMap = orchestrator.Object3DPrefabMap;
-            }
+            // Build 後の明示的な eager registration step (GraphState への factory 登録)。
+            var orchestrator = container.Resolve<NodeRegistrationOrchestrator>();
+            orchestrator.RegisterAll();
 
             return new CompositionRoot(
                 scopeGo,
                 container.Resolve<NodeTypeRegistry>(),
                 container.Resolve<HealthAggregator>(),
-                object3DPrefabMap);
+                orchestrator.Object3DPrefabMap,
+                container.Resolve<INodeFactory>(),
+                container.Resolve<GraphEventBus>(),
+                container.Resolve<SpatialIntentToCommandTranslator>(),
+                container.Resolve<IGraphRepository>(),
+                container.Resolve<GraphHydrator>(),
+                container.Resolve<ISavePathProvider>());
         }
     }
 }

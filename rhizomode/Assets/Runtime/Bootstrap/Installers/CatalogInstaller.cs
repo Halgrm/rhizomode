@@ -3,7 +3,6 @@
 using Rhizomode.Graph.Model;
 using Rhizomode.Modules;
 using Rhizomode.NodeCatalog.Runtime;
-using UnityEngine;
 using VContainer;
 using VContainer.Unity;
 
@@ -20,17 +19,17 @@ namespace Rhizomode.Bootstrap.Installers
     /// <see cref="NodeRegistrationOrchestrator.RegisterAll"/> は GraphState を mutate する副作用を
     /// 伴うため Install 内では呼ばず、Build 後に <c>EntryPointBootstrapper</c> が明示的に駆動する。
     ///
-    /// <paramref name="graphState"/> が null の場合 (graphContext 未配置の degraded 起動) は
-    /// 空の <see cref="NodeTypeRegistry"/> のみ登録し、orchestrator 登録はスキップする。
+    /// graphState は非 null 必須 — composition root は有効な graph を前提とし、degraded 起動の
+    /// 判定は GameBootstrap が行う (V2b で null 許容を撤廃)。
     /// </remarks>
     internal sealed class CatalogInstaller : IInstaller
     {
-        private readonly GraphState? _graphState;
+        private readonly GraphState _graphState;
         private readonly ModuleDefinition[]? _moduleDefinitions;
         private readonly Object3DPrefabList? _object3DPrefabs;
 
         public CatalogInstaller(
-            GraphState? graphState,
+            GraphState graphState,
             ModuleDefinition[]? moduleDefinitions,
             Object3DPrefabList? object3DPrefabs)
         {
@@ -43,13 +42,6 @@ namespace Rhizomode.Bootstrap.Installers
         {
             var registry = new NodeTypeRegistry();
             builder.RegisterInstance(registry);
-
-            if (_graphState == null)
-            {
-                Debug.LogWarning(
-                    "[CatalogInstaller] GraphState null — ノード type/factory 登録をスキップ (degraded 起動)。");
-                return;
-            }
 
             // ctor は純粋 (フィールド代入のみ)。RegisterAll() の副作用は Build 後に EntryPointBootstrapper が駆動。
             var orchestrator = new NodeRegistrationOrchestrator(
