@@ -99,13 +99,16 @@ namespace Rhizomode.XR
 
         /// <summary>
         /// Phase 12D: Audio / OSC / MIDI / Ableton の <see cref="IHealthMonitor"/> を
-        /// <see cref="HealthAggregator"/> に登録する。Tick 駆動は V1 (Plan v5.4 §15) で
-        /// VContainer の HealthAggregatorTickAdapter (ITickable) に移行済。
-        /// transport が未配置でも monitor は Unknown を返すため fail-open。
+        /// <see cref="HealthAggregator"/> に登録する。
+        /// Plan v5.4 §15 (V2a): HealthAggregator の構築・所有は ObservabilityInstaller、Tick 駆動は
+        /// VContainer の HealthAggregatorTickAdapter (ITickable)。本メソッドは monitor 登録と
+        /// StatusPanel 購読のみ。transport が未配置でも monitor は Unknown を返すため fail-open。
         /// </summary>
         private void InitializeHealthMonitoring()
         {
-            _healthAggregator = new HealthAggregator();
+            // HealthAggregator は LaunchCompositionRoot で container から resolve 済。
+            // degraded 起動 (graphContext 未設定) では null のためスキップ。
+            if (_healthAggregator == null) return;
 
             var analyzer = audioDriver != null ? audioDriver.Analyzer : null;
             if (analyzer != null)

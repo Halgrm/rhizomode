@@ -1,44 +1,74 @@
 #nullable enable
 
+using System.Collections.Generic;
 using Rhizomode.Audio.GraphAdapter;
+using Rhizomode.Graph.Model;
 using Rhizomode.Graph.Mutation;
+using Rhizomode.Modules;
+using Rhizomode.NodeCatalog.Runtime;
 using Rhizomode.Observability.Runtime;
 using UnityEngine;
+using VContainer;
 
 namespace Rhizomode.Bootstrap
 {
     /// <summary>
-    /// VContainer の <see cref="RootLifetimeScope"/> を起動する factory。
+    /// VContainer の <see cref="RootLifetimeScope"/> を起動し、pure-C# サービスを resolve する factory。
     /// </summary>
     /// <remarks>
     /// Plan v5.4 §19 hard rule: VContainer / VContainer.Unity を参照してよいのは Bootstrap asmdef
-    /// のみ。GameBootstrap (XR asmdef) は VContainer 型に一切触れず、本 factory に host を渡すだけ。
+    /// のみ。GameBootstrap (XR asmdef) は VContainer 型に一切触れず、本 factory に scene 由来の値を
+    /// 渡し、戻り値の <see cref="CompositionRoot"/> から型付きでサービスを受け取るだけ。
     ///
-    /// V1 transitional shape: GameBootstrap が pure-C# host を構築し終えた後に
-    /// <see cref="Launch"/> を呼ぶ。子 GameObject を「非アクティブ生成 → AddComponent →
-    /// SetHosts → アクティブ化」の順で構築するため、RootLifetimeScope の Awake (= VContainer
-    /// Build) 時点で host は必ず揃っており、MonoBehaviour 実行順序に依存しない。
-    /// V2 以降で GameBootstrap を解体したら、本 factory も RootLifetimeScope のシーン直接配置に
-    /// 置き換える。
+    /// V2a transitional shape: GameBootstrap が scene MonoBehaviour 由来の値を集めて <see cref="Launch"/>
+    /// を呼ぶ。子 GameObject を「非アクティブ生成 → AddComponent → SetHosts → アクティブ化」の順で
+    /// 構築するため、<c>SetActive(true)</c> 直後 (= VContainer Build 完了後) に container から
+    /// resolve できる。MonoBehaviour 実行順序に依存しない。V3/V-final で GameBootstrap を解体したら、
+    /// 本 factory も RootLifetimeScope のシーン直接配置に置き換える。
     /// </remarks>
     public static class EntryPointBootstrapper
     {
         /// <summary>
-        /// <paramref name="parent"/> の子として RootLifetimeScope を生成し、host を注入して起動する。
+        /// <paramref name="parent"/> の子として RootLifetimeScope を生成・起動し、Installer が構築した
+        /// pure-C# サービスを <see cref="CompositionRoot"/> に束ねて返す。
         /// </summary>
-        public static RootLifetimeScope Launch(
+        /// <remarks>
+        /// <c>SetActive(true)</c> で VContainer Build が同期実行された後、container から pure-C#
+        /// サービスを resolve する。<see cref="NodeRegistrationOrchestrator.RegisterAll"/> は
+        /// GraphState を mutate する副作用を持つため Installer.Install 内ではなく、Build 完了後の
+        /// 本メソッドで明示的に駆動する (= composition root の eager initialization step)。
+        /// </remarks>
+        public static CompositionRoot Launch(
             Transform parent,
             MainThreadGraphCommandQueue commandQueue,
             AudioDriverBehaviour? audioDriver,
-            HealthAggregator healthAggregator)
+            GraphState? graphState,
+            ModuleDefinition[]? moduleDefinitions,
+            Object3DPrefabList? object3DPrefabs)
         {
             var scopeGo = new GameObject("RootLifetimeScope");
             scopeGo.transform.SetParent(parent, false);
             scopeGo.SetActive(false);
             var rootScope = scopeGo.AddComponent<RootLifetimeScope>();
-            rootScope.SetHosts(commandQueue, audioDriver, healthAggregator);
+            rootScope.SetHosts(commandQueue, audioDriver, graphState, moduleDefinitions, object3DPrefabs);
             scopeGo.SetActive(true);
-            return rootScope;
+
+            var container = rootScope.Container;
+
+            IReadOnlyDictionary<string, GameObject>? object3DPrefabMap = null;
+            if (graphState != null)
+            {
+                // Build 後の明示的な eager registration step (GraphState への factory 登録)。
+                var orchestrator = container.Resolve<NodeRegistrationOrchestrator>();
+                orchestrator.RegisterAll();
+                object3DPrefabMap = orchestrator.Object3DPrefabMap;
+            }
+
+            return new CompositionRoot(
+                scopeGo,
+                container.Resolve<NodeTypeRegistry>(),
+                container.Resolve<HealthAggregator>(),
+                object3DPrefabMap);
         }
     }
 }

@@ -20,7 +20,7 @@ using UnityEngine;
 using Rhizomode.NodeCatalog.Contracts;
 using Rhizomode.NodeCatalog.Runtime;
 
-namespace Rhizomode.XR
+namespace Rhizomode.Bootstrap
 {
     /// <summary>
     /// 起動時のノード type / factory 登録を集約する orchestrator。
@@ -28,13 +28,14 @@ namespace Rhizomode.XR
     /// <remarks>
     /// Plan v5.3 F-8.2 抽出 3/N (Codex Round C advisory への対応): GameBootstrap.NodeFactoryMap +
     /// RegisterNodeTypes + RegisterFactories + RegisterModuleTypes + RegisterObject3DTypes を集約。
-    /// Awake で 1 度だけ <see cref="RegisterAll"/> を呼び、戻り値の Object3D prefab map を
+    /// 起動時に 1 度だけ <see cref="RegisterAll"/> を呼び、Object3D prefab map を
     /// <c>ModuleLifecycleProcessor</c> に渡す。
     ///
-    /// 配置: 暫定 Rhizomode.XR (graphContext と Module 各 layer に access 必要)。
-    /// Plan v5.3 の正規 location は Bootstrap/Installer asmdef だが、本 round では XR 配置に留める。
+    /// 配置: Rhizomode.Bootstrap asmdef (Plan v5.4 §15)。V2a で XR asmdef から移送 (internal 化)。
+    /// <c>CatalogInstaller</c> が VContainer Configure 時に構築し、Build 後に
+    /// <c>EntryPointBootstrapper</c> が <see cref="RegisterAll"/> を明示的に駆動する。
     /// </remarks>
-    public sealed class NodeRegistrationOrchestrator
+    internal sealed class NodeRegistrationOrchestrator
     {
         /// <summary>
         /// 静的ノード factory 辞書。typeName → factory delegate。
