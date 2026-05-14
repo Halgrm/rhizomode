@@ -7,7 +7,6 @@
         "Rhizomode.Graph.Model",
         "Rhizomode.Graph.Serialization",
         "Rhizomode.OscMidi.Contracts",
-        "Rhizomode.OscMidi.Transport",
         "R3.Unity"
     ],
     "includePlatforms": [],

@@ -4,6 +4,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using R3;
+using Rhizomode.OscMidi.Contracts;
 using UnityEngine;
 
 #if OSC_JACK
@@ -13,17 +14,19 @@ using OscJack;
 namespace Rhizomode.OscMidi.Transport
 {
     /// <summary>
-    /// OSC受信サーバーのシングルトン。OscJackパッケージが未インストールの場合はスタブとして動作。
+    /// OSC受信サーバー。OscJackパッケージが未インストールの場合はスタブとして動作。
     /// 複数のOscReceiverNodeが同一アドレスを購読可能。
     /// </summary>
-    public class OscServer : MonoBehaviour
+    /// <remarks>
+    /// Plan v5.3 Phase 12: 旧 static <c>Instance</c> singleton を解消。GameBootstrap が
+    /// SerializeField で参照を保持し、<c>OscMidiTransportLifecycleProcessor</c> 経由で
+    /// node に <see cref="IOscSource"/> として注入する。
+    /// </remarks>
+    public class OscServer : MonoBehaviour, IOscSource
     {
         private const int DefaultPort = 9000;
 
         [SerializeField] private int listenPort = DefaultPort;
-
-        private static OscServer? _instance;
-        public static OscServer? Instance => _instance;
 
         private readonly Dictionary<string, Subject<float>> _addressSubjects = new();
         private readonly ConcurrentQueue<(string address, float value)> _pendingMessages = new();
@@ -48,13 +51,6 @@ namespace Rhizomode.OscMidi.Transport
 
         private void Awake()
         {
-            if (_instance != null && _instance != this)
-            {
-                Destroy(gameObject);
-                return;
-            }
-            _instance = this;
-
 #if OSC_JACK
             try
             {
@@ -122,9 +118,6 @@ namespace Rhizomode.OscMidi.Transport
             _server?.Dispose();
             _server = null;
 #endif
-
-            if (_instance == this)
-                _instance = null;
         }
     }
 }

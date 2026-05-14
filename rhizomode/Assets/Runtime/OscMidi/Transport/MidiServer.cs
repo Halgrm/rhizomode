@@ -3,6 +3,7 @@
 using System;
 using System.Collections.Generic;
 using R3;
+using Rhizomode.OscMidi.Contracts;
 using UnityEngine;
 
 #if HAS_MINIS
@@ -12,14 +13,16 @@ using UnityEngine.InputSystem;
 namespace Rhizomode.OscMidi.Transport
 {
     /// <summary>
-    /// MIDI入力のシングルトンサーバー。Minis（Input System互換MIDIパッケージ）を使用。
+    /// MIDI入力サーバー。Minis（Input System互換MIDIパッケージ）を使用。
     /// 未インストール時はスタブとして動作。CC番号+チャンネルごとにObservableを提供。
     /// </summary>
-    public class MidiServer : MonoBehaviour
+    /// <remarks>
+    /// Plan v5.3 Phase 12: 旧 static <c>Instance</c> singleton を解消。GameBootstrap が
+    /// SerializeField で参照を保持し、<c>OscMidiTransportLifecycleProcessor</c> 経由で
+    /// node に <see cref="IMidiSource"/> として注入する。
+    /// </remarks>
+    public class MidiServer : MonoBehaviour, IMidiSource
     {
-        private static MidiServer? _instance;
-        public static MidiServer? Instance => _instance;
-
         // key: (channel, ccNumber)
         private readonly Dictionary<(int, int), Subject<float>> _ccSubjects = new();
         private readonly Dictionary<(int, int), float> _lastValues = new();
@@ -41,13 +44,6 @@ namespace Rhizomode.OscMidi.Transport
 
         private void Awake()
         {
-            if (_instance != null && _instance != this)
-            {
-                Destroy(gameObject);
-                return;
-            }
-            _instance = this;
-
 #if HAS_MINIS
             Debug.Log("[MidiServer] MIDI input active (Minis)");
             SetupMidiCallbacks();
@@ -131,9 +127,6 @@ namespace Rhizomode.OscMidi.Transport
                 subject.Dispose();
             _ccSubjects.Clear();
             _lastValues.Clear();
-
-            if (_instance == this)
-                _instance = null;
         }
     }
 }

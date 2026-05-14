@@ -6,7 +6,8 @@
         "Rhizomode.OscMidi.Contracts",
         "Rhizomode.OscMidi.Transport",
         "Rhizomode.Observability.Contracts",
-        "Rhizomode.Graph.Model"
+        "Rhizomode.Graph.Model",
+        "Rhizomode.Graph.Runtime"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

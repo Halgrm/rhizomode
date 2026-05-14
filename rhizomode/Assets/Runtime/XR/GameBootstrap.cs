@@ -16,6 +16,8 @@ using Rhizomode.Graph.Runtime;
 using Rhizomode.Ableton.Transport;
 using Rhizomode.Ableton.Session;
 using Rhizomode.Ableton.GraphAdapter;
+using Rhizomode.OscMidi.Transport;
+using Rhizomode.OscMidi.GraphAdapter;
 using Rhizomode.Nodes.Ableton;
 using Rhizomode.Nodes.OscMidi;
 using Rhizomode.Nodes.Audio;
@@ -86,6 +88,12 @@ namespace Rhizomode.XR
 
         [Header("Scene Switching")]
         [SerializeField] private AdditiveSceneLoader? sceneLoader;
+
+        [Header("OSC / MIDI Transport")]
+        [Tooltip("シーンに配置した OscServer。未設定なら OSC 入力ノードは非アクティブ。")]
+        [SerializeField] private OscServer? oscServer;
+        [Tooltip("シーンに配置した MidiServer。未設定なら MIDI 入力ノードは非アクティブ。")]
+        [SerializeField] private MidiServer? midiServer;
 
         [Header("Ableton OSC")]
         [SerializeField] private AbletonLink? abletonLink;
@@ -159,6 +167,13 @@ namespace Rhizomode.XR
         private SceneLoaderLifecycleProcessor? _sceneLoaderProcessor;
 
         /// <summary>
+        /// Phase 12B: IOscSourceConsumer / IMidiSourceConsumer に OSC/MIDI transport を注入する
+        /// LifecycleProcessor。旧 OscServer.Instance / MidiServer.Instance singleton 直参照を解消。
+        /// NodeRuntime の processors リストに登録され BeforeSetup で自動駆動。
+        /// </summary>
+        private OscMidiTransportLifecycleProcessor? _oscMidiTransportProcessor;
+
+        /// <summary>
         /// Phase 8 Round B: GraphState ミューテーション (RegisterNode / AddEdge) の唯一窓口。
         /// Awake 時に eager 構築し、processors 経由で BeforeSetup → Setup → AfterSetup を駆動。
         /// 旧 ctx.RegisterNode / ctx.TryConnect 直接呼び出しを置換。
@@ -227,6 +242,11 @@ namespace Rhizomode.XR
             // sceneLoader は [SerializeField] で MonoBehaviour に注入される。
             _sceneLoaderProcessor = new SceneLoaderLifecycleProcessor(sceneLoader);
 
+            // Phase 12B: OscMidiTransportLifecycleProcessor を初期化。
+            // oscServer / midiServer は [SerializeField]。MonoBehaviour は IOscSource /
+            // IMidiSource を実装しているのでそのまま contract として渡る。
+            _oscMidiTransportProcessor = new OscMidiTransportLifecycleProcessor(oscServer, midiServer);
+
             // Phase 8 Round B: NodeRuntime を eager 構築。EventBus + factory も lift して field 化。
             // processors 順序: SceneLoaderLifecycleProcessor (BeforeSetup で Loader 注入) →
             //                  ModuleLifecycleProcessor (AfterSetup で Prefab + Module 注入)
@@ -244,7 +264,7 @@ namespace Rhizomode.XR
                     graphContext.Context, _phase5EventBus,
                     new Rhizomode.Graph.Runtime.INodeLifecycleProcessor[]
                     {
-                        _sceneLoaderProcessor, _moduleProcessor
+                        _sceneLoaderProcessor, _oscMidiTransportProcessor, _moduleProcessor
                     });
 
                 // Phase 8 Round C: NodeSpawnService を初期化 (Plan v5.3 F-8.2 抽出 1/N)。

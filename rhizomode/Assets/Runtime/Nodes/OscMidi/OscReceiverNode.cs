@@ -5,7 +5,7 @@ using R3;
 using Rhizomode.SharedKernel;
 using Rhizomode.Graph.Model;
 using Rhizomode.Graph.Serialization;
-using Rhizomode.OscMidi.Transport;
+using Rhizomode.OscMidi.Contracts;
 using UnityEngine;
 
 using Rhizomode.NodeCatalog.Contracts;
@@ -13,10 +13,15 @@ namespace Rhizomode.Nodes.OscMidi
 {
     /// <summary>
     /// 指定OSCアドレスの値を受信してfloat出力するノード。
-    /// OscServerシングルトンのObservableを購読する。
+    /// <see cref="IOscSource"/> の Observable を購読する。
     /// </summary>
+    /// <remarks>
+    /// Plan v5.3 Phase 12: 旧 <c>OscServer.Instance</c> singleton 直参照を解消。
+    /// <see cref="IOscSourceConsumer"/> を実装し、<c>OscMidiTransportLifecycleProcessor</c>
+    /// が Setup 前に <see cref="OscSource"/> を注入する。
+    /// </remarks>
     [NodeType("OscReceiver", "OSC Receiver", NodeCategory.Input)]
-    public class OscReceiverNode : NodeBase
+    public class OscReceiverNode : NodeBase, IOscSourceConsumer
     {
         private const string DefaultAddress = "/1/fader1";
         private const int DefaultPort = 9000;
@@ -27,6 +32,9 @@ namespace Rhizomode.Nodes.OscMidi
 
         public string Address => _address;
         public int Port => _port;
+
+        /// <summary><c>OscMidiTransportLifecycleProcessor</c> が Setup 前に注入する。</summary>
+        public IOscSource? OscSource { get; set; }
 
         public OscReceiverNode(string id) : this(id, DefaultAddress, DefaultPort)
         {
@@ -41,15 +49,14 @@ namespace Rhizomode.Nodes.OscMidi
 
         public override void Setup(GraphState context)
         {
-            var server = OscServer.Instance;
-            if (server == null)
+            if (OscSource == null)
             {
-                Debug.LogWarning($"[OscReceiverNode] OscServer not found. Node {Id} inactive.");
+                Debug.LogWarning($"[OscReceiverNode] OscSource not injected. Node {Id} inactive.");
                 return;
             }
 
             AddSubscription(
-                server.GetAddressObservable(_address)
+                OscSource.GetAddressObservable(_address)
                     .Subscribe(v => _valueOut.Emit(Mathf.Clamp01(v))));
         }
 

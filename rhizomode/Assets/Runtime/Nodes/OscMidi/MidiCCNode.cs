@@ -5,7 +5,7 @@ using R3;
 using Rhizomode.SharedKernel;
 using Rhizomode.Graph.Model;
 using Rhizomode.Graph.Serialization;
-using Rhizomode.OscMidi.Transport;
+using Rhizomode.OscMidi.Contracts;
 using UnityEngine;
 
 using Rhizomode.NodeCatalog.Contracts;
@@ -13,10 +13,15 @@ namespace Rhizomode.Nodes.OscMidi
 {
     /// <summary>
     /// 指定MIDI CC番号の値を受信してfloat出力するノード（0-1正規化済み）。
-    /// MidiServerシングルトンのObservableを購読する。
+    /// <see cref="IMidiSource"/> の Observable を購読する。
     /// </summary>
+    /// <remarks>
+    /// Plan v5.3 Phase 12: 旧 <c>MidiServer.Instance</c> singleton 直参照を解消。
+    /// <see cref="IMidiSourceConsumer"/> を実装し、<c>OscMidiTransportLifecycleProcessor</c>
+    /// が Setup 前に <see cref="MidiSource"/> を注入する。
+    /// </remarks>
     [NodeType("MidiCC", "MIDI CC", NodeCategory.Input)]
-    public class MidiCCNode : NodeBase
+    public class MidiCCNode : NodeBase, IMidiSourceConsumer
     {
         private const int DefaultCCNumber = 1;
         private const int DefaultChannel = 1;
@@ -27,6 +32,9 @@ namespace Rhizomode.Nodes.OscMidi
 
         public int CCNumber => _ccNumber;
         public int Channel => _channel;
+
+        /// <summary><c>OscMidiTransportLifecycleProcessor</c> が Setup 前に注入する。</summary>
+        public IMidiSource? MidiSource { get; set; }
 
         public MidiCCNode(string id) : this(id, DefaultCCNumber, DefaultChannel)
         {
@@ -41,15 +49,14 @@ namespace Rhizomode.Nodes.OscMidi
 
         public override void Setup(GraphState context)
         {
-            var server = MidiServer.Instance;
-            if (server == null)
+            if (MidiSource == null)
             {
-                Debug.LogWarning($"[MidiCCNode] MidiServer not found. Node {Id} inactive.");
+                Debug.LogWarning($"[MidiCCNode] MidiSource not injected. Node {Id} inactive.");
                 return;
             }
 
             AddSubscription(
-                server.GetCCObservable(_channel, _ccNumber)
+                MidiSource.GetCCObservable(_channel, _ccNumber)
                     .Subscribe(v => _valueOut.Emit(v)));
         }
 
