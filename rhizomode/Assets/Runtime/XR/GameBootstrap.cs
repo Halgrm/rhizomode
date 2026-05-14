@@ -182,12 +182,20 @@ namespace Rhizomode.XR
         private AbletonTransportLifecycleProcessor? _abletonTransportProcessor;
 
         /// <summary>
-        /// Phase 12D: 各 system の IHealthMonitor を集約し、毎フレーム Tick で polling する。
+        /// Phase 12D: 各 system の IHealthMonitor を集約し、低頻度で Tick polling する。
         /// Audio / OSC / MIDI / Ableton の 4 monitor を Register。OnHealthChange の購読
         /// (StatusPanel 表示) は将来 Phase で配線予定。ITickable adapter 化は Phase 13
         /// (VContainer Installer) 待ち、現状は GameBootstrap.Update から駆動。
         /// </summary>
         private HealthAggregator? _healthAggregator;
+
+        /// <summary>
+        /// HealthAggregator.Tick の polling 間隔 (フレーム数)。CurrentSnapshot() が
+        /// HealthSnapshot record を都度 alloc するため、毎フレームではなく低頻度で polling
+        /// (90fps で ~30 frame ≒ 3Hz、Codex Phase 12 review MINOR の alloc 削減)。
+        /// </summary>
+        private const int HealthTickIntervalFrames = 30;
+        private int _healthTickCounter;
 
         /// <summary>
         /// Phase 8 Round B: GraphState ミューテーション (RegisterNode / AddEdge) の唯一窓口。
@@ -421,9 +429,14 @@ namespace Rhizomode.XR
 
         private void Update()
         {
-            // Phase 12D: HealthAggregator を毎フレーム駆動 (各 system の状態を polling)。
+            // Phase 12D: HealthAggregator を低頻度で駆動 (各 system の状態を polling)。
+            // CurrentSnapshot() の per-frame alloc を避けるため HealthTickIntervalFrames 間隔。
             // Phase 13 で VContainer ITickable adapter (HealthAggregatorTickAdapter) に移行予定。
-            _healthAggregator?.Tick();
+            if (_healthAggregator != null && ++_healthTickCounter >= HealthTickIntervalFrames)
+            {
+                _healthTickCounter = 0;
+                _healthAggregator.Tick();
+            }
         }
 
         private void OnDestroy()

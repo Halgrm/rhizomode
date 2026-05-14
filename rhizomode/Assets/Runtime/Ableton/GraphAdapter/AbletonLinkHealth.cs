@@ -27,7 +27,11 @@ namespace Rhizomode.Ableton.GraphAdapter
 
         public HealthSnapshot CurrentSnapshot()
         {
-            if (_link == null)
+            // _link は interface 参照のため、backing の MonoBehaviour が Destroy されても
+            // 通常の C# null チェックでは検知できない。`is UnityEngine.Object` パターンで
+            // Unity の == null overload (破棄済み検知) を併用する (Codex Phase 12 review MAJOR)。
+            if (_link == null ||
+                (_link is UnityEngine.Object unityObj && unityObj == null))
                 return new HealthSnapshot(Id, HealthStatus.Unknown, "AbletonLink not running");
 
             return new HealthSnapshot(Id, HealthStatus.Healthy, "AbletonLink active");
