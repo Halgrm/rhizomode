@@ -10,6 +10,10 @@ using Rhizomode.UI;
 using UnityEngine;
 
 using Rhizomode.Input.Contracts;
+using Rhizomode.Observability.Runtime;
+using Rhizomode.Audio.GraphAdapter;
+using Rhizomode.OscMidi.GraphAdapter;
+using Rhizomode.Ableton.GraphAdapter;
 
 namespace Rhizomode.XR
 {
@@ -88,6 +92,27 @@ namespace Rhizomode.XR
 
             // Ableton OSC設定パネル＋クリップグリッド初期化
             InitializeAbletonOsc();
+
+            // Phase 12D: 各 system の health monitor を HealthAggregator に集約
+            InitializeHealthMonitoring();
+        }
+
+        /// <summary>
+        /// Phase 12D: Audio / OSC / MIDI / Ableton の <see cref="IHealthMonitor"/> を
+        /// <see cref="HealthAggregator"/> に登録する。Tick は GameBootstrap.Update から駆動。
+        /// transport が未配置でも monitor は Unknown を返すため fail-open。
+        /// </summary>
+        private void InitializeHealthMonitoring()
+        {
+            _healthAggregator = new HealthAggregator();
+
+            var analyzer = audioDriver != null ? audioDriver.Analyzer : null;
+            if (analyzer != null)
+                _healthAggregator.Register(new AudioAnalyzerHealth(analyzer));
+
+            _healthAggregator.Register(new OscServerHealth(oscServer));
+            _healthAggregator.Register(new MidiServerHealth(midiServer));
+            _healthAggregator.Register(new AbletonLinkHealth(abletonLink));
         }
 
         private void InitializeAudioDeviceSelector()

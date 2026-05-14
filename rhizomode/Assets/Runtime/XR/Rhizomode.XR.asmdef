@@ -33,6 +33,8 @@
         "Rhizomode.Scene.GraphAdapter",
         "Rhizomode.Persistence.Contracts",
         "Rhizomode.Persistence.Json",
+        "Rhizomode.Observability.Contracts",
+        "Rhizomode.Observability.Runtime",
         "Rhizomode.Bootstrap",
         "Rhizomode.Audio.Analysis",
         "Rhizomode.Audio.GraphAdapter",

@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using R3;
 using Rhizomode.Audio.Analysis;
 using Rhizomode.Audio.GraphAdapter;
+using Rhizomode.Observability.Runtime;
 using Rhizomode.Cameras;
 using Rhizomode.Graph.Serialization;
 using Rhizomode.Persistence.Json;
@@ -179,6 +180,14 @@ namespace Rhizomode.XR
         /// 登録され BeforeSetup で自動駆動。
         /// </summary>
         private AbletonTransportLifecycleProcessor? _abletonTransportProcessor;
+
+        /// <summary>
+        /// Phase 12D: 各 system の IHealthMonitor を集約し、毎フレーム Tick で polling する。
+        /// Audio / OSC / MIDI / Ableton の 4 monitor を Register。OnHealthChange の購読
+        /// (StatusPanel 表示) は将来 Phase で配線予定。ITickable adapter 化は Phase 13
+        /// (VContainer Installer) 待ち、現状は GameBootstrap.Update から駆動。
+        /// </summary>
+        private HealthAggregator? _healthAggregator;
 
         /// <summary>
         /// Phase 8 Round B: GraphState ミューテーション (RegisterNode / AddEdge) の唯一窓口。
@@ -410,6 +419,13 @@ namespace Rhizomode.XR
             _graphLoadCoordinator?.Rebuild(ctx, _activeInput);
         }
 
+        private void Update()
+        {
+            // Phase 12D: HealthAggregator を毎フレーム駆動 (各 system の状態を polling)。
+            // Phase 13 で VContainer ITickable adapter (HealthAggregatorTickAdapter) に移行予定。
+            _healthAggregator?.Tick();
+        }
+
         private void OnDestroy()
         {
             // イベント購読解除
@@ -445,6 +461,10 @@ namespace Rhizomode.XR
             // applier / dispatcher / translator は IDisposable ではないため EventBus のみで OK。
             _phase5EventBus?.Dispose();
             _phase5EventBus = null;
+
+            // Phase 12D: HealthAggregator を解放 (OnHealthChange Subject の dispose)。
+            _healthAggregator?.Dispose();
+            _healthAggregator = null;
         }
 
         private void OnScrollMenuNodeSelected(string nodeType)
