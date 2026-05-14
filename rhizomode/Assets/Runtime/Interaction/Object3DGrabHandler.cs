@@ -23,6 +23,9 @@ namespace Rhizomode.XR
         [SerializeField, Range(0.1f, 5f), Tooltip("スケール変更速度（/秒）")]
         private float scaleSpeed = 1f;
 
+        // 右スティック Y 入力のデッドゾーン。これ以下はスケール変更を無視する。
+        private const float StickDeadzone = 0.1f;
+
         private IControllerPose? _controllerPose;
         private ILeftHandRay? _leftHandRay;
         private IDisposable? _subscriptions;
@@ -122,7 +125,7 @@ namespace Rhizomode.XR
             _grabbedProxy.transform.rotation = newRotation;
 
             // スティックY軸でスケール変更
-            if (Mathf.Abs(_stickY) > 0.1f)
+            if (Mathf.Abs(_stickY) > StickDeadzone)
             {
                 var currentScale = _grabbedProxy.transform.localScale.x;
                 var newScale = currentScale + _stickY * scaleSpeed * UnityEngine.Time.deltaTime;

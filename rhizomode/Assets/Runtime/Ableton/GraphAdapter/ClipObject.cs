@@ -28,6 +28,12 @@ namespace Rhizomode.Ableton.GraphAdapter
         [SerializeField] private TMP_Text? label;
         [SerializeField, Range(0.05f, 1.0f)] private float pulseDuration = 0.3f;
 
+        // 再生中の定常 emission 強度 (= pulse の下限値)。pulse 時はここから
+        // PulseMaxEmissionStrength まで Lerp する。_emissionScale と乗算される。
+        private const float SteadyEmissionStrength = 0.4f;
+        // pulse フレームの emission 上限値。
+        private const float PulseMaxEmissionStrength = 1.6f;
+
         private static readonly int BaseColorId = Shader.PropertyToID("_BaseColor");
         private static readonly int EmissionColorId = Shader.PropertyToID("_EmissionColor");
 
@@ -115,7 +121,7 @@ namespace Rhizomode.Ableton.GraphAdapter
             else if (_isPlaying)
             {
                 baseCol = PlayingColor;
-                emissionCol = PlayingColor * (0.4f * _emissionScale);
+                emissionCol = PlayingColor * (SteadyEmissionStrength * _emissionScale);
             }
             else
             {
@@ -134,7 +140,7 @@ namespace Rhizomode.Ableton.GraphAdapter
 
             var remaining = Mathf.Max(0f, _pulseUntil - Time.time);
             var t = remaining / Mathf.Max(0.0001f, pulseDuration);   // 1→0
-            var emissionStrength = Mathf.Lerp(0.4f, 1.6f, t);
+            var emissionStrength = Mathf.Lerp(SteadyEmissionStrength, PulseMaxEmissionStrength, t);
 
             _mpb.SetColor(BaseColorId, PlayingColor);
             _mpb.SetColor(EmissionColorId, PlayingColor * (emissionStrength * _emissionScale));

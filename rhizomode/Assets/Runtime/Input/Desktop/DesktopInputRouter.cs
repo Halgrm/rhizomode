@@ -24,6 +24,12 @@ namespace Rhizomode.Input.Desktop
         [SerializeField] private float lookSensitivity = 2f;
         [SerializeField] private float scrollSpeed = 5f;
 
+        // マウス delta (px) → 回転角 (度) のスケール係数。デスクトップデバッグ専用のため
+        // ライブ調整不要 (const)。lookSensitivity と乗算して最終感度を決める。
+        private const float MouseLookDegreesPerPixel = 0.1f;
+        // スクロール値 → 前後移動距離 (m) のスケール係数。scrollSpeed と乗算する。
+        private const float ScrollMovePerUnit = 0.001f;
+
         // R3 Subjects
         private readonly Subject<Unit> _onOpenMenu = new();
         private readonly Subject<bool> _onMenuHold = new();
@@ -121,8 +127,8 @@ namespace Rhizomode.Input.Desktop
             if (mouse.middleButton.isPressed)
             {
                 var delta = mouse.delta.ReadValue();
-                _yaw += delta.x * lookSensitivity * 0.1f;
-                _pitch -= delta.y * lookSensitivity * 0.1f;
+                _yaw += delta.x * lookSensitivity * MouseLookDegreesPerPixel;
+                _pitch -= delta.y * lookSensitivity * MouseLookDegreesPerPixel;
                 _pitch = Mathf.Clamp(_pitch, -89f, 89f);
             }
 
@@ -143,7 +149,7 @@ namespace Rhizomode.Input.Desktop
             // スクロールホイールで前後移動
             var scroll = mouse.scroll.ReadValue().y;
             if (Mathf.Abs(scroll) > 0.01f)
-                t.position += t.forward * (scroll * scrollSpeed * 0.001f);
+                t.position += t.forward * (scroll * scrollSpeed * ScrollMovePerUnit);
         }
 
         private void UpdateRay(Mouse mouse)
