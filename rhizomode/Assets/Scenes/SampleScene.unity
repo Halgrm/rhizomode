@@ -2518,6 +2518,12 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 1717954561962503725, guid: f6336ac4ac8b4d34bc5072418cdc62a0, type: 3}
       insertIndex: -1
       addedObject: {fileID: 1213701954}
+    - targetCorrespondingSourceObject: {fileID: 1717954561962503725, guid: f6336ac4ac8b4d34bc5072418cdc62a0, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1213701956}
+    - targetCorrespondingSourceObject: {fileID: 1717954561962503725, guid: f6336ac4ac8b4d34bc5072418cdc62a0, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1213701955}
     - targetCorrespondingSourceObject: {fileID: 1767192433, guid: f6336ac4ac8b4d34bc5072418cdc62a0, type: 3}
       insertIndex: -1
       addedObject: {fileID: 1432822257}
@@ -2636,6 +2642,8 @@ MonoBehaviour:
   desktopInput: {fileID: 1503423582}
   cinemachinePreview: {fileID: 463111290}
   sceneLoader: {fileID: 1213701952}
+  oscServer: {fileID: 1213701956}
+  midiServer: {fileID: 1213701955}
   abletonLink: {fileID: 1213701953}
   abletonBridge: {fileID: 274145556}
   abletonSetupPanel: {fileID: 788606949}
@@ -2743,6 +2751,31 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Rhizomode.XR::Rhizomode.XR.Object3DGrabHandler
   scaleSpeed: 1
+--- !u!114 &1213701955
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1213701920}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9bc026c5c94682f4497abbfc5e28f3e6, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Rhizomode.OscMidi.Transport::Rhizomode.OscMidi.Transport.MidiServer
+--- !u!114 &1213701956
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1213701920}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9f8d25fc0f6c7e341be332eb903307e3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Rhizomode.OscMidi.Transport::Rhizomode.OscMidi.Transport.OscServer
+  listenPort: 9000
 --- !u!1 &1297971205
 GameObject:
   m_ObjectHideFlags: 0
