@@ -6,6 +6,7 @@
         "Rhizomode.Ableton.Contracts",
         "Rhizomode.Ableton.Transport",
         "Rhizomode.Ableton.Session",
+        "Rhizomode.Observability.Contracts",
         "Rhizomode.Graph.Model",
         "R3.Unity",
         "Unity.TextMeshPro"

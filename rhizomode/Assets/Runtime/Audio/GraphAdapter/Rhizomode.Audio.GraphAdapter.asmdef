@@ -5,6 +5,7 @@
         "Rhizomode.SharedKernel",
         "Rhizomode.Audio.Contracts",
         "Rhizomode.Audio.Analysis",
+        "Rhizomode.Observability.Contracts",
         "Rhizomode.Graph.Model",
         "Rhizomode.Nodes.Audio",
         "Rhizomode.UI",

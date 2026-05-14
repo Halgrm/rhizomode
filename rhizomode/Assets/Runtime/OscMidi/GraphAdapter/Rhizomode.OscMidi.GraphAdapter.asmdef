@@ -5,6 +5,7 @@
         "Rhizomode.SharedKernel",
         "Rhizomode.OscMidi.Contracts",
         "Rhizomode.OscMidi.Transport",
+        "Rhizomode.Observability.Contracts",
         "Rhizomode.Graph.Model"
     ],
     "includePlatforms": [],
