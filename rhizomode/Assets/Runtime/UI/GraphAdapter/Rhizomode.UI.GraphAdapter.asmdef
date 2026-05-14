@@ -17,6 +17,7 @@
         "Rhizomode.Graph.Runtime",
         "Rhizomode.Graph.CatalogBridge",
         "Rhizomode.Persistence.Contracts",
+        "Rhizomode.Observability.Contracts",
         "Rhizomode.Cameras",
         "Unity.Cinemachine",
         "R3.Unity",

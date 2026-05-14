@@ -198,6 +198,12 @@ namespace Rhizomode.XR
         private int _healthTickCounter;
 
         /// <summary>
+        /// Phase 13C: HealthAggregator.OnHealthChange → StatusPanelController.SetHealth の
+        /// 購読。OnDestroy で Dispose。
+        /// </summary>
+        private System.IDisposable? _healthSubscription;
+
+        /// <summary>
         /// Phase 8 Round B: GraphState ミューテーション (RegisterNode / AddEdge) の唯一窓口。
         /// Awake 時に eager 構築し、processors 経由で BeforeSetup → Setup → AfterSetup を駆動。
         /// 旧 ctx.RegisterNode / ctx.TryConnect 直接呼び出しを置換。
@@ -474,6 +480,10 @@ namespace Rhizomode.XR
             // applier / dispatcher / translator は IDisposable ではないため EventBus のみで OK。
             _phase5EventBus?.Dispose();
             _phase5EventBus = null;
+
+            // Phase 13C: health → StatusPanel 購読を解放 (aggregator dispose より先に)。
+            _healthSubscription?.Dispose();
+            _healthSubscription = null;
 
             // Phase 12D: HealthAggregator を解放 (OnHealthChange Subject の dispose)。
             _healthAggregator?.Dispose();

@@ -7,5 +7,6 @@
         <ui:Label name="bpm-display" text="BPM: —" class="status-line" />
         <ui:Label name="fps-display" text="FPS: — / —" class="status-line" />
         <ui:Label name="audio-device" text="Audio: —" class="status-line" />
+        <ui:Label name="system-health" text="Health: —" class="status-line" />
     </ui:VisualElement>
 </ui:UXML>

@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Text;
 using Rhizomode.SharedKernel;
 using Rhizomode.Graph.Model;
+using Rhizomode.Observability.Contracts;
 using UnityEngine;
 using UnityEngine.UIElements;
 
@@ -33,6 +34,11 @@ namespace Rhizomode.UI
         private Label? _bpmLabel;
         private Label? _fpsLabel;
         private Label? _audioDeviceLabel;
+        private Label? _systemHealthLabel;
+
+        // 各 system の health 状態。GameBootstrap が HealthAggregator.OnHealthChange を
+        // 購読して SetHealth で更新する。表示は UpdateLabels (0.5s 間隔) で反映。
+        private readonly Dictionary<string, HealthStatus> _systemHealth = new();
 
         private float _updateTimer;
         private readonly float[] _fpsSamples = new float[FpsSampleCount];
@@ -62,6 +68,16 @@ namespace Rhizomode.UI
         public void SetAudioDevice(string deviceName)
         {
             _audioDeviceName = deviceName;
+        }
+
+        /// <summary>
+        /// system health の状態変化を反映する。GameBootstrap が
+        /// <c>HealthAggregator.OnHealthChange</c> を購読して呼ぶ。
+        /// 実際のラベル更新は次の <see cref="UpdateLabels"/> tick (0.5s 間隔) で行う。
+        /// </summary>
+        public void SetHealth(HealthSnapshot snapshot)
+        {
+            _systemHealth[snapshot.SystemId] = snapshot.Status;
         }
 
         private void Update()
@@ -94,6 +110,7 @@ namespace Rhizomode.UI
             _bpmLabel = root.Q<Label>("bpm-display");
             _fpsLabel = root.Q<Label>("fps-display");
             _audioDeviceLabel = root.Q<Label>("audio-device");
+            _systemHealthLabel = root.Q<Label>("system-health");
             _labelsCached = true;
         }
 
@@ -133,6 +150,7 @@ namespace Rhizomode.UI
             UpdateBpm();
             UpdateFps();
             UpdateAudioDevice();
+            UpdateSystemHealth();
         }
 
         private void UpdateNodeCount(GraphState ctx)
@@ -191,5 +209,39 @@ namespace Rhizomode.UI
             if (_audioDeviceLabel != null)
                 _audioDeviceLabel.text = $"Audio: {_audioDeviceName}";
         }
+
+        private readonly StringBuilder _healthSb = new();
+
+        private void UpdateSystemHealth()
+        {
+            if (_systemHealthLabel == null) return;
+
+            if (_systemHealth.Count == 0)
+            {
+                _systemHealthLabel.text = "Health: —";
+                return;
+            }
+
+            // LINQ 不使用 (GC alloc 回避)。monitor 登録順 = 表示順 (Dictionary は削除しない限り
+            // 挿入順を保持、HealthAggregator への Register は startup 時 1 回のみ)。
+            _healthSb.Clear();
+            _healthSb.Append("Health: ");
+            foreach (var kvp in _systemHealth)
+            {
+                _healthSb.Append(kvp.Key);
+                _healthSb.Append(HealthGlyph(kvp.Value));
+                _healthSb.Append(' ');
+            }
+            _systemHealthLabel.text = _healthSb.ToString();
+        }
+
+        // Healthy=✓ / Unknown=– (未起動、正常) / Degraded=! / Failed=✗
+        private static string HealthGlyph(HealthStatus status) => status switch
+        {
+            HealthStatus.Healthy => "✓",
+            HealthStatus.Degraded => "!",
+            HealthStatus.Failed => "✗",
+            _ => "–",
+        };
     }
 }

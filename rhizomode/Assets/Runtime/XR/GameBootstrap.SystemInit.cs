@@ -113,6 +113,11 @@ namespace Rhizomode.XR
             _healthAggregator.Register(new OscServerHealth(oscServer));
             _healthAggregator.Register(new MidiServerHealth(midiServer));
             _healthAggregator.Register(new AbletonLinkHealth(abletonLink));
+
+            // Phase 13C: health 状態変化を StatusPanel に表示。OnHealthChange は状態変化時のみ
+            // 発火する低頻度ストリームのため毎フレーム購読コストは無視できる。
+            if (statusPanel != null)
+                _healthSubscription = _healthAggregator.OnHealthChange.Subscribe(statusPanel.SetHealth);
         }
 
         private void InitializeAudioDeviceSelector()
