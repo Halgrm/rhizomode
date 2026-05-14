@@ -1,10 +1,12 @@
 #nullable enable
 
 using Rhizomode.Audio.GraphAdapter;
+using Rhizomode.Modules;
 using Rhizomode.OscMidi.Transport;
 using Rhizomode.Ableton.Transport;
 using Rhizomode.Ableton.Session;
 using Rhizomode.Ableton.GraphAdapter;
+using Rhizomode.Scene.Runtime;
 using Rhizomode.UI;
 using Rhizomode.XR;
 using UnityEngine;
@@ -70,6 +72,14 @@ namespace Rhizomode.Bootstrap
         [Tooltip("health 表示先。Audio / Ableton wiring が transitional に参照する。")]
         [SerializeField] private StatusPanelController? statusPanel;
 
+        [Header("Scene / Modules / Nodes (V3b)")]
+        [Tooltip("追加シーンの加算ロード。SceneLoaderLifecycleProcessor が ISceneLoader として消費。")]
+        [SerializeField] private AdditiveSceneLoader? sceneLoader;
+        [Tooltip("VFX/Shader モジュール定義。CatalogInstaller が動的 typeName / factory を登録。")]
+        [SerializeField] private ModuleDefinition[]? moduleDefinitions;
+        [Tooltip("Object3D prefab 一覧。CatalogInstaller が Object3D_ typeName / factory を登録。")]
+        [SerializeField] private Object3DPrefabList? object3DPrefabs;
+
         public AudioDriverBehaviour? AudioDriver => audioDriver;
         public AudioDeviceSelector? AudioDeviceSelector => audioDeviceSelector;
         public OscServer? OscServer => oscServer;
@@ -88,5 +98,8 @@ namespace Rhizomode.Bootstrap
         public int MacroTrackIndex => macroTrackIndex;
         public int MacroDeviceIndex => macroDeviceIndex;
         public StatusPanelController? StatusPanel => statusPanel;
+        public AdditiveSceneLoader? SceneLoader => sceneLoader;
+        public ModuleDefinition[]? ModuleDefinitions => moduleDefinitions;
+        public Object3DPrefabList? Object3DPrefabs => object3DPrefabs;
     }
 }

@@ -2612,22 +2612,6 @@ MonoBehaviour:
   sharedRaycastService: {fileID: 239156532}
   scrollMenuVisual: {fileID: 864408690}
   scrollMenuInteraction: {fileID: 864408689}
-  moduleDefinitions:
-  - {fileID: 11400000, guid: 17959982512206644826aeefc5a24187, type: 2}
-  - {fileID: 11400000, guid: 7c9b7dc65e575a34a9b315c978320dc0, type: 2}
-  - {fileID: 11400000, guid: 155d1dcdf38622f48997aba874a4f2cb, type: 2}
-  - {fileID: 11400000, guid: dddf2a2d3a4a8cd448d83b161a002a60, type: 2}
-  - {fileID: 11400000, guid: 3fa84ca61c11b1242b553bb0377f7928, type: 2}
-  - {fileID: 11400000, guid: 6a8daaf5be90e394dae685d477d3dea1, type: 2}
-  - {fileID: 11400000, guid: 2a1e4bcf1d017c047b9e04fdc584d8a6, type: 2}
-  - {fileID: 11400000, guid: 42ff3201daa8d044992e27dad94b03d5, type: 2}
-  - {fileID: 11400000, guid: d1c2befb487a6334a87d0d773f41c558, type: 2}
-  - {fileID: 11400000, guid: a07f32bd3c9bfca44a9ec6f0f7fa618d, type: 2}
-  - {fileID: 11400000, guid: 0e76241c3b3d44c45892d3ca45f833af, type: 2}
-  - {fileID: 11400000, guid: 784d428f37587e446a885a7d61099aeb, type: 2}
-  - {fileID: 11400000, guid: fd7894063011b9744a70c4b813dd8f2c, type: 2}
-  - {fileID: 11400000, guid: a5f2585d30506eb49874b12b8b3e726a, type: 2}
-  - {fileID: 11400000, guid: f899741e6a242dd42b91c1b1210baa47, type: 2}
   cinemachineModules: []
   presetManager: {fileID: 0}
   spoutSender: {fileID: 1714549741}
@@ -2638,11 +2622,9 @@ MonoBehaviour:
   pathEditorManager: {fileID: 712178745}
   pathControlPointGrabHandler: {fileID: 712178744}
   graphSaveLoad: {fileID: 0}
-  object3DPrefabs: {fileID: 11400000, guid: 459bd17f17f110c4bb3fd058f936cb15, type: 2}
   object3DGrabHandler: {fileID: 1213701954}
   desktopInput: {fileID: 1503423582}
   cinemachinePreview: {fileID: 463111290}
-  sceneLoader: {fileID: 1213701952}
 --- !u!114 &1213701930
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2792,6 +2774,24 @@ MonoBehaviour:
   macroTrackIndex: 0
   macroDeviceIndex: 0
   statusPanel: {fileID: 0}
+  sceneLoader: {fileID: 1213701952}
+  moduleDefinitions:
+  - {fileID: 11400000, guid: 17959982512206644826aeefc5a24187, type: 2}
+  - {fileID: 11400000, guid: 7c9b7dc65e575a34a9b315c978320dc0, type: 2}
+  - {fileID: 11400000, guid: 155d1dcdf38622f48997aba874a4f2cb, type: 2}
+  - {fileID: 11400000, guid: dddf2a2d3a4a8cd448d83b161a002a60, type: 2}
+  - {fileID: 11400000, guid: 3fa84ca61c11b1242b553bb0377f7928, type: 2}
+  - {fileID: 11400000, guid: 6a8daaf5be90e394dae685d477d3dea1, type: 2}
+  - {fileID: 11400000, guid: 2a1e4bcf1d017c047b9e04fdc584d8a6, type: 2}
+  - {fileID: 11400000, guid: 42ff3201daa8d044992e27dad94b03d5, type: 2}
+  - {fileID: 11400000, guid: d1c2befb487a6334a87d0d773f41c558, type: 2}
+  - {fileID: 11400000, guid: a07f32bd3c9bfca44a9ec6f0f7fa618d, type: 2}
+  - {fileID: 11400000, guid: 0e76241c3b3d44c45892d3ca45f833af, type: 2}
+  - {fileID: 11400000, guid: 784d428f37587e446a885a7d61099aeb, type: 2}
+  - {fileID: 11400000, guid: fd7894063011b9744a70c4b813dd8f2c, type: 2}
+  - {fileID: 11400000, guid: a5f2585d30506eb49874b12b8b3e726a, type: 2}
+  - {fileID: 11400000, guid: f899741e6a242dd42b91c1b1210baa47, type: 2}
+  object3DPrefabs: {fileID: 11400000, guid: 459bd17f17f110c4bb3fd058f936cb15, type: 2}
 --- !u!1 &1297971205
 GameObject:
   m_ObjectHideFlags: 0

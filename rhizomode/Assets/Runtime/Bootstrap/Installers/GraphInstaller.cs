@@ -18,18 +18,17 @@ namespace Rhizomode.Bootstrap.Installers
     /// Plan v5.4 §15 の <c>GraphInstaller</c>。V2b で GameBootstrap が new していた
     /// <c>GraphAdapterWiring</c> の構築責務を吸収した (GraphAdapterWiring.cs は削除)。
     ///
-    /// <see cref="Install"/> は登録のみを行う pure な処理 — 構築する各オブジェクトの ctor は
-    /// フィールド代入のみで副作用を持たない。依存チェーン
-    /// (factory → applier → dispatcher → translator / queue) は手動で組み、GameBootstrap /
-    /// EntryPointsInstaller が必要とするものだけを container に登録する:
-    /// <list type="bullet">
-    ///   <item><see cref="INodeFactory"/> — saveLoad.Configure / hydration 用</item>
-    ///   <item><see cref="GraphEventBus"/> — NodeRuntime ctor 用 (Dispose は当面 GameBootstrap)</item>
-    ///   <item><see cref="SpatialIntentToCommandTranslator"/> — 3 handler の IntentSink 用</item>
-    ///   <item><see cref="MainThreadGraphCommandQueue"/> — EntryPointsInstaller の MainThreadCommandTicker 用</item>
-    /// </list>
-    /// <see cref="GraphMutationApplier"/> / <see cref="GraphCommandDispatcher"/> は外部から参照
-    /// されない内部 plumbing のため登録しない。
+    /// V3b: §15「Installer は登録のみ」へ寄せ、依存チェーンの手動構築を撤廃。
+    /// <see cref="GraphState"/> / <see cref="INodeFactory"/> を instance 登録し、
+    /// <see cref="GraphEventBus"/> / <see cref="GraphMutationApplier"/> /
+    /// <see cref="GraphCommandDispatcher"/> / <see cref="SpatialIntentToCommandTranslator"/> /
+    /// <see cref="MainThreadGraphCommandQueue"/> は <see cref="Lifetime.Singleton"/> 登録で
+    /// VContainer の ctor injection に解決させる。これにより <see cref="GraphEventBus"/> (IDisposable) の
+    /// 所有が container 側に移り、GameBootstrap の OnDestroy での手動 Dispose が不要になる
+    /// (V2b の一時的 Plan v5.4 違反 2 件 — 手動構築 / EventBus 非 container 所有 — を解消)。
+    ///
+    /// <see cref="INodeFactory"/> は <c>scanner.Scan()</c> という method 呼び出しを要するため
+    /// 引き続き手動構築し instance 登録する。
     /// </remarks>
     internal sealed class GraphInstaller : IInstaller
     {
@@ -46,14 +45,20 @@ namespace Rhizomode.Bootstrap.Installers
             var staticFactory = new AttributeScannerNodeFactory(scanner.Scan());
             INodeFactory factory = new CompositeNodeFactory(new INodeFactory[] { staticFactory });
 
-            var eventBus = new GraphEventBus();
-            var applier = new GraphMutationApplier(_graphState, factory, eventBus);
-            var dispatcher = new GraphCommandDispatcher(applier);
-
             builder.RegisterInstance(factory);
-            builder.RegisterInstance(eventBus);
-            builder.RegisterInstance(new SpatialIntentToCommandTranslator(dispatcher));
-            builder.RegisterInstance(new MainThreadGraphCommandQueue(dispatcher));
+            builder.RegisterInstance(_graphState);
+            builder.Register<GraphEventBus>(Lifetime.Singleton);
+            builder.Register<GraphMutationApplier>(Lifetime.Singleton);
+
+            // GraphCommandDispatcher / SpatialIntentToCommandTranslator は optional 引数
+            // (maxHistorySize=64 / id provider=null) を持つ。VContainer は C# の既定引数を尊重せず
+            // 全引数を resolve しようとして失敗するため、factory delegate で既定値を明示する。
+            builder.Register(r => new GraphCommandDispatcher(r.Resolve<GraphMutationApplier>()),
+                Lifetime.Singleton);
+            builder.Register(r => new SpatialIntentToCommandTranslator(r.Resolve<GraphCommandDispatcher>()),
+                Lifetime.Singleton);
+
+            builder.Register<MainThreadGraphCommandQueue>(Lifetime.Singleton);
         }
     }
 }

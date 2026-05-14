@@ -65,7 +65,6 @@ namespace Rhizomode.XR
         [SerializeField] private SharedRaycastService? sharedRaycastService;
         [SerializeField] private ScrollMenuVisualController? scrollMenuVisual;
         [SerializeField] private ScrollMenuInteractionHandler? scrollMenuInteraction;
-        [SerializeField] private ModuleDefinition[]? moduleDefinitions;
         [SerializeField] private CinemachineModule[]? cinemachineModules;
         [SerializeField] private PresetManager? presetManager;
         [SerializeField] private SpoutSenderController? spoutSender;
@@ -80,19 +79,17 @@ namespace Rhizomode.XR
         [SerializeField] private GraphSaveLoadManager? graphSaveLoad;
 
         [Header("Object3D")]
-        [SerializeField] private Object3DPrefabList? object3DPrefabs;
         [SerializeField] private Object3DGrabHandler? object3DGrabHandler;
 
         [Header("Desktop Debug")]
         [SerializeField] private DesktopInputRouter? desktopInput;
         [SerializeField] private CinemachinePreviewMonitor? cinemachinePreview;
 
-        [Header("Scene Switching")]
-        [SerializeField] private AdditiveSceneLoader? sceneLoader;
-
         // V3a: Audio / OSC / MIDI / Ableton の scene 参照は XrSceneReferences へ移送。
-        // GameBootstrap は sceneRefs.OscServer / sceneRefs.AbletonLink 等を transitional に参照する
-        // (LifecycleProcessor 構築は V3b で Installer 化)。
+        // V3b: Scene / Modules / Nodes 系 (sceneLoader / moduleDefinitions / object3DPrefabs) も
+        // XrSceneReferences へ移送し、LifecycleProcessor / NodeRuntime の構築は Installer 化済。
+        // GameBootstrap は object3DGrabHandler (XR asmdef、§19 上 XrSceneReferences に置けない) のみ
+        // 残置し、BootstrapObject3DRegistry の closure 経由で Modules layer へ渡す。
 
         private NodeTypeRegistry? _typeRegistry;
 
@@ -106,44 +103,12 @@ namespace Rhizomode.XR
         /// <summary>実際に使用中の入力ルーター（VRまたはデスクトップ）。</summary>
         private IControllerInput? _activeInput;
 
-        /// <summary>Object3Dプレハブ名→元プレハブの逆引き。Instantiate用。</summary>
-        private readonly Dictionary<string, GameObject> _object3DPrefabMap = new();
-
         /// <summary>
-        /// GraphEventBus。V2b で GraphInstaller が構築・container 登録するようになり、本フィールドは
-        /// LaunchCompositionRoot で <see cref="CompositionRoot.EventBus"/> から受け取る。NodeRuntime
-        /// ctor へ渡し、OnDestroy で Dispose する (Subject を複数保持するため Dispose 必須)。
-        /// 所有を container 側へ完全移管するのは V3 (NodeRuntime の Installer 化と同時)。
-        /// </summary>
-        private Rhizomode.Graph.Events.GraphEventBus? _phase5EventBus;
-
-        /// <summary>
-        /// Phase 6 Round A: Module/Object3D の Prefab instantiation + IPerformanceModule 注入を
-        /// 担当する LifecycleProcessor。InstantiateVFXModule / InstantiateShaderModule /
-        /// InstantiateObject3D / DestroyModuleInstance / CleanupModuleInstances は本 processor に集約。
-        /// Phase 8 Round B で NodeRuntime の processors リストに登録 — AfterSetup 自動駆動化。
+        /// V3b: ModulesInstaller が container 所有 (Lifetime.Singleton) で構築した
+        /// ModuleLifecycleProcessor。LaunchCompositionRoot で <see cref="CompositionRoot.ModuleProcessor"/>
+        /// から受け取る。DestroyInstance / Instances / CleanupAll の参照に使う (Dispose は container 任せ)。
         /// </summary>
         private ModuleLifecycleProcessor? _moduleProcessor;
-
-        /// <summary>
-        /// Phase 6 Round B: ISceneLoaderConsumer に ISceneLoader を注入する LifecycleProcessor。
-        /// Phase 8 Round B で NodeRuntime の processors リストに登録 — BeforeSetup 自動駆動化。
-        /// </summary>
-        private SceneLoaderLifecycleProcessor? _sceneLoaderProcessor;
-
-        /// <summary>
-        /// Phase 12B: IOscSourceConsumer / IMidiSourceConsumer に OSC/MIDI transport を注入する
-        /// LifecycleProcessor。旧 OscServer.Instance / MidiServer.Instance singleton 直参照を解消。
-        /// NodeRuntime の processors リストに登録され BeforeSetup で自動駆動。
-        /// </summary>
-        private OscMidiTransportLifecycleProcessor? _oscMidiTransportProcessor;
-
-        /// <summary>
-        /// Phase 12C: IAbletonLinkConsumer に AbletonLink を注入する LifecycleProcessor。
-        /// 旧 AbletonLink.Instance singleton 直参照を解消。NodeRuntime の processors リストに
-        /// 登録され BeforeSetup で自動駆動。
-        /// </summary>
-        private AbletonTransportLifecycleProcessor? _abletonTransportProcessor;
 
         /// <summary>
         /// Phase 12D: 各 system の IHealthMonitor を集約し、低頻度で Tick polling する。
@@ -162,9 +127,9 @@ namespace Rhizomode.XR
         private System.IDisposable? _healthSubscription;
 
         /// <summary>
-        /// Phase 8 Round B: GraphState ミューテーション (RegisterNode / AddEdge) の唯一窓口。
-        /// Awake 時に eager 構築し、processors 経由で BeforeSetup → Setup → AfterSetup を駆動。
-        /// 旧 ctx.RegisterNode / ctx.TryConnect 直接呼び出しを置換。
+        /// GraphState ミューテーション (RegisterNode / AddEdge) の唯一窓口。processors 経由で
+        /// BeforeSetup → Setup → AfterSetup を駆動。V3b: NodesInstaller が container で組み立てるようになり、
+        /// LaunchCompositionRoot で <see cref="CompositionRoot.NodeRuntime"/> から受け取る。
         /// </summary>
         private Rhizomode.Graph.Runtime.NodeRuntime? _nodeRuntime;
 
@@ -196,68 +161,28 @@ namespace Rhizomode.XR
 
         private void Awake()
         {
-            // V2b: VContainer composition root を Awake 序盤で起動。Graph / Catalog / Persistence /
-            // Observability / EntryPoints の各 Installer が pure-C# サービスを構築し、container から
-            // resolve して _compositionRoot 経由で各 field に束ねる。
+            // VContainer composition root を Awake 序盤で起動。各 Installer が pure-C# サービスを
+            // 構築し、container から resolve して _compositionRoot 経由で各 field に束ねる。
+            // V3b: NodeRuntime / ModuleLifecycleProcessor / 4 LifecycleProcessor は Scene/OscMidi/
+            // Ableton/Modules/Nodes Installer が container 化済。GameBootstrap は resolve するだけ。
             LaunchCompositionRoot();
 
-            // Phase 6 Round A: ModuleLifecycleProcessor を初期化
-            // (CatalogInstaller の RegisterObject3DTypes で _object3DPrefabMap が populate された後)。
-            // Phase 9 prereq: 旧 private nested adapter classes (BootstrapModulePlacement /
-            // BootstrapObject3DRegistry) を Rhizomode.Bootstrap asmdef に移送し、Func/Action
-            // provider 経由で MonoBehaviour state を遅延解決する形に refactor (F-8.2, F-8.7 resolve)。
-            _moduleProcessor = new ModuleLifecycleProcessor(
-                _object3DPrefabMap,
-                new Rhizomode.Bootstrap.BootstrapModulePlacement(() => _activeInput),
-                new Rhizomode.Bootstrap.BootstrapObject3DRegistry(
-                    proxy => object3DGrabHandler?.Register(proxy),
-                    proxy => object3DGrabHandler?.Unregister(proxy)));
-
-            // Phase 6 Round B: SceneLoaderLifecycleProcessor を初期化。
-            // sceneLoader は [SerializeField] で MonoBehaviour に注入される。
-            _sceneLoaderProcessor = new SceneLoaderLifecycleProcessor(sceneLoader);
-
-            // Phase 12B: OscMidiTransportLifecycleProcessor を初期化。
-            // V3a: oscServer / midiServer は XrSceneReferences から取得。MonoBehaviour は
-            // IOscSource / IMidiSource を実装しているのでそのまま contract として渡る。
-            // (LifecycleProcessor の Installer 化は V3b。)
-            _oscMidiTransportProcessor = new OscMidiTransportLifecycleProcessor(
-                sceneRefs != null ? sceneRefs.OscServer : null,
-                sceneRefs != null ? sceneRefs.MidiServer : null);
-
-            // Phase 12C: AbletonTransportLifecycleProcessor を初期化。
-            // V3a: abletonLink は XrSceneReferences から取得。AbletonOscBridge への link 注入は
-            // AbletonBootstrapWiring.Wire へ移送済。
-            _abletonTransportProcessor = new AbletonTransportLifecycleProcessor(
-                sceneRefs != null ? sceneRefs.AbletonLink : null);
-
-            // Phase 8 Round B: NodeRuntime を eager 構築。
-            // processors 順序: SceneLoaderLifecycleProcessor (BeforeSetup で Loader 注入) →
-            //                  ModuleLifecycleProcessor (AfterSetup で Prefab + Module 注入)
-            // この設計で ScrollMenu Spawn / SceneObject 自動登録 / SpawnInputNodes 全てが
-            // 自動的に Lifecycle を駆動する (旧来の手動 InjectModuleIfNeeded 呼び出しを撤廃)。
-            // V2b: EventBus は GraphInstaller 産を CompositionRoot 経由で受け取る。
             if (graphContext != null && _compositionRoot != null)
             {
-                _nodeRuntime = new Rhizomode.Graph.Runtime.NodeRuntime(
-                    graphContext.Context, _compositionRoot.EventBus,
-                    new Rhizomode.Graph.Runtime.INodeLifecycleProcessor[]
-                    {
-                        _sceneLoaderProcessor, _oscMidiTransportProcessor,
-                        _abletonTransportProcessor, _moduleProcessor
-                    });
+                _nodeRuntime = _compositionRoot.NodeRuntime;
+                _moduleProcessor = _compositionRoot.ModuleProcessor;
 
-                // Phase 8 Round C: NodeSpawnService を初期化 (Plan v5.3 F-8.2 抽出 1/N)。
+                // Phase 8 Round C: NodeSpawnService を初期化 (graph mutation 部、visual は GameBootstrap)。
                 _nodeSpawnService = new NodeSpawnService(graphContext.Context, _nodeRuntime);
 
-                // Phase 9 Round F: visual coordinator を初期化 (F-8.2 抽出残)。
+                // Phase 9 Round F: visual coordinator を初期化。
                 if (visualManager != null && edgeVisualManager != null)
                 {
                     _graphLoadCoordinator = new GraphLoadCoordinator(visualManager, edgeVisualManager);
                     _menuNodeSpawnCoordinator = new MenuNodeSpawnCoordinator(visualManager, edgeVisualManager, _nodeSpawnService);
                 }
 
-                // Phase 8 Round D: SceneObjectRegistrationService を初期化 (F-8.2 抽出 2/N)。
+                // Phase 8 Round D: SceneObjectRegistrationService を初期化。
                 if (_typeRegistry != null)
                 {
                     _sceneObjectService = new SceneObjectRegistrationService(
@@ -271,22 +196,23 @@ namespace Rhizomode.XR
         }
 
         /// <summary>
-        /// Plan v5.4 §15 (V2b): VContainer composition root を起動し、Graph / Catalog / Persistence /
-        /// Observability / EntryPoints の各 Installer が構築した pure-C# サービスを container から
-        /// resolve して各 field (_typeRegistry / _healthAggregator / _phase5EventBus /
-        /// _object3DPrefabMap) に束ねる。
+        /// Plan v5.4 §15: VContainer composition root を起動し、各 Installer が構築した pure-C#
+        /// サービスを container から resolve して <c>_compositionRoot</c> 経由で受け取る。
         /// </summary>
         /// <remarks>
         /// VContainer 型には触れず、Bootstrap asmdef の <see cref="EntryPointBootstrapper"/> に scene
         /// 由来の値を渡し、戻り値の <c>CompositionRoot</c> から型付きでサービスを受け取る
         /// (Plan v5.4 §19: VContainer 参照は Bootstrap asmdef のみ)。生成される scope GameObject は
         /// 本コンポーネントの子なので GameBootstrap の破棄と同時に破棄され、LifetimeScope.OnDestroy が
-        /// container を Dispose する (ObservabilityInstaller 産の HealthAggregator もこの時 Dispose)。
+        /// container を Dispose する。
         ///
-        /// graphContext 未設定の degraded 起動では scope を起動せず、空の NodeTypeRegistry のみ
-        /// fallback で確保する (旧 Awake が常に new NodeTypeRegistry() していた挙動を保つ)。
-        /// NodeFactory / IntentTranslator / GraphRepository 等は <c>_compositionRoot</c> 経由で
-        /// 後段の WireIntentSink / ConfigureSaveLoad / NodeRuntime 構築から参照する。
+        /// V3b: ModuleLifecycleProcessor が要する <c>IModulePlacementService</c> /
+        /// <c>IObject3DProxyRegistry</c> は VR/Desktop 入力ルーターと object3DGrabHandler (XR asmdef) への
+        /// closure を要するため、GameBootstrap が構築して Launch に渡す (§19: XrSceneReferences に XR 型は
+        /// 置けない transitional shape — V-final で解消)。
+        ///
+        /// graphContext / sceneRefs 未設定の degraded 起動では scope を起動せず、空の NodeTypeRegistry
+        /// のみ fallback で確保する。
         /// </remarks>
         private void LaunchCompositionRoot()
         {
@@ -298,20 +224,19 @@ namespace Rhizomode.XR
                 return;
             }
 
+            // ModuleLifecycleProcessor の placement / object3D registry は XR asmdef の closure を
+            // 要するため GameBootstrap が構築。BootstrapModulePlacement は Func で _activeInput を
+            // 遅延解決する (InitializeInteractionHandlers より前に呼ばれるため)。
+            var modulePlacement = new Rhizomode.Bootstrap.BootstrapModulePlacement(() => _activeInput);
+            var object3DRegistry = new Rhizomode.Bootstrap.BootstrapObject3DRegistry(
+                proxy => object3DGrabHandler?.Register(proxy),
+                proxy => object3DGrabHandler?.Unregister(proxy));
+
             _compositionRoot = EntryPointBootstrapper.Launch(
-                transform, sceneRefs, graphContext.Context,
-                moduleDefinitions, object3DPrefabs);
+                transform, sceneRefs, graphContext.Context, modulePlacement, object3DRegistry);
 
             _typeRegistry = _compositionRoot.TypeRegistry;
             _healthAggregator = _compositionRoot.HealthAggregator;
-            _phase5EventBus = _compositionRoot.EventBus;
-
-            // Object3D prefab map は ModuleLifecycleProcessor の dependency として利用。
-            if (_compositionRoot.Object3DPrefabMap != null)
-            {
-                foreach (var kvp in _compositionRoot.Object3DPrefabMap)
-                    _object3DPrefabMap[kvp.Key] = kvp.Value;
-            }
         }
 
         /// <summary>
@@ -453,29 +378,18 @@ namespace Rhizomode.XR
             if (scrollMenuVisual != null)
                 scrollMenuVisual.OnNodeTypeSelected -= OnScrollMenuNodeSelected;
 
-            // V3a: AudioDeviceSelector / Ableton Macro listener の購読解除は
-            // AudioDeviceSelectorWiring / AbletonBootstrapWiring (container 所有 Lifetime.Singleton) の
-            // Dispose が担う。_compositionRoot.Dispose() が scope を破棄した時点で両者も Dispose される。
-
-            // Phase 8: dispose 順序 — subscribers (processor) を先に dispose し、source (EventBus) を後に。
-            // 将来 ModuleLifecycleProcessor が GraphEventBus.OnNodeRemoved を購読した場合に、
-            // 逆順だと disposed Subject に処理が走る race を防ぐ。
-            _moduleProcessor?.Dispose();
+            // V3a/V3b: AudioDeviceSelectorWiring / AbletonBootstrapWiring / ModuleLifecycleProcessor /
+            // GraphEventBus は全て container 所有 (Lifetime.Singleton)。_compositionRoot.Dispose() が
+            // scope を破棄した時点で container が一括 Dispose するため、GameBootstrap 側の手動 Dispose は不要。
             _moduleProcessor = null;
-
-            // Phase 5 Round E で構築した EventBus を解放 (Codex review fix #8)。
-            // applier / dispatcher / translator は IDisposable ではないため EventBus のみで OK。
-            _phase5EventBus?.Dispose();
-            _phase5EventBus = null;
+            _nodeRuntime = null;
 
             // Phase 13C: health → StatusPanel 購読を解放。
-            // V2a transitional 非対称: HealthAggregator 自体の Dispose は VContainer
-            // (ObservabilityInstaller の Lifetime.Singleton) が scope GameObject (本コンポーネントの子)
-            // の OnDestroy で行う。通常は本 OnDestroy が先に走るため購読解放が source dispose より
-            // 先で安全だが、scope GameObject が単独破棄された場合は順序が逆転し得る。R3 は disposed
-            // Subject への購読解放を no-op として許容するため実害はないが、上記 EventBus の
-            // 「subscriber を source より先に dispose」規約とは非対称。V3+ で HealthAggregator の
-            // 所有・購読を Installer 側に完全移管した際に整理する。
+            // transitional 非対称: HealthAggregator 自体の Dispose は VContainer (ObservabilityInstaller の
+            // Lifetime.Singleton) が scope GameObject (本コンポーネントの子) の OnDestroy で行う。通常は
+            // 本 OnDestroy が先に走るため購読解放が source dispose より先で安全だが、scope GameObject が
+            // 単独破棄された場合は順序が逆転し得る。R3 は disposed Subject への購読解放を no-op として
+            // 許容するため実害はない。V3d で StatusPanel subscription を Installer 側へ移管した際に整理する。
             _healthSubscription?.Dispose();
             _healthSubscription = null;
             _healthAggregator = null;

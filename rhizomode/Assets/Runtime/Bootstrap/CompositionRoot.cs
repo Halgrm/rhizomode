@@ -1,12 +1,12 @@
 #nullable enable
 
 using System;
-using System.Collections.Generic;
 using Rhizomode.Bootstrap.Wiring;
 using Rhizomode.Graph.CatalogBridge;
-using Rhizomode.Graph.Events;
+using Rhizomode.Graph.Runtime;
 using Rhizomode.Graph.Serialization;
 using Rhizomode.Interaction.GraphAdapter;
+using Rhizomode.Modules;
 using Rhizomode.NodeCatalog.Runtime;
 using Rhizomode.Observability.Runtime;
 using Rhizomode.Persistence.Contracts;
@@ -23,11 +23,11 @@ namespace Rhizomode.Bootstrap
     /// (XR asmdef) は <c>IObjectResolver</c> / <c>LifetimeScope</c> に触れられないため、resolve と
     /// scope 破棄は Bootstrap 内で完結させ、GameBootstrap には本クラスのプレーンな型付き API のみ晒す。
     ///
-    /// V2a で Catalog / Observability、V2b で Graph / Persistence の Installer 産サービスを公開。
-    /// GameBootstrap がまだ手動 wiring (NodeRuntime 構築 / WireIntentSink / ConfigureSaveLoad) を
-    /// 担うため本クラスは一時的に多数のサービスを抱える transitional な bag — V3/V-final で
-    /// GameBootstrap を解体すれば縮小・廃止される。Installer / NodeRegistrationOrchestrator 等の
-    /// Bootstrap-internal 型は晒さず、Object3D prefab map は BCL 型で渡す。
+    /// V3b: GraphEventBus / Object3DPrefabMap は GameBootstrap が直接使わなくなった (NodeRuntime /
+    /// ModuleLifecycleProcessor を container 化) ため公開を撤去。代わりに container 所有の
+    /// <see cref="NodeRuntime"/> / <see cref="ModuleLifecycleProcessor"/> を公開する — GameBootstrap は
+    /// NodeSpawnService / HydrationPlanExecutor 構築や OnGraphLoading の cleanup でこれらを参照する。
+    /// 本クラスは GameBootstrap が手動 wiring を担う間の transitional な bag — V-final で縮小・廃止される。
     ///
     /// <see cref="Dispose"/> は scope GameObject を破棄し、VContainer container を Dispose させる。
     /// GameBootstrap.OnDestroy から、本クラスが渡したサービスへ依存する後段の手動 teardown より
@@ -41,20 +41,8 @@ namespace Rhizomode.Bootstrap
         /// <summary>ObservabilityInstaller が構築し container が所有する HealthAggregator。</summary>
         public HealthAggregator HealthAggregator { get; }
 
-        /// <summary>
-        /// NodeRegistrationOrchestrator が populate した Object3D prefab の逆引きマップ
-        /// (prefab 名 → 元 prefab)。GraphState 未配置の degraded 起動では null。
-        /// </summary>
-        public IReadOnlyDictionary<string, GameObject>? Object3DPrefabMap { get; }
-
         /// <summary>GraphInstaller が構築した合成ノード factory (CompositeNodeFactory)。</summary>
         public INodeFactory NodeFactory { get; }
-
-        /// <summary>
-        /// GraphInstaller が構築した GraphEventBus。NodeRuntime ctor に渡す。
-        /// Dispose は当面 GameBootstrap が担う (V3 で所有移管予定)。
-        /// </summary>
-        public GraphEventBus EventBus { get; }
 
         /// <summary>GraphInstaller が構築した IntentSink (3 handler 用)。</summary>
         public SpatialIntentToCommandTranslator IntentTranslator { get; }
@@ -75,38 +63,51 @@ namespace Rhizomode.Bootstrap
         /// </summary>
         public AbletonBootstrapWiring AbletonWiring { get; }
 
+        /// <summary>
+        /// NodesInstaller が container で組み立てた NodeRuntime。GameBootstrap は NodeSpawnService /
+        /// SceneObjectRegistrationService / HydrationPlanExecutor の構築でこれを参照する。
+        /// </summary>
+        public NodeRuntime NodeRuntime { get; }
+
+        /// <summary>
+        /// ModulesInstaller が container 所有 (Lifetime.Singleton) で構築した ModuleLifecycleProcessor。
+        /// GameBootstrap は DestroyInstance / Instances / CleanupAll の参照に使う (Dispose は container)。
+        /// </summary>
+        public ModuleLifecycleProcessor ModuleProcessor { get; }
+
         private GameObject? _scopeObject;
 
         public CompositionRoot(
             GameObject scopeObject,
             NodeTypeRegistry typeRegistry,
             HealthAggregator healthAggregator,
-            IReadOnlyDictionary<string, GameObject>? object3DPrefabMap,
             INodeFactory nodeFactory,
-            GraphEventBus eventBus,
             SpatialIntentToCommandTranslator intentTranslator,
             IGraphRepository graphRepository,
             GraphHydrator graphHydrator,
             ISavePathProvider savePathProvider,
-            AbletonBootstrapWiring abletonWiring)
+            AbletonBootstrapWiring abletonWiring,
+            NodeRuntime nodeRuntime,
+            ModuleLifecycleProcessor moduleProcessor)
         {
             _scopeObject = scopeObject;
             TypeRegistry = typeRegistry;
             HealthAggregator = healthAggregator;
-            Object3DPrefabMap = object3DPrefabMap;
             NodeFactory = nodeFactory;
-            EventBus = eventBus;
             IntentTranslator = intentTranslator;
             GraphRepository = graphRepository;
             GraphHydrator = graphHydrator;
             SavePathProvider = savePathProvider;
             AbletonWiring = abletonWiring;
+            NodeRuntime = nodeRuntime;
+            ModuleProcessor = moduleProcessor;
         }
 
         /// <summary>
         /// scope GameObject を破棄する。子の <c>RootLifetimeScope</c> (LifetimeScope) の OnDestroy が
         /// VContainer container を Dispose し、ObservabilityInstaller 産の HealthAggregator や
-        /// EntryPointsInstaller の ITickable adapter 群が停止・解放される。
+        /// EntryPointsInstaller の ITickable adapter 群、ModulesInstaller 産の ModuleLifecycleProcessor /
+        /// GraphInstaller 産の GraphEventBus が停止・解放される。
         /// </summary>
         public void Dispose()
         {

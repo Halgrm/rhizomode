@@ -19,6 +19,7 @@ namespace Rhizomode.Bootstrap.Installers
     /// <list type="bullet">
     ///   <item><see cref="AbletonBootstrapWiring"/> — Lifetime.Singleton (container が Dispose)</item>
     ///   <item><see cref="AbletonLinkHealth"/> — IHealthMonitor として登録</item>
+    ///   <item><see cref="AbletonTransportLifecycleProcessor"/> — V3b: NodeRuntime processor (旧 GameBootstrap.Awake)</item>
     /// </list>
     /// <c>AbletonBootstrapWiring.Wire()</c> は VR/Desktop の入力ルーターと SharedRaycastService を
     /// 要するため Build 後即時には駆動できない。GameBootstrap が InteractionHandlers 初期化後に
@@ -37,6 +38,10 @@ namespace Rhizomode.Bootstrap.Installers
         {
             builder.Register<AbletonBootstrapWiring>(Lifetime.Singleton);
             builder.RegisterInstance<IHealthMonitor>(new AbletonLinkHealth(_sceneRefs.AbletonLink));
+
+            // V3b: AbletonLink を IAbletonLinkConsumer ノードへ注入する LifecycleProcessor。
+            // NodesInstaller が NodeRuntime の processor 配列へ明示順で組み込む。
+            builder.RegisterInstance(new AbletonTransportLifecycleProcessor(_sceneRefs.AbletonLink));
         }
     }
 }
