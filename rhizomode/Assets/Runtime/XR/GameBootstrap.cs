@@ -42,6 +42,7 @@ using Rhizomode.Input.Desktop;
 using Rhizomode.Scene.Contracts;
 using Rhizomode.Scene.Runtime;
 using Rhizomode.Interaction;
+using Rhizomode.Bootstrap;
 
 namespace Rhizomode.XR
 {
@@ -183,19 +184,11 @@ namespace Rhizomode.XR
 
         /// <summary>
         /// Phase 12D: 各 system の IHealthMonitor を集約し、低頻度で Tick polling する。
-        /// Audio / OSC / MIDI / Ableton の 4 monitor を Register。OnHealthChange の購読
-        /// (StatusPanel 表示) は将来 Phase で配線予定。ITickable adapter 化は Phase 13
-        /// (VContainer Installer) 待ち、現状は GameBootstrap.Update から駆動。
+        /// Audio / OSC / MIDI / Ableton の 4 monitor を Register。
+        /// Plan v5.4 §15 (V1): Tick 駆動は VContainer の HealthAggregatorTickAdapter (ITickable)
+        /// に移行済。本クラスは構築・monitor 登録・OnHealthChange 購読・Dispose のみを担う。
         /// </summary>
         private HealthAggregator? _healthAggregator;
-
-        /// <summary>
-        /// HealthAggregator.Tick の polling 間隔 (フレーム数)。CurrentSnapshot() が
-        /// HealthSnapshot record を都度 alloc するため、毎フレームではなく低頻度で polling
-        /// (90fps で ~30 frame ≒ 3Hz、Codex Phase 12 review MINOR の alloc 削減)。
-        /// </summary>
-        private const int HealthTickIntervalFrames = 30;
-        private int _healthTickCounter;
 
         /// <summary>
         /// Phase 13C: HealthAggregator.OnHealthChange → StatusPanelController.SetHealth の
@@ -326,6 +319,33 @@ namespace Rhizomode.XR
             InitializeSystems();
             InitializeVerticalSliceSystems();
             RegisterSceneObjects();
+
+            // Plan v5.4 §15 (V1): pure-C# host が出揃った後に VContainer composition root を起動。
+            InitializeEntryPoints();
+        }
+
+        /// <summary>
+        /// Plan v5.4 §15 (V1): pure-C# host (MainThreadGraphCommandQueue / AudioDriverHost /
+        /// HealthAggregator) を <see cref="RootLifetimeScope"/> に渡し、VContainer の
+        /// ITickable adapter 経由で駆動させる。
+        /// </summary>
+        /// <remarks>
+        /// VContainer 型には触れず、Bootstrap asmdef の <see cref="EntryPointBootstrapper"/> に
+        /// host を渡すだけ (Plan v5.4 §19: VContainer 参照は Bootstrap asmdef のみ)。
+        /// 生成される scope GameObject は本コンポーネントの子なので GameBootstrap の破棄と同時に
+        /// 破棄され、LifetimeScope.OnDestroy が container を Dispose する。
+        /// </remarks>
+        private void InitializeEntryPoints()
+        {
+            var commandQueue = _graphAdapterWiring?.CommandQueue;
+            if (commandQueue == null || _healthAggregator == null)
+            {
+                Debug.LogWarning(
+                    "[GameBootstrap] InitializeEntryPoints skipped — host 未構築 (graphContext / health 未初期化)。");
+                return;
+            }
+
+            EntryPointBootstrapper.Launch(transform, commandQueue, audioDriver, _healthAggregator);
         }
 
         /// <summary>
@@ -431,18 +451,6 @@ namespace Rhizomode.XR
 
             // Round F1: visual rebuild + プレイヤー方向への回転は GraphLoadCoordinator に委譲。
             _graphLoadCoordinator?.Rebuild(ctx, _activeInput);
-        }
-
-        private void Update()
-        {
-            // Phase 12D: HealthAggregator を低頻度で駆動 (各 system の状態を polling)。
-            // CurrentSnapshot() の per-frame alloc を避けるため HealthTickIntervalFrames 間隔。
-            // Phase 13 で VContainer ITickable adapter (HealthAggregatorTickAdapter) に移行予定。
-            if (_healthAggregator != null && ++_healthTickCounter >= HealthTickIntervalFrames)
-            {
-                _healthTickCounter = 0;
-                _healthAggregator.Tick();
-            }
         }
 
         private void OnDestroy()

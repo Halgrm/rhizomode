@@ -33,6 +33,12 @@ namespace Rhizomode.XR
         public GraphEventBus EventBus { get; }
         public SpatialIntentToCommandTranslator Translator { get; }
 
+        /// <summary>
+        /// バックグラウンドスレッドからのグラフコマンドをメインスレッドで dispatch する queue。
+        /// Bootstrap の <c>MainThreadCommandTicker</c> (ITickable) が毎フレーム Tick する。
+        /// </summary>
+        public MainThreadGraphCommandQueue CommandQueue { get; }
+
         public GraphAdapterWiring(GraphState graphState)
         {
             var scanner = new NodeTypeAttributeScanner();
@@ -43,6 +49,7 @@ namespace Rhizomode.XR
             var applier = new GraphMutationApplier(graphState, Factory, EventBus);
             var dispatcher = new GraphCommandDispatcher(applier);
             Translator = new SpatialIntentToCommandTranslator(dispatcher);
+            CommandQueue = new MainThreadGraphCommandQueue(dispatcher);
         }
 
         /// <summary>

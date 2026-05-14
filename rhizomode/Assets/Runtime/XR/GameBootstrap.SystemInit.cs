@@ -99,7 +99,8 @@ namespace Rhizomode.XR
 
         /// <summary>
         /// Phase 12D: Audio / OSC / MIDI / Ableton の <see cref="IHealthMonitor"/> を
-        /// <see cref="HealthAggregator"/> に登録する。Tick は GameBootstrap.Update から駆動。
+        /// <see cref="HealthAggregator"/> に登録する。Tick 駆動は V1 (Plan v5.4 §15) で
+        /// VContainer の HealthAggregatorTickAdapter (ITickable) に移行済。
         /// transport が未配置でも monitor は Unknown を返すため fail-open。
         /// </summary>
         private void InitializeHealthMonitoring()

@@ -6,6 +6,7 @@
         "Rhizomode.Graph.Model",
         "Rhizomode.Graph.Runtime",
         "Rhizomode.Graph.Serialization",
+        "Rhizomode.Graph.Mutation",
         "Rhizomode.NodeCatalog.Contracts",
         "Rhizomode.NodeCatalog.Runtime",
         "Rhizomode.Input.Contracts",

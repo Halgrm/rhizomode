@@ -12,13 +12,17 @@ namespace Rhizomode.Audio.GraphAdapter
     /// <remarks>
     /// Plan v5.3 Phase 10D: 旧 ~150 行の AudioDriverBehaviour は <see cref="AudioDriverHost"/>
     /// に純粋ロジックを移送し、本 class は MonoBehaviour lifecycle (SerializeField の
-    /// AudioAnalyzer + Update tick) のみ保持。Phase 5/12 で VContainer ITickable adapter に
-    /// 置き換える際は本 MonoBehaviour を削除し、Bootstrap が AudioDriverHost を直接構築する。
+    /// AudioAnalyzer + host の保持) のみ保持。
     ///
-    /// Codex Phase 10 review Axis 5 fix: 旧 AudioDriverBehaviour は Update() 内で
+    /// Plan v5.4 §15 (V1): 自前の <c>Update()</c> tick を撤廃し、Bootstrap の
+    /// <c>AudioDriverHostTickAdapter</c> (VContainer ITickable) が毎フレーム <see cref="Tick"/>
+    /// を呼ぶ。Installer が AudioDriverHost を直接構築する形 (V2+) になったら本 MonoBehaviour
+    /// は削除する。
+    ///
+    /// Codex Phase 10 review Axis 5 fix: 旧 AudioDriverBehaviour は tick 内で
     /// audioAnalyzer + _graphContext の両方を毎フレーム guard していたため、Initialize() より
     /// 後に audioAnalyzer が SerializeField 経由で割り当てられても動作した。本実装も
-    /// late-binding を維持するため、_host の構築は Update 内で lazy に行う。
+    /// late-binding を維持するため、_host の構築は <see cref="Tick"/> 内で lazy に行う。
     /// </remarks>
     public sealed class AudioDriverBehaviour : MonoBehaviour
     {
@@ -51,7 +55,11 @@ namespace Rhizomode.Audio.GraphAdapter
             _host = null; // 既存 host を破棄して次 Update で再構築
         }
 
-        private void Update()
+        /// <summary>
+        /// Bootstrap の <c>AudioDriverHostTickAdapter</c> (ITickable) が毎フレーム呼ぶ。
+        /// audioAnalyzer / _graphContext が揃った最初の呼び出しで host を lazy 構築する。
+        /// </summary>
+        public void Tick()
         {
             if (_host == null)
             {
@@ -59,7 +67,6 @@ namespace Rhizomode.Audio.GraphAdapter
                 _host = new AudioDriverHost(audioAnalyzer, _graphContext);
             }
 
-            // Phase 5/12 で本 Update() は ITickable.Tick() に移行予定。
             _host.Tick();
         }
     }
