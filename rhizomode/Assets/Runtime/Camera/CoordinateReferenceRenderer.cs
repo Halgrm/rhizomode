@@ -1,5 +1,6 @@
 #nullable enable
 
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace Rhizomode.Cameras
@@ -115,18 +116,37 @@ namespace Rhizomode.Cameras
             lr.receiveShadows = false;
         }
 
+        // Color → cached Material。BeginEdit / EndEdit を繰り返すたびに new Material が
+        // 積算するリークを抑える (Phase 11 Codex review)。使用色は固定 6 色 + caller 由来の
+        // ごく少数のため辞書サイズは bounded。Unity Object 破棄 (シーン切替時など) で
+        // `mat == null` が true になった場合は再生成 (Unity == null overload で安全に検知)。
+        private static readonly Dictionary<uint, Material> _materialCache = new();
+
         /// <summary>
         /// URP/Unlit シェーダは LineRenderer の頂点カラーを無視するので、
         /// マテリアルの _BaseColor / _Color を明示的に塗っておく。
         /// </summary>
         internal static Material CreateLineMaterial(Color color)
         {
+            uint key = ColorKey(color);
+            if (_materialCache.TryGetValue(key, out var cached) && cached != null)
+                return cached;
             var shader = Shader.Find("Universal Render Pipeline/Unlit")
                 ?? Shader.Find("Sprites/Default");
             var mat = new Material(shader);
             if (mat.HasProperty("_BaseColor")) mat.SetColor("_BaseColor", color);
             if (mat.HasProperty("_Color")) mat.SetColor("_Color", color);
+            _materialCache[key] = mat;
             return mat;
+        }
+
+        private static uint ColorKey(Color c)
+        {
+            uint r = (uint)(Mathf.Clamp01(c.r) * 255f) & 0xFFu;
+            uint g = (uint)(Mathf.Clamp01(c.g) * 255f) & 0xFFu;
+            uint b = (uint)(Mathf.Clamp01(c.b) * 255f) & 0xFFu;
+            uint a = (uint)(Mathf.Clamp01(c.a) * 255f) & 0xFFu;
+            return (r << 24) | (g << 16) | (b << 8) | a;
         }
     }
 }

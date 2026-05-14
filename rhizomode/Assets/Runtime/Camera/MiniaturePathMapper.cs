@@ -11,6 +11,8 @@ namespace Rhizomode.Cameras
     /// </summary>
     public sealed class MiniaturePathMapper
     {
+        private const float MinValidExtent = 0.0001f;
+
         public Matrix4x4 RealToMini { get; }
         public Matrix4x4 MiniToReal { get; }
 
@@ -29,6 +31,11 @@ namespace Rhizomode.Cameras
             bool includeOriginInBbox,
             float minBboxExtent)
         {
+            // 0 / 負値が inspector 経由で渡る可能性に備えて defensive clamp
+            // (divide-by-zero と inverse 計算崩壊回避)。
+            boxSize = Mathf.Max(MinValidExtent, boxSize);
+            minBboxExtent = Mathf.Max(MinValidExtent, minBboxExtent);
+
             var spline = container.Spline;
             var xform = container.transform;
 
