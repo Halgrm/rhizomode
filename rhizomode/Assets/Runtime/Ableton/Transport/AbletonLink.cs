@@ -4,6 +4,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using R3;
+using Rhizomode.Ableton.Contracts;
 using UnityEngine;
 
 #if OSC_JACK
@@ -17,7 +18,13 @@ namespace Rhizomode.Ableton.Transport
     /// Abletonへコマンド送信(port 11000)＋応答受信(port 11001)を管理する。
     /// Listenerの参照カウント付きstart/stop管理を提供。
     /// </summary>
-    public class AbletonLink : MonoBehaviour
+    /// <remarks>
+    /// Plan v5.3 Phase 12: 旧 static <c>Instance</c> singleton を解消し
+    /// <see cref="IAbletonLink"/> を実装。GameBootstrap が SerializeField で参照を保持し、
+    /// <c>AbletonTransportLifecycleProcessor</c> 経由で node に注入する。
+    /// 受信メッセージ型は <see cref="AbletonMessage"/> (Ableton.Contracts) に移送済。
+    /// </remarks>
+    public class AbletonLink : MonoBehaviour, IAbletonLink
     {
         private const int DefaultSendPort = 11000;
         private const int DefaultReceivePort = 11001;
@@ -26,26 +33,6 @@ namespace Rhizomode.Ableton.Transport
         [SerializeField] private string host = DefaultHost;
         [SerializeField] private int sendPort = DefaultSendPort;
         [SerializeField] private int receivePort = DefaultReceivePort;
-
-        private static AbletonLink? _instance;
-        public static AbletonLink? Instance => _instance;
-
-        /// <summary>受信メッセージの構造体。メインスレッドへのキュー転送用。</summary>
-        public readonly struct AbletonMessage
-        {
-            public readonly string Address;
-            public readonly float[] FloatArgs;
-            public readonly int[] IntArgs;
-            public readonly string[] StringArgs;
-
-            public AbletonMessage(string address, float[] floatArgs, int[] intArgs, string[] stringArgs)
-            {
-                Address = address;
-                FloatArgs = floatArgs;
-                IntArgs = intArgs;
-                StringArgs = stringArgs;
-            }
-        }
 
         private readonly Dictionary<string, Subject<AbletonMessage>> _addressSubjects = new();
         private readonly ConcurrentQueue<AbletonMessage> _pendingMessages = new();
@@ -240,13 +227,6 @@ namespace Rhizomode.Ableton.Transport
 
         private void Awake()
         {
-            if (_instance != null && _instance != this)
-            {
-                Destroy(gameObject);
-                return;
-            }
-            _instance = this;
-
 #if OSC_JACK
             try
             {
@@ -320,9 +300,6 @@ namespace Rhizomode.Ableton.Transport
             _server?.Dispose();
             _server = null;
 #endif
-
-            if (_instance == this)
-                _instance = null;
         }
     }
 }

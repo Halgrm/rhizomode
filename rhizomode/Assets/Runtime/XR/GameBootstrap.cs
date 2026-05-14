@@ -174,6 +174,13 @@ namespace Rhizomode.XR
         private OscMidiTransportLifecycleProcessor? _oscMidiTransportProcessor;
 
         /// <summary>
+        /// Phase 12C: IAbletonLinkConsumer に AbletonLink を注入する LifecycleProcessor。
+        /// 旧 AbletonLink.Instance singleton 直参照を解消。NodeRuntime の processors リストに
+        /// 登録され BeforeSetup で自動駆動。
+        /// </summary>
+        private AbletonTransportLifecycleProcessor? _abletonTransportProcessor;
+
+        /// <summary>
         /// Phase 8 Round B: GraphState ミューテーション (RegisterNode / AddEdge) の唯一窓口。
         /// Awake 時に eager 構築し、processors 経由で BeforeSetup → Setup → AfterSetup を駆動。
         /// 旧 ctx.RegisterNode / ctx.TryConnect 直接呼び出しを置換。
@@ -247,6 +254,13 @@ namespace Rhizomode.XR
             // IMidiSource を実装しているのでそのまま contract として渡る。
             _oscMidiTransportProcessor = new OscMidiTransportLifecycleProcessor(oscServer, midiServer);
 
+            // Phase 12C: AbletonTransportLifecycleProcessor を初期化。
+            // abletonLink は [SerializeField]。MonoBehaviour は IAbletonLink を実装。
+            // AbletonOscBridge にも同じ link を注入 (旧 AbletonLink.Instance 直参照を解消)。
+            _abletonTransportProcessor = new AbletonTransportLifecycleProcessor(abletonLink);
+            if (abletonBridge != null)
+                abletonBridge.Link = abletonLink;
+
             // Phase 8 Round B: NodeRuntime を eager 構築。EventBus + factory も lift して field 化。
             // processors 順序: SceneLoaderLifecycleProcessor (BeforeSetup で Loader 注入) →
             //                  ModuleLifecycleProcessor (AfterSetup で Prefab + Module 注入)
@@ -264,7 +278,8 @@ namespace Rhizomode.XR
                     graphContext.Context, _phase5EventBus,
                     new Rhizomode.Graph.Runtime.INodeLifecycleProcessor[]
                     {
-                        _sceneLoaderProcessor, _oscMidiTransportProcessor, _moduleProcessor
+                        _sceneLoaderProcessor, _oscMidiTransportProcessor,
+                        _abletonTransportProcessor, _moduleProcessor
                     });
 
                 // Phase 8 Round C: NodeSpawnService を初期化 (Plan v5.3 F-8.2 抽出 1/N)。

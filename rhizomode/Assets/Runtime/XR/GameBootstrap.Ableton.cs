@@ -72,7 +72,7 @@ namespace Rhizomode.XR
             abletonSetupPanel.OnSkipRequested += () => abletonSetupPanel.Hide();
 
             if (abletonGridManager != null && abletonBridge != null)
-                abletonGridManager.Initialize(abletonBridge);
+                abletonGridManager.Initialize(abletonBridge, abletonLink);
 
             if (clipFireHandler != null && _activeInput != null
                 && sharedRaycastService != null && abletonLink != null)

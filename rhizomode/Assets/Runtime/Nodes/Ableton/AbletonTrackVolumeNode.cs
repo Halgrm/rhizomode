@@ -5,7 +5,7 @@ using R3;
 using Rhizomode.SharedKernel;
 using Rhizomode.Graph.Model;
 using Rhizomode.Graph.Serialization;
-using Rhizomode.Ableton.Transport;
+using Rhizomode.Ableton.Contracts;
 using UnityEngine;
 
 using Rhizomode.NodeCatalog.Contracts;
@@ -15,8 +15,13 @@ namespace Rhizomode.Nodes.Ableton
     /// Abletonの指定トラックの音量を読み書きするノード。
     /// trackIndexで対象トラックを指定。入力ポートVolume接続時は双方向制御。
     /// </summary>
+    /// <remarks>
+    /// Plan v5.3 Phase 12: 旧 <c>AbletonLink.Instance</c> singleton 直参照を解消。
+    /// <see cref="IAbletonLinkConsumer"/> を実装し、<c>AbletonTransportLifecycleProcessor</c>
+    /// が Setup 前に <see cref="Link"/> を注入する。
+    /// </remarks>
     [NodeType("AbletonTrackVolume", "Ableton Track Volume", NodeCategory.Input)]
-    public class AbletonTrackVolumeNode : NodeBase
+    public class AbletonTrackVolumeNode : NodeBase, IAbletonLinkConsumer
     {
         private const int DefaultTrackIndex = 0;
 
@@ -25,6 +30,9 @@ namespace Rhizomode.Nodes.Ableton
         private int _trackIndex;
 
         public int TrackIndex => _trackIndex;
+
+        /// <summary><c>AbletonTransportLifecycleProcessor</c> が Setup 前に注入する。</summary>
+        public IAbletonLink? Link { get; set; }
 
         public AbletonTrackVolumeNode(string id) : this(id, DefaultTrackIndex)
         {
@@ -39,10 +47,10 @@ namespace Rhizomode.Nodes.Ableton
 
         public override void Setup(GraphState context)
         {
-            var link = AbletonLink.Instance;
+            var link = Link;
             if (link == null)
             {
-                Debug.LogWarning($"[AbletonTrackVolumeNode] AbletonLink not found. Node {Id} inactive.");
+                Debug.LogWarning($"[AbletonTrackVolumeNode] AbletonLink not injected. Node {Id} inactive.");
                 return;
             }
 

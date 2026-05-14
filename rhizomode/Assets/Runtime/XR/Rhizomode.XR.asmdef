@@ -36,6 +36,7 @@
         "Rhizomode.Bootstrap",
         "Rhizomode.Audio.Analysis",
         "Rhizomode.Audio.GraphAdapter",
+        "Rhizomode.Ableton.Contracts",
         "Rhizomode.Ableton.Transport",
         "Rhizomode.Ableton.Session",
         "Rhizomode.Ableton.GraphAdapter",

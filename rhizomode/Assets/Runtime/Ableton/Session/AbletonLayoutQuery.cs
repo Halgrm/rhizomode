@@ -5,7 +5,7 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using R3;
-using Rhizomode.Ableton.Transport;
+using Rhizomode.Ableton.Contracts;
 using UnityEngine;
 
 namespace Rhizomode.Ableton.Session
@@ -39,7 +39,7 @@ namespace Rhizomode.Ableton.Session
         /// AbletonLive に対しレイアウト情報を問い合わせる。完了またはタイムアウトで返る。
         /// </summary>
         /// <returns>Success=true: 全応答受信、false: タイムアウト (部分受信は反映済み)</returns>
-        public async Task<Result> RunAsync(AbletonLink link, int timeoutMs)
+        public async Task<Result> RunAsync(IAbletonLink link, int timeoutMs)
         {
             var handle = new AbletonClipGridQueryHandle();
             using var cts = new CancellationTokenSource(timeoutMs);
@@ -70,7 +70,7 @@ namespace Rhizomode.Ableton.Session
         }
 
         private async Task<bool> QueryCountsAsync(
-            AbletonLink link, AbletonClipGridQueryHandle handle, CancellationToken ct)
+            IAbletonLink link, AbletonClipGridQueryHandle handle, CancellationToken ct)
         {
             var tcsTracks = new TaskCompletionSource<int>();
             var tcsScenes = new TaskCompletionSource<int>();
@@ -106,7 +106,7 @@ namespace Rhizomode.Ableton.Session
         }
 
         private async Task QueryTrackNamesAsync(
-            AbletonLink link, AbletonClipGridQueryHandle handle, CancellationToken ct)
+            IAbletonLink link, AbletonClipGridQueryHandle handle, CancellationToken ct)
         {
             var pending = handle.NumTracks;
             var tcs = new TaskCompletionSource<bool>();
@@ -140,7 +140,7 @@ namespace Rhizomode.Ableton.Session
         }
 
         private async Task QueryClipMetaAsync(
-            AbletonLink link, AbletonClipGridQueryHandle handle, CancellationToken ct)
+            IAbletonLink link, AbletonClipGridQueryHandle handle, CancellationToken ct)
         {
             var hasClipExpected = handle.NumTracks * handle.NumScenes;
             var hasClipReceived = 0;
@@ -223,7 +223,7 @@ namespace Rhizomode.Ableton.Session
         /// <summary>
         /// 受信メッセージから名前文字列を抽出する。track index 後の最初の非空文字列。
         /// </summary>
-        private static string ExtractName(AbletonLink.AbletonMessage msg)
+        private static string ExtractName(AbletonMessage msg)
         {
             // AbletonOSC の応答形式: [track, name] または [track, scene, name]
             for (var i = msg.IntArgs.Length; i < msg.StringArgs.Length; i++)

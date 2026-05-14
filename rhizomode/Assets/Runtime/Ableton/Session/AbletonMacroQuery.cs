@@ -5,7 +5,7 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using R3;
-using Rhizomode.Ableton.Transport;
+using Rhizomode.Ableton.Contracts;
 using UnityEngine;
 
 namespace Rhizomode.Ableton.Session
@@ -29,7 +29,7 @@ namespace Rhizomode.Ableton.Session
         /// <param name="deviceIndex">Track 内の Device index (0 始まり)。</param>
         /// <param name="macroCount">取得する Macro 数 (呼び出し側で 1〜16 に clamp 済み)。</param>
         public async Task<AbletonMacroMeta[]> RunAsync(
-            AbletonLink link, int trackIndex, int deviceIndex, int macroCount, int timeoutMs)
+            IAbletonLink link, int trackIndex, int deviceIndex, int macroCount, int timeoutMs)
         {
             // 複数形応答 ([track, device, item0, item1, ...]) をそのまま配列で保持
             string[]? receivedNamesPlural = null;
@@ -121,7 +121,7 @@ namespace Rhizomode.Ableton.Session
         /// 単数形応答 [track, device, param, name] から param→name を集計。
         /// </summary>
         private static void CollectSingularString(
-            AbletonLink.AbletonMessage msg, int track, int device, Dictionary<int, string> bucket)
+            AbletonMessage msg, int track, int device, Dictionary<int, string> bucket)
         {
             if (msg.IntArgs.Length < 3) return;
             if (msg.IntArgs[0] != track || msg.IntArgs[1] != device) return;
@@ -141,7 +141,7 @@ namespace Rhizomode.Ableton.Session
         /// 単数形応答 [track, device, param, value] から param→value を集計。
         /// </summary>
         private static void CollectSingularFloat(
-            AbletonLink.AbletonMessage msg, int track, int device, Dictionary<int, float> bucket)
+            AbletonMessage msg, int track, int device, Dictionary<int, float> bucket)
         {
             if (msg.IntArgs.Length < 3) return;
             if (msg.IntArgs[0] != track || msg.IntArgs[1] != device) return;
@@ -154,7 +154,7 @@ namespace Rhizomode.Ableton.Session
         /// 複数形 API の応答 [track, device, val0, val1, ...] から float 配列を抽出。
         /// </summary>
         private static void CollectFloatList(
-            AbletonLink.AbletonMessage msg, int track, int device, ref float[]? destination)
+            AbletonMessage msg, int track, int device, ref float[]? destination)
         {
             if (msg.IntArgs.Length < 2) return;
             if (msg.IntArgs[0] != track || msg.IntArgs[1] != device) return;
@@ -171,7 +171,7 @@ namespace Rhizomode.Ableton.Session
         /// 複数形 API の応答 [track, device, name0, name1, ...] から string 配列を抽出。
         /// </summary>
         private static void CollectStringList(
-            AbletonLink.AbletonMessage msg, int track, int device, ref string[]? destination)
+            AbletonMessage msg, int track, int device, ref string[]? destination)
         {
             if (msg.IntArgs.Length < 2) return;
             if (msg.IntArgs[0] != track || msg.IntArgs[1] != device) return;

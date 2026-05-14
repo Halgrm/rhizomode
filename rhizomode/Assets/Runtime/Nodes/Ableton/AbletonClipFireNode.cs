@@ -5,7 +5,7 @@ using R3;
 using Rhizomode.SharedKernel;
 using Rhizomode.Graph.Model;
 using Rhizomode.Graph.Serialization;
-using Rhizomode.Ableton.Transport;
+using Rhizomode.Ableton.Contracts;
 using UnityEngine;
 
 using Rhizomode.NodeCatalog.Contracts;
@@ -16,8 +16,13 @@ namespace Rhizomode.Nodes.Ableton
     /// Track(Float)とScene(Float)入力ポートで対象クリップを動的に指定可能。
     /// Trigger入力のrising edgeでfire送信。
     /// </summary>
+    /// <remarks>
+    /// Plan v5.3 Phase 12: 旧 <c>AbletonLink.Instance</c> singleton 直参照を解消。
+    /// <see cref="IAbletonLinkConsumer"/> を実装し、<c>AbletonTransportLifecycleProcessor</c>
+    /// が Setup 前に <see cref="Link"/> を注入する。
+    /// </remarks>
     [NodeType("AbletonClipFire", "Ableton Clip Fire", NodeCategory.Input)]
-    public class AbletonClipFireNode : NodeBase
+    public class AbletonClipFireNode : NodeBase, IAbletonLinkConsumer
     {
         private const int DefaultTrackIndex = 0;
         private const int DefaultSceneIndex = 0;
@@ -35,6 +40,9 @@ namespace Rhizomode.Nodes.Ableton
         /// <summary>現在のシーンインデックス（0始まり）。</summary>
         public int SceneIndex => _sceneIndex;
 
+        /// <summary><c>AbletonTransportLifecycleProcessor</c> が Setup 前に注入する。</summary>
+        public IAbletonLink? Link { get; set; }
+
         public AbletonClipFireNode(string id) : this(id, DefaultTrackIndex, DefaultSceneIndex)
         {
         }
@@ -51,10 +59,10 @@ namespace Rhizomode.Nodes.Ableton
 
         public override void Setup(GraphState context)
         {
-            var link = AbletonLink.Instance;
+            var link = Link;
             if (link == null)
             {
-                Debug.LogWarning($"[AbletonClipFireNode] AbletonLink not found. Node {Id} inactive.");
+                Debug.LogWarning($"[AbletonClipFireNode] AbletonLink not injected. Node {Id} inactive.");
                 return;
             }
 
@@ -116,12 +124,12 @@ namespace Rhizomode.Nodes.Ableton
             AddSubscription(new ActionDisposable(() => StopClipListener(link)));
         }
 
-        private void StartClipListener(AbletonLink link)
+        private void StartClipListener(IAbletonLink link)
         {
             link.Send("/live/clip_slot/start_listen/is_playing", _trackIndex, _sceneIndex);
         }
 
-        private void StopClipListener(AbletonLink link)
+        private void StopClipListener(IAbletonLink link)
         {
             link.Send("/live/clip_slot/stop_listen/is_playing", _trackIndex, _sceneIndex);
         }

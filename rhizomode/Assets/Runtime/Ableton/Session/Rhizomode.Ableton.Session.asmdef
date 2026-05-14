@@ -4,7 +4,6 @@
     "references": [
         "Rhizomode.SharedKernel",
         "Rhizomode.Ableton.Contracts",
-        "Rhizomode.Ableton.Transport",
         "R3.Unity"
     ],
     "includePlatforms": [],

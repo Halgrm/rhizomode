@@ -4,7 +4,7 @@ using System;
 using R3;
 using Rhizomode.SharedKernel;
 using Rhizomode.Graph.Model;
-using Rhizomode.Ableton.Transport;
+using Rhizomode.Ableton.Contracts;
 using UnityEngine;
 
 using Rhizomode.NodeCatalog.Contracts;
@@ -14,11 +14,19 @@ namespace Rhizomode.Nodes.Ableton
     /// Abletonのトランスポート状態を出力するノード。
     /// IsPlaying: 再生中かどうか(bool)。SongTime: 現在の曲時間(float, beats)。
     /// </summary>
+    /// <remarks>
+    /// Plan v5.3 Phase 12: 旧 <c>AbletonLink.Instance</c> singleton 直参照を解消。
+    /// <see cref="IAbletonLinkConsumer"/> を実装し、<c>AbletonTransportLifecycleProcessor</c>
+    /// が Setup 前に <see cref="Link"/> を注入する。
+    /// </remarks>
     [NodeType("AbletonTransport", "Ableton Transport", NodeCategory.Input)]
-    public class AbletonTransportNode : NodeBase
+    public class AbletonTransportNode : NodeBase, IAbletonLinkConsumer
     {
         private readonly OutputPort<bool> _isPlayingOut;
         private readonly OutputPort<float> _songTimeOut;
+
+        /// <summary><c>AbletonTransportLifecycleProcessor</c> が Setup 前に注入する。</summary>
+        public IAbletonLink? Link { get; set; }
 
         public AbletonTransportNode(string id) : base(id, "AbletonTransport")
         {
@@ -28,10 +36,10 @@ namespace Rhizomode.Nodes.Ableton
 
         public override void Setup(GraphState context)
         {
-            var link = AbletonLink.Instance;
+            var link = Link;
             if (link == null)
             {
-                Debug.LogWarning($"[AbletonTransportNode] AbletonLink not found. Node {Id} inactive.");
+                Debug.LogWarning($"[AbletonTransportNode] AbletonLink not injected. Node {Id} inactive.");
                 return;
             }
 

@@ -3,7 +3,7 @@
 using System;
 using System.Collections.Generic;
 using R3;
-using Rhizomode.Ableton.Transport;
+using Rhizomode.Ableton.Contracts;
 using Rhizomode.Ableton.Session;
 using UnityEngine;
 
@@ -32,6 +32,7 @@ namespace Rhizomode.Ableton.GraphAdapter
         }
 
         private AbletonOscBridge? _bridge;
+        private IAbletonLink? _link;
         private readonly Dictionary<(int t, int s), ClipObject> _clips = new();
         private IDisposable? _stateSubscription;
         private GameObject? _gridRoot;
@@ -39,9 +40,14 @@ namespace Rhizomode.Ableton.GraphAdapter
         public bool IsSpawned => _gridRoot != null;
         public IReadOnlyDictionary<(int t, int s), ClipObject> Clips => _clips;
 
-        public void Initialize(AbletonOscBridge bridge)
+        /// <summary>
+        /// Bridge と AbletonLink を注入する。Plan v5.3 Phase 12: 旧 <c>AbletonLink.Instance</c>
+        /// singleton 直参照を解消。
+        /// </summary>
+        public void Initialize(AbletonOscBridge bridge, IAbletonLink? link)
         {
             _bridge = bridge;
+            _link = link;
         }
 
         /// <summary>
@@ -133,7 +139,7 @@ namespace Rhizomode.Ableton.GraphAdapter
 
         private void SubscribePlayingState()
         {
-            var link = AbletonLink.Instance;
+            var link = _link;
             if (link == null) return;
 
             _stateSubscription = link.GetAddressObservable("/live/clip_slot/get/is_playing")
@@ -150,7 +156,7 @@ namespace Rhizomode.Ableton.GraphAdapter
 
         private void StartListenAll()
         {
-            var link = AbletonLink.Instance;
+            var link = _link;
             if (link == null) return;
 
             foreach (var key in _clips.Keys)
@@ -161,7 +167,7 @@ namespace Rhizomode.Ableton.GraphAdapter
 
         private void StopListenAll()
         {
-            var link = AbletonLink.Instance;
+            var link = _link;
             if (link == null) return;
 
             foreach (var key in _clips.Keys)

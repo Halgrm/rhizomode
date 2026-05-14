@@ -2,13 +2,16 @@
     "name": "Rhizomode.Ableton.Contracts",
     "rootNamespace": "Rhizomode.Ableton.Contracts",
     "references": [
-        "Rhizomode.SharedKernel"
+        "Rhizomode.SharedKernel",
+        "R3.Unity"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
     "allowUnsafeCode": false,
-    "overrideReferences": false,
-    "precompiledReferences": [],
+    "overrideReferences": true,
+    "precompiledReferences": [
+        "R3.dll"
+    ],
     "autoReferenced": true,
     "defineConstraints": [],
     "versionDefines": [],

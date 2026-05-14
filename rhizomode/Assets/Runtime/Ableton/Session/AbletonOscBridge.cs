@@ -2,7 +2,7 @@
 
 using System;
 using System.Threading.Tasks;
-using Rhizomode.Ableton.Transport;
+using Rhizomode.Ableton.Contracts;
 using UnityEngine;
 
 namespace Rhizomode.Ableton.Session
@@ -53,6 +53,12 @@ namespace Rhizomode.Ableton.Session
         private readonly AbletonLayoutQuery _layoutQuery = new();
         private readonly AbletonMacroQuery _macroQuery = new();
 
+        /// <summary>
+        /// GameBootstrap が注入する AbletonLink。Plan v5.3 Phase 12: 旧 <c>AbletonLink.Instance</c>
+        /// singleton 直参照を解消。未注入時は空 Layout / 空 Macro で graceful degradation。
+        /// </summary>
+        public IAbletonLink? Link { get; set; }
+
         // ---- Layout ----
         public AbletonTrackMeta[] Tracks { get; private set; } = Array.Empty<AbletonTrackMeta>();
         public int NumTracks { get; private set; }
@@ -75,7 +81,7 @@ namespace Rhizomode.Ableton.Session
         /// <returns>true: 全応答受信、false: タイムアウト（部分受信は反映済み）</returns>
         public async Task<bool> QueryLayoutAsync(int timeoutMs = DefaultTimeoutMs)
         {
-            var link = AbletonLink.Instance;
+            var link = Link;
             if (link == null)
             {
                 Debug.LogWarning("[AbletonOscBridge] AbletonLink not available — empty layout");
@@ -108,7 +114,7 @@ namespace Rhizomode.Ableton.Session
 
             macroCount = Mathf.Clamp(macroCount, 1, 16);
 
-            var link = AbletonLink.Instance;
+            var link = Link;
             if (link == null)
             {
                 Debug.LogWarning("[AbletonOscBridge] AbletonLink not available — empty macros");

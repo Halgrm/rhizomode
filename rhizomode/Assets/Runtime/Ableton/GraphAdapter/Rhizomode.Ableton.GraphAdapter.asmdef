@@ -8,6 +8,7 @@
         "Rhizomode.Ableton.Session",
         "Rhizomode.Observability.Contracts",
         "Rhizomode.Graph.Model",
+        "Rhizomode.Graph.Runtime",
         "R3.Unity",
         "Unity.TextMeshPro"
     ],
