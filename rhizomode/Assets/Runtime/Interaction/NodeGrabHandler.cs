@@ -2,6 +2,7 @@
 
 using System;
 using R3;
+using Rhizomode.Interaction;
 using Rhizomode.UI;
 using UnityEngine;
 
@@ -30,9 +31,7 @@ namespace Rhizomode.XR
         // グラブ状態
         private bool _isGrabbing;
         private string? _grabbedNodeId;
-        private Quaternion _grabControllerRotation;
-        private Quaternion _grabNodeRotation;
-        private Vector3 _grabLocalOffset;
+        private GrabPoseSolver.GrabPose _grabPose;
         private bool _isLeftHandGrab;
 
         /// <summary>現在グラブ中かどうか。</summary>
@@ -101,10 +100,10 @@ namespace Rhizomode.XR
                 return;
             }
 
-            var rotationDelta = controllerRotation * Quaternion.Inverse(_grabControllerRotation);
-            var rotatedOffset = rotationDelta * _grabLocalOffset;
-            visual.transform.position = controllerOrigin + rotatedOffset;
-            visual.transform.rotation = rotationDelta * _grabNodeRotation;
+            GrabPoseSolver.Solve(in _grabPose, controllerOrigin, controllerRotation,
+                out var newPosition, out var newRotation);
+            visual.transform.position = newPosition;
+            visual.transform.rotation = newRotation;
 
             _edgeVisualManager?.MarkNodeDirty(_grabbedNodeId);
         }
@@ -135,9 +134,11 @@ namespace Rhizomode.XR
             if (visual?.Node == null) return;
 
             _grabbedNodeId = visual.Node.NodeId;
-            _grabControllerRotation = _controllerPose.ControllerRotation;
-            _grabNodeRotation = visual.transform.rotation;
-            _grabLocalOffset = visual.transform.position - _controllerPose.RayOrigin;
+            _grabPose = GrabPoseSolver.Capture(
+                visual.transform.position,
+                visual.transform.rotation,
+                _controllerPose.RayOrigin,
+                _controllerPose.ControllerRotation);
             _isLeftHandGrab = false;
             _isGrabbing = true;
         }
@@ -154,9 +155,11 @@ namespace Rhizomode.XR
             if (visual?.Node == null) return;
 
             _grabbedNodeId = visual.Node.NodeId;
-            _grabControllerRotation = Quaternion.LookRotation(_leftHandRay.LeftRayDirection);
-            _grabNodeRotation = visual.transform.rotation;
-            _grabLocalOffset = visual.transform.position - _leftHandRay.LeftRayOrigin;
+            _grabPose = GrabPoseSolver.Capture(
+                visual.transform.position,
+                visual.transform.rotation,
+                _leftHandRay.LeftRayOrigin,
+                Quaternion.LookRotation(_leftHandRay.LeftRayDirection));
             _isLeftHandGrab = true;
             _isGrabbing = true;
         }

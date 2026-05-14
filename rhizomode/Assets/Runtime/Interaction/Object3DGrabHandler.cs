@@ -3,6 +3,7 @@
 using System;
 using System.Collections.Generic;
 using R3;
+using Rhizomode.Interaction;
 using Rhizomode.Modules;
 using Rhizomode.UI;
 using UnityEngine;
@@ -31,9 +32,7 @@ namespace Rhizomode.XR
         // グラブ状態
         private bool _isGrabbing;
         private Object3DProxy? _grabbedProxy;
-        private Quaternion _grabControllerRotation;
-        private Quaternion _grabObjectRotation;
-        private Vector3 _grabLocalOffset;
+        private GrabPoseSolver.GrabPose _grabPose;
         private bool _isLeftHandGrab;
         private float _stickY;
 
@@ -117,10 +116,10 @@ namespace Rhizomode.XR
             }
 
             // 位置・回転追従
-            var rotationDelta = controllerRotation * Quaternion.Inverse(_grabControllerRotation);
-            var rotatedOffset = rotationDelta * _grabLocalOffset;
-            _grabbedProxy.transform.position = controllerOrigin + rotatedOffset;
-            _grabbedProxy.transform.rotation = rotationDelta * _grabObjectRotation;
+            GrabPoseSolver.Solve(in _grabPose, controllerOrigin, controllerRotation,
+                out var newPosition, out var newRotation);
+            _grabbedProxy.transform.position = newPosition;
+            _grabbedProxy.transform.rotation = newRotation;
 
             // スティックY軸でスケール変更
             if (Mathf.Abs(_stickY) > 0.1f)
@@ -176,9 +175,11 @@ namespace Rhizomode.XR
             if (!_proxyMap.TryGetValue(hit.collider, out var proxy)) return;
 
             _grabbedProxy = proxy;
-            _grabControllerRotation = controllerRotation;
-            _grabObjectRotation = proxy.transform.rotation;
-            _grabLocalOffset = proxy.transform.position - rayOrigin;
+            _grabPose = GrabPoseSolver.Capture(
+                proxy.transform.position,
+                proxy.transform.rotation,
+                rayOrigin,
+                controllerRotation);
             _isLeftHandGrab = isLeftHand;
             _isGrabbing = true;
         }

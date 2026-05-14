@@ -3,6 +3,7 @@
 using System;
 using R3;
 using Rhizomode.Cameras;
+using Rhizomode.Interaction;
 using Rhizomode.UI;
 using UnityEngine;
 
@@ -26,8 +27,7 @@ namespace Rhizomode.XR
 
         private bool _isGrabbing;
         private PathControlPointVisual? _grabbedVisual;
-        private Vector3 _grabLocalOffset;
-        private Quaternion _grabControllerRotation;
+        private GrabPoseSolver.GrabPose _grabPose;
 
         /// <summary>現在グラブ中かどうか。</summary>
         public bool IsGrabbing => _isGrabbing;
@@ -53,11 +53,11 @@ namespace Rhizomode.XR
         {
             if (!_isGrabbing || _grabbedVisual == null || _controllerPose == null) return;
 
-            var origin = _controllerPose.RayOrigin;
-            var rotation = _controllerPose.ControllerRotation;
-            var rotationDelta = rotation * Quaternion.Inverse(_grabControllerRotation);
-            var rotatedOffset = rotationDelta * _grabLocalOffset;
-            _grabbedVisual.UpdateWorldPosition(origin + rotatedOffset);
+            var newPosition = GrabPoseSolver.SolvePosition(
+                in _grabPose,
+                _controllerPose.RayOrigin,
+                _controllerPose.ControllerRotation);
+            _grabbedVisual.UpdateWorldPosition(newPosition);
         }
 
         private void OnRightGrab(bool pressed)
@@ -77,8 +77,11 @@ namespace Rhizomode.XR
             if (visual == null) return;
 
             _grabbedVisual = visual;
-            _grabControllerRotation = _controllerPose.ControllerRotation;
-            _grabLocalOffset = visual.transform.position - _controllerPose.RayOrigin;
+            _grabPose = GrabPoseSolver.Capture(
+                visual.transform.position,
+                visual.transform.rotation,
+                _controllerPose.RayOrigin,
+                _controllerPose.ControllerRotation);
             _isGrabbing = true;
         }
 
