@@ -49,6 +49,10 @@ namespace Rhizomode.XR
     /// </summary>
     public partial class GameBootstrap : MonoBehaviour
     {
+        [Header("Composition Root")]
+        [Tooltip("Plan v5.4 §15: scene 参照を集約する MonoBehaviour。各 Installer がここから参照を取る。")]
+        [SerializeField] private XrSceneReferences? sceneRefs;
+
         [SerializeField] private GraphContextBehaviour? graphContext;
         [SerializeField] private NodeVisualManager? visualManager;
         [SerializeField] private ControllerInputRouter? controllerInput;
@@ -61,7 +65,6 @@ namespace Rhizomode.XR
         [SerializeField] private SharedRaycastService? sharedRaycastService;
         [SerializeField] private ScrollMenuVisualController? scrollMenuVisual;
         [SerializeField] private ScrollMenuInteractionHandler? scrollMenuInteraction;
-        [SerializeField] private AudioDriverBehaviour? audioDriver;
         [SerializeField] private ModuleDefinition[]? moduleDefinitions;
         [SerializeField] private CinemachineModule[]? cinemachineModules;
         [SerializeField] private PresetManager? presetManager;
@@ -70,8 +73,6 @@ namespace Rhizomode.XR
 
         [Header("Week 5 — 統合システム")]
         [SerializeField] private MirrorOutputController? mirrorOutput;
-        [SerializeField] private AudioDeviceSelector? audioDeviceSelector;
-        [SerializeField] private StatusPanelController? statusPanel;
         [SerializeField] private CameraManagerPanelController? cameraManagerPanel;
         [SerializeField] private DesktopMirrorBlitter? desktopBlitter;
         [SerializeField] private PathControlPointVisualManager? pathEditorManager;
@@ -89,43 +90,9 @@ namespace Rhizomode.XR
         [Header("Scene Switching")]
         [SerializeField] private AdditiveSceneLoader? sceneLoader;
 
-        [Header("OSC / MIDI Transport")]
-        [Tooltip("シーンに配置した OscServer。未設定なら OSC 入力ノードは非アクティブ。")]
-        [SerializeField] private OscServer? oscServer;
-        [Tooltip("シーンに配置した MidiServer。未設定なら MIDI 入力ノードは非アクティブ。")]
-        [SerializeField] private MidiServer? midiServer;
-
-        [Header("Ableton OSC")]
-        [SerializeField] private AbletonLink? abletonLink;
-        [SerializeField] private AbletonOscBridge? abletonBridge;
-        [SerializeField] private AbletonSetupPanel? abletonSetupPanel;
-        [SerializeField] private AbletonClipGridManager? abletonGridManager;
-        [SerializeField] private ClipFireRayHandler? clipFireHandler;
-        [SerializeField] private AbletonControlPanel? abletonControlPanel;
-
-        [Header("Ableton UI Anchor (Editor で位置・回転調整)")]
-        [Tooltip("Ableton UI 全体の基準アンカー。Setup/Grid/Control パネルがこの位置・向きを共有して配置される。" +
-                 "未設定ならプレイヤー前方にフォールバック。Z+ がパネル正面。")]
-        [SerializeField] private Transform? abletonUiAnchor;
-
-        [Header("Ableton Outer Frame (Grid + Control 全体を囲む枠)")]
-        [Tooltip("UnlitRoundedFrame シェーダーを使ったマテリアル。null なら外枠を生成しない。")]
-        [SerializeField] private Material? abletonOuterFrameMaterial;
-        [Tooltip("コンテンツ端からの余白 (m)。フレームはこの分外側に広がる。")]
-        [SerializeField, Range(0.01f, 0.2f)] private float abletonOuterFramePadding = 0.06f;
-        [Tooltip("フレームの背後オフセット (m)。すべての UI の最も奥に置く。")]
-        [SerializeField, Range(0.0f, 0.05f)] private float abletonOuterFrameDepthOffset = 0.012f;
-        [Tooltip("外枠の角丸半径 (m)。")]
-        [SerializeField, Range(0.0f, 0.2f)] private float abletonOuterFrameCornerRadius = 0.04f;
-
-        [Header("Ableton Macro (どの Track / Device の Rack の Macro を VR から触るか)")]
-        [Tooltip("Track index。-1 = Master Track (推奨: Live Set 切替で位置がズレない)、0..N-1 = 通常 Track。")]
-        [SerializeField] private int macroTrackIndex = -1;
-        [Tooltip("Track 内のどの Device の Macro を扱うか。0 = 最初のデバイス。")]
-        [SerializeField, Range(0, 16)] private int macroDeviceIndex = 0;
-
-        private GameObject? _abletonOuterFrameInstance;
-        private IDisposable? _macroValueListenerSub;
+        // V3a: Audio / OSC / MIDI / Ableton の scene 参照は XrSceneReferences へ移送。
+        // GameBootstrap は sceneRefs.OscServer / sceneRefs.AbletonLink 等を transitional に参照する
+        // (LifecycleProcessor 構築は V3b で Installer 化)。
 
         private NodeTypeRegistry? _typeRegistry;
 
@@ -138,10 +105,6 @@ namespace Rhizomode.XR
 
         /// <summary>実際に使用中の入力ルーター（VRまたはデスクトップ）。</summary>
         private IControllerInput? _activeInput;
-
-        // AudioDeviceSelector イベント購読解除用デリゲート
-        private Action<string>? _onDeviceSelected;
-        private Action? _onRefreshRequested;
 
         /// <summary>Object3Dプレハブ名→元プレハブの逆引き。Instantiate用。</summary>
         private readonly Dictionary<string, GameObject> _object3DPrefabMap = new();
@@ -255,16 +218,18 @@ namespace Rhizomode.XR
             _sceneLoaderProcessor = new SceneLoaderLifecycleProcessor(sceneLoader);
 
             // Phase 12B: OscMidiTransportLifecycleProcessor を初期化。
-            // oscServer / midiServer は [SerializeField]。MonoBehaviour は IOscSource /
-            // IMidiSource を実装しているのでそのまま contract として渡る。
-            _oscMidiTransportProcessor = new OscMidiTransportLifecycleProcessor(oscServer, midiServer);
+            // V3a: oscServer / midiServer は XrSceneReferences から取得。MonoBehaviour は
+            // IOscSource / IMidiSource を実装しているのでそのまま contract として渡る。
+            // (LifecycleProcessor の Installer 化は V3b。)
+            _oscMidiTransportProcessor = new OscMidiTransportLifecycleProcessor(
+                sceneRefs != null ? sceneRefs.OscServer : null,
+                sceneRefs != null ? sceneRefs.MidiServer : null);
 
             // Phase 12C: AbletonTransportLifecycleProcessor を初期化。
-            // abletonLink は [SerializeField]。MonoBehaviour は IAbletonLink を実装。
-            // AbletonOscBridge にも同じ link を注入 (旧 AbletonLink.Instance 直参照を解消)。
-            _abletonTransportProcessor = new AbletonTransportLifecycleProcessor(abletonLink);
-            if (abletonBridge != null)
-                abletonBridge.Link = abletonLink;
+            // V3a: abletonLink は XrSceneReferences から取得。AbletonOscBridge への link 注入は
+            // AbletonBootstrapWiring.Wire へ移送済。
+            _abletonTransportProcessor = new AbletonTransportLifecycleProcessor(
+                sceneRefs != null ? sceneRefs.AbletonLink : null);
 
             // Phase 8 Round B: NodeRuntime を eager 構築。
             // processors 順序: SceneLoaderLifecycleProcessor (BeforeSetup で Loader 注入) →
@@ -325,16 +290,16 @@ namespace Rhizomode.XR
         /// </remarks>
         private void LaunchCompositionRoot()
         {
-            if (graphContext == null)
+            if (graphContext == null || sceneRefs == null)
             {
                 Debug.LogWarning(
-                    "[GameBootstrap] LaunchCompositionRoot skipped — graphContext 未設定 (degraded 起動)。");
+                    "[GameBootstrap] LaunchCompositionRoot skipped — graphContext / sceneRefs 未設定 (degraded 起動)。");
                 _typeRegistry = new NodeTypeRegistry();
                 return;
             }
 
             _compositionRoot = EntryPointBootstrapper.Launch(
-                transform, audioDriver, graphContext.Context,
+                transform, sceneRefs, graphContext.Context,
                 moduleDefinitions, object3DPrefabs);
 
             _typeRegistry = _compositionRoot.TypeRegistry;
@@ -373,6 +338,8 @@ namespace Rhizomode.XR
             if (visualManager != null)
                 visualManager.Initialize(_typeRegistry);
 
+            // V3a: audioDriver は XrSceneReferences から取得。Initialize の Installer 化は後続 V で検討。
+            var audioDriver = sceneRefs != null ? sceneRefs.AudioDriver : null;
             if (audioDriver != null && graphContext != null)
                 audioDriver.Initialize(graphContext);
 
@@ -486,18 +453,9 @@ namespace Rhizomode.XR
             if (scrollMenuVisual != null)
                 scrollMenuVisual.OnNodeTypeSelected -= OnScrollMenuNodeSelected;
 
-            // AudioDeviceSelector イベント購読解除
-            if (audioDeviceSelector != null)
-            {
-                if (_onDeviceSelected != null)
-                    audioDeviceSelector.OnDeviceSelected -= _onDeviceSelected;
-                if (_onRefreshRequested != null)
-                    audioDeviceSelector.OnRefreshRequested -= _onRefreshRequested;
-            }
-
-            // Ableton Macro listener 解除
-            _macroValueListenerSub?.Dispose();
-            _macroValueListenerSub = null;
+            // V3a: AudioDeviceSelector / Ableton Macro listener の購読解除は
+            // AudioDeviceSelectorWiring / AbletonBootstrapWiring (container 所有 Lifetime.Singleton) の
+            // Dispose が担う。_compositionRoot.Dispose() が scope を破棄した時点で両者も Dispose される。
 
             // Phase 8: dispose 順序 — subscribers (processor) を先に dispose し、source (EventBus) を後に。
             // 将来 ModuleLifecycleProcessor が GraphEventBus.OnNodeRemoved を購読した場合に、

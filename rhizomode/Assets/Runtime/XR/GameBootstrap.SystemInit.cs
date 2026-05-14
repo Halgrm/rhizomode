@@ -40,7 +40,8 @@ namespace Rhizomode.XR
                 graphSaveLoad.OnGraphLoaded += OnGraphLoaded;
             }
 
-            // StatusPanelController
+            // StatusPanelController (V3a: 参照は XrSceneReferences へ移送、Installer 化は V3d)
+            var statusPanel = sceneRefs != null ? sceneRefs.StatusPanel : null;
             if (statusPanel != null && graphContext != null)
                 statusPanel.Initialize(graphContext);
 
@@ -87,13 +88,17 @@ namespace Rhizomode.XR
                 cinemachinePreview.Initialize();
             }
 
-            // AudioDeviceSelector → AudioAnalyzer
-            InitializeAudioDeviceSelector();
+            // V3a: AudioDeviceSelector wiring は EntryPointBootstrapper が Build 後即時駆動済
+            // (AudioDeviceSelectorWiring)。Ableton OSC wiring は入力ルーター /
+            // SharedRaycastService を要するためここで駆動する (InitializeInteractionHandlers が
+            // _activeInput を解決済)。CompositionRoot 経由なのは Plan v5.4 §19 (VContainer 型は
+            // Bootstrap asmdef のみ) を守るため — 一時的 Plan v5.4 違反、V3c で解消。
+            // degraded 起動 (_typeRegistry == null で InitializeSystems が early return) では
+            // _activeInput が null のまま渡るが、Wire は panel 表示を skip して fail-open する
+            // (旧 InitializeAbletonOsc の ShowSetupPanel/ResolveGridPose と同一挙動)。
+            _compositionRoot?.AbletonWiring.Wire(_activeInput, sharedRaycastService);
 
-            // Ableton OSC設定パネル＋クリップグリッド初期化
-            InitializeAbletonOsc();
-
-            // Phase 12D: 各 system の health monitor を HealthAggregator に集約
+            // Phase 12D: health monitor 登録は各 transport Installer + EntryPointBootstrapper が実施済。
             InitializeHealthMonitoring();
         }
 
@@ -108,46 +113,14 @@ namespace Rhizomode.XR
         {
             // HealthAggregator は LaunchCompositionRoot で container から resolve 済。
             // degraded 起動 (graphContext 未設定) では null のためスキップ。
+            // V3a: monitor 登録 (Audio/OSC/MIDI/Ableton) は各 transport Installer +
+            // EntryPointBootstrapper の Build 後 eager step へ移送済。本メソッドは StatusPanel への
+            // 購読のみを担う (StatusPanel の Installer 化は V3d)。
             if (_healthAggregator == null) return;
 
-            var analyzer = audioDriver != null ? audioDriver.Analyzer : null;
-            if (analyzer != null)
-                _healthAggregator.Register(new AudioAnalyzerHealth(analyzer));
-
-            _healthAggregator.Register(new OscServerHealth(oscServer));
-            _healthAggregator.Register(new MidiServerHealth(midiServer));
-            _healthAggregator.Register(new AbletonLinkHealth(abletonLink));
-
-            // Phase 13C: health 状態変化を StatusPanel に表示。OnHealthChange は状態変化時のみ
-            // 発火する低頻度ストリームのため毎フレーム購読コストは無視できる。
+            var statusPanel = sceneRefs != null ? sceneRefs.StatusPanel : null;
             if (statusPanel != null)
                 _healthSubscription = _healthAggregator.OnHealthChange.Subscribe(statusPanel.SetHealth);
-        }
-
-        private void InitializeAudioDeviceSelector()
-        {
-            if (audioDeviceSelector == null || audioDriver?.Analyzer == null) return;
-
-            var analyzer = audioDriver.Analyzer;
-            audioDeviceSelector.Initialize(analyzer.AvailableDevices, analyzer.CurrentDevice);
-
-            _onDeviceSelected = deviceName =>
-            {
-                analyzer.Initialize(deviceName);
-                audioDeviceSelector.SetCurrentDevice(analyzer.CurrentDevice);
-                statusPanel?.SetAudioDevice(deviceName);
-            };
-            audioDeviceSelector.OnDeviceSelected += _onDeviceSelected;
-
-            _onRefreshRequested = () =>
-            {
-                audioDeviceSelector.UpdateDeviceList(analyzer.AvailableDevices);
-            };
-            audioDeviceSelector.OnRefreshRequested += _onRefreshRequested;
-
-            // 初期デバイスがあればステータスパネルに反映
-            if (analyzer.CurrentDevice != null)
-                statusPanel?.SetAudioDevice(analyzer.CurrentDevice);
         }
 
         private void InitializeInteractionHandlers()
@@ -271,11 +244,12 @@ namespace Rhizomode.XR
                     scrollMenuInteraction.SetEdgeDragHandler(edgeDragHandler);
 
                 // メニュー状態変更時にエッジ切断・ノード削除・クリップ発火も無効化
+                // V3a: clipFireHandler 参照は XrSceneReferences へ移送 (Installer 化は V3c)。
                 scrollMenuInteraction.SetMenuStateCallback(isIdle =>
                 {
                     edgeCutHandler?.SetEnabled(isIdle);
                     nodeDeleteHandler?.SetEnabled(isIdle);
-                    clipFireHandler?.SetEnabled(isIdle);
+                    sceneRefs?.ClipFireHandler?.SetEnabled(isIdle);
                 });
             }
 

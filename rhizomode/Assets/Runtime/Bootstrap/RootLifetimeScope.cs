@@ -1,6 +1,5 @@
 #nullable enable
 
-using Rhizomode.Audio.GraphAdapter;
 using Rhizomode.Bootstrap.Installers;
 using Rhizomode.Graph.Model;
 using Rhizomode.Modules;
@@ -36,7 +35,7 @@ namespace Rhizomode.Bootstrap
     [DisallowMultipleComponent]
     public sealed class RootLifetimeScope : LifetimeScope
     {
-        private AudioDriverBehaviour? _audioDriver;
+        private XrSceneReferences? _sceneRefs;
         private GraphState? _graphState;
         private ModuleDefinition[]? _moduleDefinitions;
         private Object3DPrefabList? _object3DPrefabs;
@@ -46,12 +45,12 @@ namespace Rhizomode.Bootstrap
         /// 呼び出し元は同 asmdef の <see cref="EntryPointBootstrapper"/> のみ。
         /// </summary>
         internal void SetHosts(
-            AudioDriverBehaviour? audioDriver,
+            XrSceneReferences sceneRefs,
             GraphState graphState,
             ModuleDefinition[]? moduleDefinitions,
             Object3DPrefabList? object3DPrefabs)
         {
-            _audioDriver = audioDriver;
+            _sceneRefs = sceneRefs;
             _graphState = graphState;
             _moduleDefinitions = moduleDefinitions;
             _object3DPrefabs = object3DPrefabs;
@@ -59,23 +58,26 @@ namespace Rhizomode.Bootstrap
 
         protected override void Configure(IContainerBuilder builder)
         {
-            // 防御: SetHosts が Build 前に呼ばれていれば _graphState は非 null
+            // 防御: SetHosts が Build 前に呼ばれていれば _graphState / _sceneRefs は非 null
             // (EntryPointBootstrapper.Launch の構築プロトコルが保証する)。
-            if (_graphState == null)
+            if (_graphState == null || _sceneRefs == null)
             {
                 Debug.LogWarning(
                     "[RootLifetimeScope] Configure skipped — SetHosts が Build 前に呼ばれていない。");
                 return;
             }
 
-            if (_audioDriver != null)
-                builder.RegisterInstance(_audioDriver);
+            // XrSceneReferences は wiring クラスの ctor injection に使うため container に登録する。
+            builder.RegisterInstance(_sceneRefs);
 
             new GraphInstaller(_graphState).Install(builder);
             new CatalogInstaller(_graphState, _moduleDefinitions, _object3DPrefabs).Install(builder);
             new PersistenceInstaller().Install(builder);
             new ObservabilityInstaller().Install(builder);
-            new EntryPointsInstaller(includeAudioDriver: _audioDriver != null).Install(builder);
+            new AudioInstaller(_sceneRefs).Install(builder);
+            new OscMidiInstaller(_sceneRefs).Install(builder);
+            new AbletonInstaller(_sceneRefs).Install(builder);
+            new EntryPointsInstaller(includeAudioDriver: _sceneRefs.AudioDriver != null).Install(builder);
         }
     }
 }

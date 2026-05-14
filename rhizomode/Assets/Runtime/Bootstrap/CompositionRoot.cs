@@ -2,6 +2,7 @@
 
 using System;
 using System.Collections.Generic;
+using Rhizomode.Bootstrap.Wiring;
 using Rhizomode.Graph.CatalogBridge;
 using Rhizomode.Graph.Events;
 using Rhizomode.Graph.Serialization;
@@ -67,6 +68,13 @@ namespace Rhizomode.Bootstrap
         /// <summary>PersistenceInstaller が構築した保存先パス provider。</summary>
         public ISavePathProvider SavePathProvider { get; }
 
+        /// <summary>
+        /// AbletonInstaller が構築した Ableton OSC wiring。<see cref="AbletonBootstrapWiring.Wire"/> は
+        /// 入力ルーター / SharedRaycastService を要するため GameBootstrap が InteractionHandlers 初期化後に
+        /// 駆動する (一時的 Plan v5.4 違反 — V3c で input/interaction が container 化したら解消)。
+        /// </summary>
+        public AbletonBootstrapWiring AbletonWiring { get; }
+
         private GameObject? _scopeObject;
 
         public CompositionRoot(
@@ -79,7 +87,8 @@ namespace Rhizomode.Bootstrap
             SpatialIntentToCommandTranslator intentTranslator,
             IGraphRepository graphRepository,
             GraphHydrator graphHydrator,
-            ISavePathProvider savePathProvider)
+            ISavePathProvider savePathProvider,
+            AbletonBootstrapWiring abletonWiring)
         {
             _scopeObject = scopeObject;
             TypeRegistry = typeRegistry;
@@ -91,6 +100,7 @@ namespace Rhizomode.Bootstrap
             GraphRepository = graphRepository;
             GraphHydrator = graphHydrator;
             SavePathProvider = savePathProvider;
+            AbletonWiring = abletonWiring;
         }
 
         /// <summary>

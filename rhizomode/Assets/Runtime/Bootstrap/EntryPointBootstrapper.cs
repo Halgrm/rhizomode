@@ -1,7 +1,7 @@
 #nullable enable
 
 using System.Collections.Generic;
-using Rhizomode.Audio.GraphAdapter;
+using Rhizomode.Bootstrap.Wiring;
 using Rhizomode.Graph.CatalogBridge;
 using Rhizomode.Graph.Events;
 using Rhizomode.Graph.Model;
@@ -9,6 +9,7 @@ using Rhizomode.Graph.Serialization;
 using Rhizomode.Interaction.GraphAdapter;
 using Rhizomode.Modules;
 using Rhizomode.NodeCatalog.Runtime;
+using Rhizomode.Observability.Contracts;
 using Rhizomode.Observability.Runtime;
 using Rhizomode.Persistence.Contracts;
 using UnityEngine;
@@ -48,7 +49,7 @@ namespace Rhizomode.Bootstrap
         /// </remarks>
         public static CompositionRoot Launch(
             Transform parent,
-            AudioDriverBehaviour? audioDriver,
+            XrSceneReferences sceneRefs,
             GraphState graphState,
             ModuleDefinition[]? moduleDefinitions,
             Object3DPrefabList? object3DPrefabs)
@@ -57,7 +58,7 @@ namespace Rhizomode.Bootstrap
             scopeGo.transform.SetParent(parent, false);
             scopeGo.SetActive(false);
             var rootScope = scopeGo.AddComponent<RootLifetimeScope>();
-            rootScope.SetHosts(audioDriver, graphState, moduleDefinitions, object3DPrefabs);
+            rootScope.SetHosts(sceneRefs, graphState, moduleDefinitions, object3DPrefabs);
             scopeGo.SetActive(true);
 
             var container = rootScope.Container;
@@ -66,17 +67,31 @@ namespace Rhizomode.Bootstrap
             var orchestrator = container.Resolve<NodeRegistrationOrchestrator>();
             orchestrator.RegisterAll();
 
+            // V3a: 各 transport Installer (Audio/OscMidi/Ableton) が IHealthMonitor として登録した
+            // monitor を HealthAggregator へ集約する (旧 GameBootstrap.InitializeHealthMonitoring の
+            // Register 群を移送)。OscMidiInstaller が 2 件を無条件登録するため常に 1 件以上。
+            var healthAggregator = container.Resolve<HealthAggregator>();
+            foreach (var monitor in container.Resolve<IReadOnlyList<IHealthMonitor>>())
+                healthAggregator.Register(monitor);
+
+            // V3a: AudioDeviceSelector wiring は scene-runtime 値 (入力ルーター等) に依存しないため
+            // Build 後即時に駆動する。Ableton wiring は入力ルーター / SharedRaycastService を要する
+            // ため即時駆動できず、CompositionRoot 経由で GameBootstrap が後段で駆動する。
+            container.Resolve<AudioDeviceSelectorWiring>().Wire();
+            var abletonWiring = container.Resolve<AbletonBootstrapWiring>();
+
             return new CompositionRoot(
                 scopeGo,
                 container.Resolve<NodeTypeRegistry>(),
-                container.Resolve<HealthAggregator>(),
+                healthAggregator,
                 orchestrator.Object3DPrefabMap,
                 container.Resolve<INodeFactory>(),
                 container.Resolve<GraphEventBus>(),
                 container.Resolve<SpatialIntentToCommandTranslator>(),
                 container.Resolve<IGraphRepository>(),
                 container.Resolve<GraphHydrator>(),
-                container.Resolve<ISavePathProvider>());
+                container.Resolve<ISavePathProvider>(),
+                abletonWiring);
         }
     }
 }

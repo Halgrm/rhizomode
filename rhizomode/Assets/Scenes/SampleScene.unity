@@ -2483,7 +2483,7 @@ PrefabInstance:
     - target: {fileID: 6232745470614056090, guid: f6336ac4ac8b4d34bc5072418cdc62a0, type: 3}
       propertyPath: m_Material
       value: 
-      objectReference: {fileID: 1757834053}
+      objectReference: {fileID: 1604240869}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -2524,6 +2524,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 1717954561962503725, guid: f6336ac4ac8b4d34bc5072418cdc62a0, type: 3}
       insertIndex: -1
       addedObject: {fileID: 1213701955}
+    - targetCorrespondingSourceObject: {fileID: 1717954561962503725, guid: f6336ac4ac8b4d34bc5072418cdc62a0, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1213701957}
     - targetCorrespondingSourceObject: {fileID: 1767192433, guid: f6336ac4ac8b4d34bc5072418cdc62a0, type: 3}
       insertIndex: -1
       addedObject: {fileID: 1432822257}
@@ -2596,6 +2599,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 091ff24a272b12142b5aca5530d52f22, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Rhizomode.XR::Rhizomode.XR.GameBootstrap
+  sceneRefs: {fileID: 1213701957}
   graphContext: {fileID: 239156527}
   visualManager: {fileID: 239156526}
   controllerInput: {fileID: 1213701926}
@@ -2608,7 +2612,6 @@ MonoBehaviour:
   sharedRaycastService: {fileID: 239156532}
   scrollMenuVisual: {fileID: 864408690}
   scrollMenuInteraction: {fileID: 864408689}
-  audioDriver: {fileID: 239156531}
   moduleDefinitions:
   - {fileID: 11400000, guid: 17959982512206644826aeefc5a24187, type: 2}
   - {fileID: 11400000, guid: 7c9b7dc65e575a34a9b315c978320dc0, type: 2}
@@ -2630,8 +2633,6 @@ MonoBehaviour:
   spoutSender: {fileID: 1714549741}
   ndiSender: {fileID: 836328289}
   mirrorOutput: {fileID: 51798893}
-  audioDeviceSelector: {fileID: 0}
-  statusPanel: {fileID: 0}
   cameraManagerPanel: {fileID: 314959824}
   desktopBlitter: {fileID: 104243479}
   pathEditorManager: {fileID: 712178745}
@@ -2642,21 +2643,6 @@ MonoBehaviour:
   desktopInput: {fileID: 1503423582}
   cinemachinePreview: {fileID: 463111290}
   sceneLoader: {fileID: 1213701952}
-  oscServer: {fileID: 1213701956}
-  midiServer: {fileID: 1213701955}
-  abletonLink: {fileID: 1213701953}
-  abletonBridge: {fileID: 274145556}
-  abletonSetupPanel: {fileID: 788606949}
-  abletonGridManager: {fileID: 334771643}
-  clipFireHandler: {fileID: 332057703}
-  abletonControlPanel: {fileID: 1925905842}
-  abletonUiAnchor: {fileID: 1297971206}
-  abletonOuterFrameMaterial: {fileID: 2100000, guid: ae3d0834593d942479cd08c429e9b175, type: 2}
-  abletonOuterFramePadding: 0.06
-  abletonOuterFrameDepthOffset: 0.012
-  abletonOuterFrameCornerRadius: 0.04
-  macroTrackIndex: 0
-  macroDeviceIndex: 0
 --- !u!114 &1213701930
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2776,6 +2762,36 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Rhizomode.OscMidi.Transport::Rhizomode.OscMidi.Transport.OscServer
   listenPort: 9000
+--- !u!114 &1213701957
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1213701920}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6dfc5e89ab6a4a74cbfc5ec5bce6f796, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Rhizomode.Bootstrap::Rhizomode.Bootstrap.XrSceneReferences
+  audioDriver: {fileID: 239156531}
+  audioDeviceSelector: {fileID: 0}
+  oscServer: {fileID: 1213701956}
+  midiServer: {fileID: 1213701955}
+  abletonLink: {fileID: 1213701953}
+  abletonBridge: {fileID: 274145556}
+  abletonSetupPanel: {fileID: 788606949}
+  abletonGridManager: {fileID: 334771643}
+  clipFireHandler: {fileID: 332057703}
+  abletonControlPanel: {fileID: 1925905842}
+  abletonUiAnchor: {fileID: 1297971206}
+  abletonOuterFrameMaterial: {fileID: 2100000, guid: ae3d0834593d942479cd08c429e9b175, type: 2}
+  abletonOuterFramePadding: 0.06
+  abletonOuterFrameDepthOffset: 0.012
+  abletonOuterFrameCornerRadius: 0.04
+  macroTrackIndex: 0
+  macroDeviceIndex: 0
+  statusPanel: {fileID: 0}
 --- !u!1 &1297971205
 GameObject:
   m_ObjectHideFlags: 0
@@ -3001,6 +3017,19 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!134 &1604240869
+PhysicsMaterial:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: ' (Instance) (Instance) (Instance)'
+  serializedVersion: 2
+  m_DynamicFriction: 0.6
+  m_StaticFriction: 0.6
+  m_Bounciness: 0
+  m_FrictionCombine: 0
+  m_BounceCombine: 0
 --- !u!1 &1632498950
 GameObject:
   m_ObjectHideFlags: 0
@@ -3080,19 +3109,6 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!134 &1757834053
-PhysicsMaterial:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_Name: ' (Instance) (Instance)'
-  serializedVersion: 2
-  m_DynamicFriction: 0.6
-  m_StaticFriction: 0.6
-  m_Bounciness: 0
-  m_FrictionCombine: 0
-  m_BounceCombine: 0
 --- !u!1 &1780425786
 GameObject:
   m_ObjectHideFlags: 0
