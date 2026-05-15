@@ -11,15 +11,19 @@ using UnityEngine;
 using Rhizomode.NodeCatalog.Contracts;
 using Rhizomode.NodeCatalog.Runtime;
 
-namespace Rhizomode.XR
+namespace Rhizomode.Bootstrap
 {
     /// <summary>
     /// シーン上の <see cref="SceneObjectBridge"/> を検出して SceneObjectNode を auto-spawn する service。
     /// </summary>
     /// <remarks>
-    /// Plan v5.3 Phase 8 F-8.2 抽出 2/N: 旧 GameBootstrap.RegisterSceneObjects を本 service に分離。
-    /// graph mutation 部 (type 登録 + 各 bridge に対する node 生成 + RegisterNode) を担当、
-    /// visual 創出 + orientation は引き続き GameBootstrap が処理。
+    /// Plan v5.4 V-final (Vf-a): 旧 Rhizomode.XR.SceneObjectRegistrationService を Bootstrap asmdef へ verbatim 移送。
+    /// Plan v5.4 §15 「Bootstrap は業務ロジック禁止」に対する transitional 違反 (F-Vf-a.1) —
+    /// 本来 Scene.GraphAdapter へ置くべきだが NodeTypeRegistry (NodeCatalog.Runtime) と
+    /// SceneObjectBridge (Nodes.Scene) への参照を要するため Bootstrap に集約。
+    ///
+    /// graph mutation 部 (type 登録 + 各 bridge に対する node 生成 + RegisterNode) を担当。
+    /// visual 創出 + orientation は <see cref="SceneObjectsBootstrapWiring"/> が担当。
     /// </remarks>
     public sealed class SceneObjectRegistrationService
     {

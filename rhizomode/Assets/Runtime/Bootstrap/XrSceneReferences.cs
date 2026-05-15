@@ -14,6 +14,9 @@ using Rhizomode.UI;
 using Rhizomode.XR;
 using UnityEngine;
 
+// Plan v5.4 V-final (Vf-a): GraphContextBehaviour / GraphSaveLoadManager を XrSceneReferences に集約。
+// EntryPointBootstrapper.Launch + 各 wiring がここから取得する (GameBootstrap への依存を撤去)。
+
 namespace Rhizomode.Bootstrap
 {
     /// <summary>
@@ -112,6 +115,12 @@ namespace Rhizomode.Bootstrap
         [Tooltip("デスクトップデバッグ専用 cinemachine プレビュー。VR モードでは非アクティブ化。")]
         [SerializeField] private CinemachinePreviewMonitor? cinemachinePreview;
 
+        [Header("Graph / Save-Load (V-final Vf-a)")]
+        [Tooltip("GraphState の MonoBehaviour ラッパー。EntryPointBootstrapper + 各 wiring が参照する。")]
+        [SerializeField] private GraphContextBehaviour? graphContext;
+        [Tooltip("セーブ/ロード facade。GraphSaveLoadBootstrapWiring が Initialize + Configure する。")]
+        [SerializeField] private GraphSaveLoadManager? graphSaveLoad;
+
         public AudioDriverBehaviour? AudioDriver => audioDriver;
         public AudioDeviceSelector? AudioDeviceSelector => audioDeviceSelector;
         public OscServer? OscServer => oscServer;
@@ -154,5 +163,7 @@ namespace Rhizomode.Bootstrap
         public DesktopMirrorBlitter? DesktopBlitter => desktopBlitter;
         public CameraManagerPanelController? CameraManagerPanel => cameraManagerPanel;
         public CinemachinePreviewMonitor? CinemachinePreview => cinemachinePreview;
+        public GraphContextBehaviour? GraphContext => graphContext;
+        public GraphSaveLoadManager? GraphSaveLoad => graphSaveLoad;
     }
 }

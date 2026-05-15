@@ -8,17 +8,16 @@ using Rhizomode.UI;
 using Rhizomode.UI.Contracts;
 using UnityEngine;
 
-namespace Rhizomode.XR
+namespace Rhizomode.Bootstrap
 {
     /// <summary>
     /// グラフロード完了時のビジュアル再構築を担う coordinator。
     /// </summary>
     /// <remarks>
-    /// Plan v5.3 Phase 9 Round F (F-8.2 系 prereq 残): 旧 GameBootstrap.OnGraphLoaded から
-    /// node/edge visual rebuild + プレイヤー方向への回転を抽出。GameBootstrap 側は
-    /// Object3D Proxy bind (module 層の関心事) のみ残し、純粋な UI 副作用は本 coordinator に集約。
-    ///
-    /// 依存方向: XR → UI.Presentation / UI.GraphAdapter / Graph.Model (既存 ref で OK)。
+    /// Plan v5.4 V-final (Vf-a): 旧 Rhizomode.XR.GraphLoadCoordinator を Bootstrap asmdef へ verbatim 移送。
+    /// Plan v5.4 §15 「Bootstrap は業務ロジック禁止」に対する transitional 違反 (F-Vf-a.1) —
+    /// 本来 UI.GraphAdapter へ置くべきだが NodeVisualManager / EdgeVisualManager (Rhizomode.UI asmdef)
+    /// + NodeViewAdapter (UI.GraphAdapter) の両方を要するため Bootstrap に集約。
     /// </remarks>
     public sealed class GraphLoadCoordinator
     {

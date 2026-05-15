@@ -2600,10 +2600,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Rhizomode.XR::Rhizomode.XR.GameBootstrap
   sceneRefs: {fileID: 1213701957}
-  graphContext: {fileID: 239156527}
-  cinemachineModules: []
-  presetManager: {fileID: 0}
-  graphSaveLoad: {fileID: 0}
 --- !u!114 &1213701930
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2792,6 +2788,8 @@ MonoBehaviour:
   desktopBlitter: {fileID: 104243479}
   cameraManagerPanel: {fileID: 314959824}
   cinemachinePreview: {fileID: 463111290}
+  graphContext: {fileID: 239156527}
+  graphSaveLoad: {fileID: 0}
 --- !u!1 &1297971205
 GameObject:
   m_ObjectHideFlags: 0

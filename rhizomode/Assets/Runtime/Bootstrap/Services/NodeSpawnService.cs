@@ -12,19 +12,20 @@ using Rhizomode.Nodes.Time;
 using Rhizomode.Nodes.Utility;
 using UnityEngine;
 
-namespace Rhizomode.XR
+namespace Rhizomode.Bootstrap
 {
     /// <summary>
     /// ScrollMenu 選択 + Const/Toggle/Trigger 自動 spawn の graph mutation ロジックを集約する service。
     /// </summary>
     /// <remarks>
-    /// Plan v5.3 Phase 8 Round C (F-8.2 抽出 1/N): 旧 GameBootstrap.OnScrollMenuNodeSelected +
-    /// SpawnInputNodes の graph 操作を本 service に分離。visual 創出 (NodeVisualManager / EdgeVisualManager)
-    /// は GameBootstrap が引き続き担当 — service は "data 層"、bootstrap は "UI 反映層"。
+    /// Plan v5.4 V-final (Vf-a): 旧 Rhizomode.XR.NodeSpawnService を Bootstrap asmdef へ verbatim 移送。
+    /// Plan v5.4 §15 「Bootstrap は業務ロジック禁止」に対する transitional 違反 (F-Vf-a.1) —
+    /// 本来 Interaction.GraphAdapter へ置くべきだが Nodes.Input/Time/Utility/Modules への参照が必要なため
+    /// Bootstrap に集約する。Vf-final 後の整理 phase で各 GraphAdapter asmdef へ細分化する。
     ///
-    /// 配置: 暫定 Rhizomode.XR (graphContext / NodeRuntime / Module 各 layer に access 必要)。
-    /// Plan v5.3 上の正規 location は Interaction.GraphAdapter だが、UI.Presentation 依存を解消する
-    /// (visual 創出を callback / event 経由にする) refactor が必要なため、本 round では XR 配置に留める。
+    /// graph mutation 部 (NodeRuntime.RegisterNode + AddEdge) を担当、visual 創出 (NodeVisualManager /
+    /// EdgeVisualManager) は <see cref="MenuNodeSpawnCoordinator"/> が担当 — service は "data 層"、
+    /// coordinator は "UI 反映層"。
     /// </remarks>
     public sealed class NodeSpawnService
     {
@@ -163,7 +164,6 @@ namespace Rhizomode.XR
 
         /// <summary>
         /// 新規追加された edge を endpoint 一致で _state.Edges から逆引き。
-        /// AddEdge が GraphState.TryConnect 経由のため、edge ID は生成側で取れない (Phase 7 で id 指定 API 化予定)。
         /// </summary>
         private Edge? FindEdge(string fromNodeId, string fromPort, string toNodeId, string toPort)
         {
@@ -181,7 +181,7 @@ namespace Rhizomode.XR
         }
     }
 
-    /// <summary>ScrollMenu spawn 結果 (visual 創出は GameBootstrap が担当)。</summary>
+    /// <summary>ScrollMenu spawn 結果 (visual 創出は coordinator が担当)。</summary>
     public sealed record SpawnResult(NodeBase Node, Vector3 Position);
 
     /// <summary>

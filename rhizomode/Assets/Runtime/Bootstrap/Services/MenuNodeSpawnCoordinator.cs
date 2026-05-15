@@ -6,16 +6,16 @@ using Rhizomode.UI;
 using Rhizomode.UI.Contracts;
 using UnityEngine;
 
-namespace Rhizomode.XR
+namespace Rhizomode.Bootstrap
 {
     /// <summary>
     /// ScrollMenu 選択経由でノード spawn が成立した後の visual 創出を担う coordinator。
     /// </summary>
     /// <remarks>
-    /// Plan v5.3 Phase 9 Round F2 (F-8.2 系 prereq 残)。旧 GameBootstrap.OnScrollMenuNodeSelected /
-    /// SpawnInputVisuals の visual 構築 (NodeVisualManager.CreateNodeVisual + EdgeVisualManager.CreateEdgeVisual)
-    /// 部分をここに集約。GameBootstrap 側は graphContext 妥当性チェック + scrollMenuInteraction.CloseMenu +
-    /// Object3D Proxy bind (Module 層の関心事) のみを残す。
+    /// Plan v5.4 V-final (Vf-a): 旧 Rhizomode.XR.MenuNodeSpawnCoordinator を Bootstrap asmdef へ verbatim 移送。
+    /// Plan v5.4 §15 「Bootstrap は業務ロジック禁止」に対する transitional 違反 (F-Vf-a.1) —
+    /// 本来 UI.GraphAdapter へ置くべきだが NodeVisualManager / EdgeVisualManager の創出を扱うため
+    /// Bootstrap に集約。
     ///
     /// graph mutation は <see cref="NodeSpawnService"/> が担当。本 coordinator は visual side-effects のみ。
     /// </remarks>

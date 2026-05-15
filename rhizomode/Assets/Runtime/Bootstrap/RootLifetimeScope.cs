@@ -64,6 +64,19 @@ namespace Rhizomode.Bootstrap
             // XrSceneReferences は wiring クラスの ctor injection に使うため container に登録する。
             builder.RegisterInstance(_sceneRefs);
 
+            // V-final (Vf-a): Object3DProxyBindService が GraphContextBehaviour を ctor 注入で要するため
+            // container に登録する (sceneRefs.GraphContext から取得)。
+            var graphContext = _sceneRefs.GraphContext;
+            if (graphContext != null)
+                builder.RegisterInstance(graphContext);
+
+            // V-final (Vf-a): MenuNodeSpawnCoordinator / GraphLoadCoordinator が NodeVisualManager /
+            // EdgeVisualManager を ctor 注入で要するため container に登録する。
+            if (_sceneRefs.VisualManager != null)
+                builder.RegisterInstance(_sceneRefs.VisualManager);
+            if (_sceneRefs.EdgeVisualManager != null)
+                builder.RegisterInstance(_sceneRefs.EdgeVisualManager);
+
             new GraphInstaller(_graphState).Install(builder);
             new CatalogInstaller(_sceneRefs, _graphState).Install(builder);
             new PersistenceInstaller().Install(builder);
@@ -78,6 +91,8 @@ namespace Rhizomode.Bootstrap
             new InteractionGraphAdapterInstaller().Install(builder);
             new InteractionInstaller().Install(builder);
             new UIInstaller().Install(builder);
+            new UIGraphAdapterInstaller().Install(builder);
+            new XRInstaller().Install(builder);
             new EntryPointsInstaller(includeAudioDriver: _sceneRefs.AudioDriver != null).Install(builder);
         }
     }
