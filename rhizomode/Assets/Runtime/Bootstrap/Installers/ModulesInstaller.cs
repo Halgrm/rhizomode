@@ -30,7 +30,8 @@ namespace Rhizomode.Bootstrap.Installers
                 .AsImplementedInterfaces()
                 .AsSelf();
             builder.Register<BootstrapObject3DRegistry>(Lifetime.Singleton)
-                .AsImplementedInterfaces();
+                .AsImplementedInterfaces()
+                .AsSelf();
             builder.Register<ModuleLifecycleProcessor>(Lifetime.Singleton);
         }
     }
