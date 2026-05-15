@@ -1,5 +1,6 @@
 #nullable enable
 
+using Rhizomode.Audio.Analysis;
 using Rhizomode.Audio.GraphAdapter;
 using Rhizomode.Cameras;
 using Rhizomode.Input.Desktop;
@@ -37,7 +38,8 @@ namespace Rhizomode.Bootstrap
     public sealed class XrSceneReferences : MonoBehaviour
     {
         [Header("Audio")]
-        [SerializeField] private AudioDriverBehaviour? audioDriver;
+        [Tooltip("AudioAnalyzer (Game Manager 等の MonoBehaviour)。AudioDriverHost が ctor 注入で受け取る。")]
+        [SerializeField] private AudioAnalyzer? audioAnalyzer;
         [SerializeField] private AudioDeviceSelector? audioDeviceSelector;
 
         [Header("OSC / MIDI Transport")]
@@ -121,7 +123,11 @@ namespace Rhizomode.Bootstrap
         [Tooltip("セーブ/ロード facade。GraphSaveLoadBootstrapWiring が Initialize + Configure する。")]
         [SerializeField] private GraphSaveLoadManager? graphSaveLoad;
 
-        public AudioDriverBehaviour? AudioDriver => audioDriver;
+        [Header("Global Settings (V-final Vf-d)")]
+        [Tooltip("グローバル ScriptableObject。Assets/Data/Config/RhizomodeSettings.asset を割り当てる。")]
+        [SerializeField] private RhizomodeSettings? rhizomodeSettings;
+
+        public AudioAnalyzer? AudioAnalyzer => audioAnalyzer;
         public AudioDeviceSelector? AudioDeviceSelector => audioDeviceSelector;
         public OscServer? OscServer => oscServer;
         public MidiServer? MidiServer => midiServer;
@@ -165,5 +171,6 @@ namespace Rhizomode.Bootstrap
         public CinemachinePreviewMonitor? CinemachinePreview => cinemachinePreview;
         public GraphContextBehaviour? GraphContext => graphContext;
         public GraphSaveLoadManager? GraphSaveLoad => graphSaveLoad;
+        public RhizomodeSettings? RhizomodeSettings => rhizomodeSettings;
     }
 }

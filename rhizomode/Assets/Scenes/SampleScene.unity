@@ -575,7 +575,6 @@ GameObject:
   - component: {fileID: 239156530}
   - component: {fileID: 239156529}
   - component: {fileID: 239156532}
-  - component: {fileID: 239156531}
   - component: {fileID: 239156533}
   m_Layer: 0
   m_Name: Game Manager
@@ -672,19 +671,6 @@ MonoBehaviour:
   highlightColor: {r: 1, g: 1, b: 1, a: 1}
   normalGlowIntensity: 1
   highlightGlowIntensity: 2.5
---- !u!114 &239156531
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 239156525}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 45a8f322afc972d48820f546eebcf892, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Rhizomode.XR::Rhizomode.XR.AudioDriverBehaviour
-  audioAnalyzer: {fileID: 239156533}
 --- !u!114 &239156532
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2731,7 +2717,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6dfc5e89ab6a4a74cbfc5ec5bce6f796, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Rhizomode.Bootstrap::Rhizomode.Bootstrap.XrSceneReferences
-  audioDriver: {fileID: 239156531}
+  audioAnalyzer: {fileID: 239156533}
   audioDeviceSelector: {fileID: 0}
   oscServer: {fileID: 1213701956}
   midiServer: {fileID: 1213701955}
@@ -2790,6 +2776,7 @@ MonoBehaviour:
   cinemachinePreview: {fileID: 463111290}
   graphContext: {fileID: 239156527}
   graphSaveLoad: {fileID: 0}
+  rhizomodeSettings: {fileID: 11400000, guid: c155b06c056f82743bbf940e5a80442e, type: 2}
 --- !u!114 &1213701958
 MonoBehaviour:
   m_ObjectHideFlags: 0

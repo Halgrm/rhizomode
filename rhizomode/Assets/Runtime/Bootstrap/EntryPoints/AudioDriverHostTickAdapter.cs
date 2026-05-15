@@ -6,26 +6,26 @@ using VContainer.Unity;
 namespace Rhizomode.Bootstrap.EntryPoints
 {
     /// <summary>
-    /// VContainer ITickable adapter — 毎フレーム AudioDriverHost の Tick を駆動する。
+    /// VContainer ITickable adapter — 毎フレーム <see cref="AudioDriverHost"/> の Tick を駆動する。
     /// </summary>
     /// <remarks>
     /// Plan v5.4 §15 EntryPoints tick order #2。MainThreadCommandTicker の後、HealthAggregator の前。
-    ///
-    /// V1 transitional shape: AudioDriverHost は <see cref="AudioAnalyzer"/> の late-binding
-    /// (SerializeField / ランタイム差替え) に対応するため <see cref="AudioDriverBehaviour"/> が
-    /// lazy 構築する。本 adapter はその <c>Tick()</c> を呼ぶだけ。Installer が AudioDriverHost を
-    /// 直接構築する形 (V2+) になったら本 adapter は host を直接保持する。
     /// 詳細は EntryPoints/TickOrder.md を参照。
+    ///
+    /// Vf-d: 旧 AudioDriverBehaviour wrap から AudioDriverHost 直 wrap に refactor。
+    /// AudioDriverHost は AudioInstaller が <see cref="VContainer.Lifetime.Singleton"/> で構築 +
+    /// AudioAnalyzer / GraphContextBehaviour を ctor 注入で受け取る。lazy 構築や late-binding は
+    /// container build 時に固定されるため不要 (XrSceneReferences が両者を確定的に保持する前提)。
     /// </remarks>
     public sealed class AudioDriverHostTickAdapter : ITickable
     {
-        private readonly AudioDriverBehaviour _driver;
+        private readonly AudioDriverHost _host;
 
-        public AudioDriverHostTickAdapter(AudioDriverBehaviour driver)
+        public AudioDriverHostTickAdapter(AudioDriverHost host)
         {
-            _driver = driver;
+            _host = host;
         }
 
-        public void Tick() => _driver.Tick();
+        public void Tick() => _host.Tick();
     }
 }

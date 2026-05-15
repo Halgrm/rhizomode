@@ -19,7 +19,7 @@ namespace Rhizomode.Bootstrap.Wiring
     /// </remarks>
     public sealed class AudioDeviceSelectorWiring : IDisposable
     {
-        private readonly AudioDriverBehaviour? _audioDriver;
+        private readonly AudioAnalyzer? _analyzer;
         private readonly AudioDeviceSelector? _selector;
         private readonly StatusPanelController? _statusPanel;
 
@@ -29,7 +29,7 @@ namespace Rhizomode.Bootstrap.Wiring
 
         public AudioDeviceSelectorWiring(XrSceneReferences refs)
         {
-            _audioDriver = refs.AudioDriver;
+            _analyzer = refs.AudioAnalyzer;
             _selector = refs.AudioDeviceSelector;
             _statusPanel = refs.StatusPanel;
         }
@@ -41,9 +41,9 @@ namespace Rhizomode.Bootstrap.Wiring
         public void Wire()
         {
             if (_wired) return;
-            if (_selector == null || _audioDriver?.Analyzer == null) return;
+            if (_selector == null || _analyzer == null) return;
 
-            var analyzer = _audioDriver.Analyzer;
+            var analyzer = _analyzer;
             _selector.Initialize(analyzer.AvailableDevices, analyzer.CurrentDevice);
 
             _onDeviceSelected = deviceName =>

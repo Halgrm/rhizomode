@@ -12,18 +12,20 @@ namespace Rhizomode.Bootstrap.Installers
     /// VContainer Installer — Audio bounded context の scene 参照とサービスを登録する。
     /// </summary>
     /// <remarks>
-    /// Plan v5.4 §15 の <c>AudioInstaller</c>。V3a で GameBootstrap が直接握っていた
-    /// <see cref="AudioDriverBehaviour"/> 参照、AudioDeviceSelector の wiring、Audio health monitor を
-    /// ここへ移送。
+    /// Plan v5.4 §15 の <c>AudioInstaller</c>。
     ///
-    /// 登録するもの:
+    /// 登録するもの (Vf-d):
     /// <list type="bullet">
-    ///   <item><see cref="AudioDriverBehaviour"/> — <c>AudioDriverHostTickAdapter</c> が resolve</item>
+    ///   <item><see cref="AudioDriverHost"/> — Lifetime.Singleton で構築。
+    ///     AudioAnalyzer + GraphContextBehaviour を ctor 注入で受け取る (両者は
+    ///     RootLifetimeScope.Configure が container に RegisterInstance 済)。
+    ///     AudioDriverHostTickAdapter が ITickable から resolve する。</item>
     ///   <item><see cref="AudioDeviceSelectorWiring"/> — Lifetime.Singleton (container が Dispose)</item>
     ///   <item><see cref="AudioAnalyzerHealth"/> — IHealthMonitor として登録、Build 後に HealthAggregator へ</item>
     /// </list>
-    /// <c>AudioDeviceSelectorWiring.Wire()</c> の副作用駆動は Build 後の eager step
-    /// (<c>EntryPointBootstrapper</c>) が行う。
+    ///
+    /// Vf-d: 旧 <c>AudioDriverBehaviour</c> (MonoBehaviour wrapper) を廃止し、AudioDriverHost を直接
+    /// container 化。XrSceneReferences が AudioAnalyzer を直接 [SerializeField] で持つ。
     /// </remarks>
     internal sealed class AudioInstaller : IInstaller
     {
@@ -36,14 +38,14 @@ namespace Rhizomode.Bootstrap.Installers
 
         public void Install(IContainerBuilder builder)
         {
-            if (_sceneRefs.AudioDriver != null)
-                builder.RegisterInstance(_sceneRefs.AudioDriver);
+            var analyzer = _sceneRefs.AudioAnalyzer;
+            if (analyzer == null)
+                return;
 
+            builder.RegisterInstance(analyzer);
+            builder.Register<AudioDriverHost>(Lifetime.Singleton);
             builder.Register<AudioDeviceSelectorWiring>(Lifetime.Singleton);
-
-            var analyzer = _sceneRefs.AudioDriver != null ? _sceneRefs.AudioDriver.Analyzer : null;
-            if (analyzer != null)
-                builder.RegisterInstance<IHealthMonitor>(new AudioAnalyzerHealth(analyzer));
+            builder.RegisterInstance<IHealthMonitor>(new AudioAnalyzerHealth(analyzer));
         }
     }
 }

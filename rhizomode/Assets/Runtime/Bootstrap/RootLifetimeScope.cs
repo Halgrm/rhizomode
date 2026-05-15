@@ -91,7 +91,8 @@ namespace Rhizomode.Bootstrap
             new UIInstaller().Install(builder);
             new UIGraphAdapterInstaller().Install(builder);
             new XRInstaller().Install(builder);
-            new EntryPointsInstaller(includeAudioDriver: sceneRefs.AudioDriver != null).Install(builder);
+            new RhizomodeSettingsInstaller(sceneRefs).Install(builder);
+            new EntryPointsInstaller(includeAudioDriver: sceneRefs.AudioAnalyzer != null).Install(builder);
         }
 
         /// <summary>
@@ -122,11 +123,13 @@ namespace Rhizomode.Bootstrap
                 healthAggregator.Register(monitor);
 
             // === Phase 2: scene-ref 依存の Initialize ===
+            //
+            // Vf-d: AudioDriverBehaviour 廃止に伴い audioDriver.Initialize(graphContext) は撤去。
+            // AudioDriverHost は AudioInstaller が ctor 注入で AudioAnalyzer + GraphContextBehaviour を
+            // 受け取るため Configure 時点で初期化済 → ITickable adapter が Tick から駆動する。
             var typeRegistry = Container.Resolve<NodeTypeRegistry>();
             if (sceneRefs.VisualManager != null)
                 sceneRefs.VisualManager.Initialize(typeRegistry);
-            if (sceneRefs.AudioDriver != null)
-                sceneRefs.AudioDriver.Initialize(graphContext);
 
             // === Phase 3: AudioDeviceSelector wiring (依存なし) ===
             Container.Resolve<AudioDeviceSelectorWiring>().Wire();
