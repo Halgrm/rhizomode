@@ -129,7 +129,7 @@ To add interface capability: create a new interface (e.g., `ISmoothableModule`),
 - VR rendering: Single Pass Instanced (URP)
 - ShaderModule uses MaterialPropertyBlock (no material instances), batched to LateUpdate
 
-## Current Implementation Status (2026-04-05)
+## Current Implementation Status (2026-05-15)
 
 ### Completed
 
@@ -143,7 +143,7 @@ To add interface capability: create a new interface (e.g., `ISmoothableModule`),
 - `ControllerInputRouter`: InputSystem → R3 Observable変換、`IRayProvider`実装
 - `ScrollMenuVisualController` / `ScrollMenuInteractionHandler`: 巻物式メニュー（左手操作）
 - `NodeVisualManager` / `NodeVisualController` / `WorldPanelHost`: ノードWorldSpace表示
-- `GameBootstrap`: 全システムの初期化・相互接続
+- ~~`GameBootstrap`~~ → v5.4 V-final で VContainer Installer 構成へ全面置換 (`RootLifetimeScope` シーン直接配置、19 Installer 完備、`GameBootstrap.cs` 自体は削除済)
 
 **Week 3 — ノード操作** ✅
 - `EdgeDragHandler`: エッジ接続（2クリックステートマシン方式。ドラッグ不要）
@@ -181,6 +181,18 @@ To add interface capability: create a new interface (e.g., `ISmoothableModule`),
 - NodeVisualController deferred bind リトライ上限
 - モジュールノード自動スポーン (ConstFloat/ConstColor プリコネクト)
 
+**v5.4 大規模リファクタ — Phase 0-13B/C + V-final + F-Vf-a.1** ✅
+- 48 asmdef 構成 (`SharedKernel` 最下層 + `Graph.*` 8 分割 + 各システム `Contracts/Impl/GraphAdapter` + `NodeCatalog.Contracts/Runtime` + `Nodes.Standard/Audio/OscMidi/Ableton/Scene/Defaults`)
+- `IGraphCommand` + `GraphCommandDispatcher` + `GraphMutationApplier` で全 graph 変異を統一 (Origin 付き record / Undo Snapshot)
+- VContainer 全面導入: `RootLifetimeScope` シーン直接配置、19 Installer 完備 (Plan §15 適合)
+- **F-Vf-a.1 解消 (2026-05-15)**: 旧 `Bootstrap/Services/` 5 service を各層へ細分化:
+  - `GraphLoadCoordinator` / `MenuNodeSpawnCoordinator` → `Rhizomode.UI.GraphAdapter`
+  - `Object3DProxyBindService` → `Rhizomode.Modules.Runtime` (GraphContextBehaviour 依存を GraphState 直接注入へ)
+  - `SceneObjectRegistrationService` → `Rhizomode.Scene.GraphAdapter`
+  - `NodeSpawnService` → `Rhizomode.Interaction`
+  - `Bootstrap` asmdef は §15 通り「Installer / Wiring / ITickable adapter のみ」へ純化
+- 残課題は `docs/CODEX_DEFERRED_FINDINGS.md` 参照 (F-Vf-c.1 / F-Vf-d.1 等)
+
 ### VR UIパイプライン（重要な設計知識）
 
 ```
@@ -197,8 +209,15 @@ UIToolkit Panel (WorldPanelHost上のRenderTexture)
 - `PanelSettings`はテーマ付きテンプレートからクローン（Unity 6要件）
 - メニュー非表示は `SetActive(false)` ではなく `MeshRenderer/MeshCollider.enabled` トグル（UIDocument破壊防止）
 
-### 残りのタスク（Week 6.5 〜5/16）
+### 残りのタスク（〜5/16 launch）
 
 - パフォーマンス用VFX Graph / Shaderアセット制作（コンテンツ）
 - 通しリハーサル
 - タグ打ち（v0.3.0）
+
+### Post-launch / 継続課題
+
+- **F-Vf-d.1**: `NodeSpawnService` の IGraphCommand 経由化 (AddNodeFromMenuCommand + AutoSpawnInputsCommand を Graph.Mutation に追加、ParamType→typeName mapping を NodeCatalog.Contracts へ、`ModuleNodeBase.IsEvent` を NodeBase abstract API へ抽象化)
+- **F-Vf-c.1**: `VerticalSliceBootstrapWiring.Dispose` の edit-mode listener 解除欠落 (理論 leak、`CameraManagerPanel.RemoveEditModeListener` API 不在のため deferred)
+- v5.4 残: Phase 13A / 負荷テスト / `GraphStateBehaviour` rename / PanelBudget
+- カメラ・パス機能 Phase 4 (永続化)

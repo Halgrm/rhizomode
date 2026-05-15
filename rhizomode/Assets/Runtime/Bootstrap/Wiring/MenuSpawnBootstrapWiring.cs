@@ -11,17 +11,17 @@ namespace Rhizomode.Bootstrap.Wiring
 {
     /// <summary>
     /// ScrollMenu のノード選択コールバックを受け取り、graph mutation + visual 創出 + Object3D Proxy bind を
-    /// 一括で実行する post-Build wiring。Plan v5.4 §15 V-final (Vf-a): 旧 <c>GameBootstrap.OnScrollMenuNodeSelected</c>
-    /// を Bootstrap asmdef へ移送。
+    /// 一括で結ぶ post-Build wiring。Bootstrap.Wiring は §15 で許容される orchestration 層 — 実体ロジックは
+    /// 別 asmdef に分散している。
     /// </summary>
     /// <remarks>
-    /// 担当する配線:
+    /// 担当する配線 (F-Vf-a.1 完了後の所属層):
     /// <list type="bullet">
-    ///   <item><see cref="NodeSpawnService.TrySpawnFromMenu"/> で graph mutation</item>
+    ///   <item><see cref="NodeSpawnService.TrySpawnFromMenu"/> — Rhizomode.Interaction (graph mutation)</item>
     ///   <item>ScrollMenu.CloseMenu (spawn 成功時)</item>
-    ///   <item><see cref="Object3DProxyBindService.Bind"/> (Object3D node の場合)</item>
+    ///   <item><see cref="Object3DProxyBindService.Bind"/> — Rhizomode.Modules.Runtime (Object3D node の場合)</item>
     ///   <item><see cref="MenuNodeSpawnCoordinator.CreatePrimaryVisual"/> +
-    ///     <see cref="MenuNodeSpawnCoordinator.SpawnInputVisuals"/></item>
+    ///     <see cref="MenuNodeSpawnCoordinator.SpawnInputVisuals"/> — Rhizomode.UI.GraphAdapter (visual)</item>
     /// </list>
     /// <see cref="InteractionBootstrapWiring"/> が ScrollMenu の OnNodeTypeSelected += に
     /// <see cref="HandleSelection"/> を渡すため、本 wiring 自体に Wire メソッドはなく、activeInput のみ

@@ -17,8 +17,7 @@ namespace Rhizomode.UI
     /// (<see cref="InputSpawnResult"/> リスト) を caller から受け取る形に変更
     /// — 本 coordinator は純粋な visual side-effects のみを担当する。
     ///
-    /// graph mutation は <c>Rhizomode.Bootstrap.NodeSpawnService</c> (Phase D で
-    /// Interaction.GraphAdapter へ移送予定) が担当。
+    /// graph mutation は <c>Rhizomode.Interaction.NodeSpawnService</c> (F-Vf-a.1 Phase D 移送済) が担当。
     /// </remarks>
     public sealed class MenuNodeSpawnCoordinator
     {
