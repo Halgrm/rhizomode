@@ -77,6 +77,7 @@ namespace Rhizomode.Bootstrap
             new InputInstaller(_sceneRefs).Install(builder);
             new InteractionGraphAdapterInstaller().Install(builder);
             new InteractionInstaller().Install(builder);
+            new UIInstaller().Install(builder);
             new EntryPointsInstaller(includeAudioDriver: _sceneRefs.AudioDriver != null).Install(builder);
         }
     }

@@ -56,22 +56,16 @@ namespace Rhizomode.XR
         [SerializeField] private GraphContextBehaviour? graphContext;
         [SerializeField] private CinemachineModule[]? cinemachineModules;
         [SerializeField] private PresetManager? presetManager;
-        [SerializeField] private SpoutSenderController? spoutSender;
-        [SerializeField] private NdiSenderController? ndiSender;
 
         [Header("Week 5 — 統合システム")]
-        [SerializeField] private MirrorOutputController? mirrorOutput;
-        [SerializeField] private CameraManagerPanelController? cameraManagerPanel;
-        [SerializeField] private DesktopMirrorBlitter? desktopBlitter;
         [SerializeField] private GraphSaveLoadManager? graphSaveLoad;
 
-        [Header("Desktop Debug")]
-        [SerializeField] private CinemachinePreviewMonitor? cinemachinePreview;
-
-        // V3a-c: Audio / OSC / MIDI / Ableton / Scene / Modules / Nodes / Input / Interaction の
-        // scene 参照は XrSceneReferences へ移送済。LifecycleProcessor / NodeRuntime / interaction
-        // handler の構築・配線は各 Installer + InteractionBootstrapWiring が担当。GameBootstrap は
-        // sceneRefs 経由で参照を取り、CompositionRoot 経由で resolve 済サービスを受け取る。
+        // V3a-d: Audio / OSC / MIDI / Ableton / Scene / Modules / Nodes / Input / Interaction /
+        // UI / Cameras の scene 参照は XrSceneReferences へ集約済。LifecycleProcessor / NodeRuntime /
+        // interaction / vertical-slice wiring は各 Installer + Bootstrap.Wiring 各クラスが担当。
+        // GameBootstrap に残る GraphSaveLoad 関連 (Initialize/ConfigureSaveLoad/OnGraphLoading/
+        // OnGraphLoaded) と NodeSpawnService / SceneObjectRegistrationService / visual coordinator は
+        // NodeRuntime / _compositionRoot に深く依存し、解体は V-final で行う。
 
         private NodeTypeRegistry? _typeRegistry;
 
@@ -91,22 +85,6 @@ namespace Rhizomode.XR
         /// から受け取る。DestroyInstance / Instances / CleanupAll の参照に使う (Dispose は container 任せ)。
         /// </summary>
         private ModuleLifecycleProcessor? _moduleProcessor;
-
-        /// <summary>
-        /// Phase 12D: 各 system の IHealthMonitor を集約し、低頻度で Tick polling する。
-        /// Audio / OSC / MIDI / Ableton の 4 monitor を Register。
-        /// Plan v5.4 §15 (V2a): 構築・所有・Dispose は ObservabilityInstaller (VContainer の
-        /// Lifetime.Singleton) に移行済。Tick 駆動も VContainer の HealthAggregatorTickAdapter
-        /// (ITickable)。本クラスは LaunchCompositionRoot で resolve した参照に対し monitor 登録と
-        /// OnHealthChange 購読のみを担う (Dispose は container 任せ)。
-        /// </summary>
-        private HealthAggregator? _healthAggregator;
-
-        /// <summary>
-        /// Phase 13C: HealthAggregator.OnHealthChange → StatusPanelController.SetHealth の
-        /// 購読。OnDestroy で Dispose。
-        /// </summary>
-        private System.IDisposable? _healthSubscription;
 
         /// <summary>
         /// GraphState ミューテーション (RegisterNode / AddEdge) の唯一窓口。processors 経由で
@@ -221,7 +199,6 @@ namespace Rhizomode.XR
                 transform, sceneRefs, graphContext.Context, modulePlacement, object3DRegistry);
 
             _typeRegistry = _compositionRoot.TypeRegistry;
-            _healthAggregator = _compositionRoot.HealthAggregator;
         }
 
         /// <summary>
@@ -358,22 +335,13 @@ namespace Rhizomode.XR
             // V3c: ScrollMenu の OnNodeTypeSelected 購読解除は InteractionBootstrapWiring.Dispose が担う
             // (container 所有 Lifetime.Singleton)。_compositionRoot.Dispose() で scope 破棄時に解放される。
 
-            // V3a/V3b: AudioDeviceSelectorWiring / AbletonBootstrapWiring / InteractionBootstrapWiring /
-            // ModuleLifecycleProcessor / GraphEventBus は全て container 所有 (Lifetime.Singleton)。
-            // _compositionRoot.Dispose() が scope を破棄した時点で container が一括 Dispose するため、
-            // GameBootstrap 側の手動 Dispose は不要。
+            // V3a-d: AudioDeviceSelectorWiring / AbletonBootstrapWiring / InteractionBootstrapWiring /
+            // VerticalSliceBootstrapWiring / ModuleLifecycleProcessor / GraphEventBus / HealthAggregator は
+            // 全て container 所有 (Lifetime.Singleton)。_compositionRoot.Dispose() が scope を破棄した
+            // 時点で container が一括 Dispose するため、GameBootstrap 側の手動 Dispose は不要。
+            // health → StatusPanel 購読も VerticalSliceBootstrapWiring.Dispose が解放する。
             _moduleProcessor = null;
             _nodeRuntime = null;
-
-            // Phase 13C: health → StatusPanel 購読を解放。
-            // transitional 非対称: HealthAggregator 自体の Dispose は VContainer (ObservabilityInstaller の
-            // Lifetime.Singleton) が scope GameObject (本コンポーネントの子) の OnDestroy で行う。通常は
-            // 本 OnDestroy が先に走るため購読解放が source dispose より先で安全だが、scope GameObject が
-            // 単独破棄された場合は順序が逆転し得る。R3 は disposed Subject への購読解放を no-op として
-            // 許容するため実害はない。V3d で StatusPanel subscription を Installer 側へ移管した際に整理する。
-            _healthSubscription?.Dispose();
-            _healthSubscription = null;
-            _healthAggregator = null;
         }
 
         private void OnScrollMenuNodeSelected(string nodeType)

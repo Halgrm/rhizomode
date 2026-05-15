@@ -93,7 +93,8 @@ namespace Rhizomode.Bootstrap
                 abletonWiring,
                 container.Resolve<NodeRuntime>(),
                 container.Resolve<ModuleLifecycleProcessor>(),
-                container.Resolve<InteractionBootstrapWiring>());
+                container.Resolve<InteractionBootstrapWiring>(),
+                container.Resolve<VerticalSliceBootstrapWiring>());
         }
     }
 }

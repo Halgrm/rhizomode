@@ -79,6 +79,14 @@ namespace Rhizomode.Bootstrap
         /// </summary>
         public InteractionBootstrapWiring InteractionWiring { get; }
 
+        /// <summary>
+        /// UIInstaller が構築した vertical-slice UI / Cameras wiring。
+        /// <see cref="VerticalSliceBootstrapWiring.Wire"/> は GraphContextBehaviour を transitional
+        /// 引数で要するため GameBootstrap が CompositionRoot 経由で駆動する (一時的 Plan v5.4 違反 —
+        /// V-final で解消)。
+        /// </summary>
+        public VerticalSliceBootstrapWiring VerticalSliceWiring { get; }
+
         private GameObject? _scopeObject;
 
         public CompositionRoot(
@@ -92,7 +100,8 @@ namespace Rhizomode.Bootstrap
             AbletonBootstrapWiring abletonWiring,
             NodeRuntime nodeRuntime,
             ModuleLifecycleProcessor moduleProcessor,
-            InteractionBootstrapWiring interactionWiring)
+            InteractionBootstrapWiring interactionWiring,
+            VerticalSliceBootstrapWiring verticalSliceWiring)
         {
             _scopeObject = scopeObject;
             TypeRegistry = typeRegistry;
@@ -105,6 +114,7 @@ namespace Rhizomode.Bootstrap
             NodeRuntime = nodeRuntime;
             ModuleProcessor = moduleProcessor;
             InteractionWiring = interactionWiring;
+            VerticalSliceWiring = verticalSliceWiring;
         }
 
         /// <summary>

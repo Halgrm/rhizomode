@@ -102,6 +102,16 @@ namespace Rhizomode.Bootstrap
         [SerializeField] private ScrollMenuVisualController? scrollMenuVisual;
         [SerializeField] private ScrollMenuInteractionHandler? scrollMenuInteraction;
 
+        [Header("UI / Cameras (V3d)")]
+        [Tooltip("VR 視点の RenderTexture 出力。Spout/NDI/Desktop blitter のソース。")]
+        [SerializeField] private MirrorOutputController? mirrorOutput;
+        [SerializeField] private SpoutSenderController? spoutSender;
+        [SerializeField] private NdiSenderController? ndiSender;
+        [SerializeField] private DesktopMirrorBlitter? desktopBlitter;
+        [SerializeField] private CameraManagerPanelController? cameraManagerPanel;
+        [Tooltip("デスクトップデバッグ専用 cinemachine プレビュー。VR モードでは非アクティブ化。")]
+        [SerializeField] private CinemachinePreviewMonitor? cinemachinePreview;
+
         public AudioDriverBehaviour? AudioDriver => audioDriver;
         public AudioDeviceSelector? AudioDeviceSelector => audioDeviceSelector;
         public OscServer? OscServer => oscServer;
@@ -138,5 +148,11 @@ namespace Rhizomode.Bootstrap
         public UIRaycastDriver? UIRaycastDriver => uiRaycastDriver;
         public ScrollMenuVisualController? ScrollMenuVisual => scrollMenuVisual;
         public ScrollMenuInteractionHandler? ScrollMenuInteraction => scrollMenuInteraction;
+        public MirrorOutputController? MirrorOutput => mirrorOutput;
+        public SpoutSenderController? SpoutSender => spoutSender;
+        public NdiSenderController? NdiSender => ndiSender;
+        public DesktopMirrorBlitter? DesktopBlitter => desktopBlitter;
+        public CameraManagerPanelController? CameraManagerPanel => cameraManagerPanel;
+        public CinemachinePreviewMonitor? CinemachinePreview => cinemachinePreview;
     }
 }

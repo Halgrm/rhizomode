@@ -2603,13 +2603,7 @@ MonoBehaviour:
   graphContext: {fileID: 239156527}
   cinemachineModules: []
   presetManager: {fileID: 0}
-  spoutSender: {fileID: 1714549741}
-  ndiSender: {fileID: 836328289}
-  mirrorOutput: {fileID: 51798893}
-  cameraManagerPanel: {fileID: 314959824}
-  desktopBlitter: {fileID: 104243479}
   graphSaveLoad: {fileID: 0}
-  cinemachinePreview: {fileID: 463111290}
 --- !u!114 &1213701930
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2792,6 +2786,12 @@ MonoBehaviour:
   uiRaycastDriver: {fileID: 1213701938}
   scrollMenuVisual: {fileID: 864408690}
   scrollMenuInteraction: {fileID: 864408689}
+  mirrorOutput: {fileID: 51798893}
+  spoutSender: {fileID: 1714549741}
+  ndiSender: {fileID: 836328289}
+  desktopBlitter: {fileID: 104243479}
+  cameraManagerPanel: {fileID: 314959824}
+  cinemachinePreview: {fileID: 463111290}
 --- !u!1 &1297971205
 GameObject:
   m_ObjectHideFlags: 0
