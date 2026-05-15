@@ -220,7 +220,8 @@ namespace Rhizomode.Ableton.Transport
             }
             catch (Exception ex)
             {
-                Debug.LogError($"[AbletonLink] Reconnect failed: {ex.Message}");
+                // fail-open: Reconnect 時のポート競合も Warning 級。Initial Awake と対称扱い。
+                Debug.LogWarning($"[AbletonLink] Reconnect failed (send={host}:{sendPort}, recv=:{receivePort}): {ex.Message} — keeping previous state.");
             }
 #endif
         }
@@ -264,7 +265,9 @@ namespace Rhizomode.Ableton.Transport
             }
             catch (Exception ex)
             {
-                Debug.LogError($"[AbletonLink] Failed to start: {ex.Message}");
+                // fail-open: ポート競合 (Ableton 側の Remote Script が同 port を占有等) は warning 級。
+                // Ableton OSC が無効でも video / graph 駆動は継続 (memory: feedback_health_monitor)。
+                Debug.LogWarning($"[AbletonLink] Failed to start (send={host}:{sendPort}, recv=:{receivePort}): {ex.Message} — Ableton OSC disabled.");
             }
 #else
             Debug.LogWarning("[AbletonLink] OscJack package not installed. Ableton OSC disabled.");

@@ -18,7 +18,9 @@ namespace Rhizomode.UI
     {
         private const int OutputWidth = 1920;
         private const int OutputHeight = 1080;
-        private const int OutputDepth = 0;
+        // Unity 6 URP render graph requires camera target RT to have non-None depth stencil.
+        // 24-bit depth + 8-bit stencil で SRP の depth-stencil 要求を満たす。
+        private const int OutputDepth = 24;
         private const RenderTextureFormat OutputFormat = RenderTextureFormat.ARGB32;
 
         [Header("Camera")]

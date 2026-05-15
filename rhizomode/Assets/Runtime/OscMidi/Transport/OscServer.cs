@@ -59,7 +59,9 @@ namespace Rhizomode.OscMidi.Transport
             }
             catch (Exception ex)
             {
-                Debug.LogError($"[OscServer] Failed to start: {ex.Message}");
+                // fail-open: ポート競合 (別プロセスが port を占有) は warning 級。
+                // OSC 入力が無効でも video / graph 駆動は継続する (memory: feedback_health_monitor)。
+                Debug.LogWarning($"[OscServer] Failed to start on port {listenPort}: {ex.Message} — OSC input disabled.");
             }
 #else
             Debug.LogWarning("[OscServer] OscJack package not installed. OSC input disabled.");
