@@ -215,6 +215,26 @@ Bootstrap.Services / Bootstrap.Wiring に移送。Codex review (`ad3f33ebd5fdf11
     各 GraphAdapter asmdef へ細分化
   - 細分化に伴って Bootstrap asmdef は §15 通り「Installers / Wiring / ITickable adapter のみ」に純化
 
+### F-Vf-c.1: VerticalSliceBootstrapWiring.Dispose に edit-mode listener 解除が欠落
+- **検出**: Vf-c Codex review (3 度目の試行、commit `1a0ba0fb`、`abeacbe1eda90a1c5`)
+- **対象**: `Bootstrap/Wiring/VerticalSliceBootstrapWiring.cs:67-72` Wire 内
+  `cameraManagerPanel.AddEditModeListener(isEditing => { ... })` の lambda 登録に対し、
+  `Dispose` 側 (line 112-116) では `_healthSubscription.Dispose()` のみで listener 解除がない
+- **指摘内容**: Lifetime.Singleton で container 所有のため LifetimeScope.OnDestroy 時に Dispose が
+  呼ばれるが、edit-mode listener の `-=` 相当処理 (RemoveEditModeListener API 不在) がないため
+  CameraManagerPanel 側の `_editModeListeners` リストに stale 参照が残り続ける理論 leak がある。
+- **実害評価**: 軽微 (V3d 由来の既存条件・regression ではない)。
+  CameraManagerPanel は MonoBehaviour でシーン上の Game Manager 配下に配置、`_editModeListeners`
+  は private List。VerticalSliceBootstrapWiring の Dispose は scene-wide unload 時に走り、
+  CameraManagerPanel も同時に Unity の GameObject destroy で List ごと解放される。
+  すなわち scene-bound entity 同士の関係で listener leak は scene の lifetime 内に閉じる。
+  GameBootstrap が wiring を抱えていた V3d 以前から同パターンで運用されており、新 regression ではない。
+- **将来 trigger**:
+  - CameraManagerPanel に `RemoveEditModeListener(Action<bool>)` API を追加 + listener を field 保持
+    + VerticalSliceBootstrapWiring.Dispose で remove (Codex 提案の fix 候補)
+  - Phase 13 (final cleanup) の Subscribe Dispose 監査 で一括対応
+  - 別 LifetimeScope を導入してシーン unload より早い phase で wiring を破棄する設計に変わった場合
+
 ### F-Vf-a.2: VisualManager / EdgeVisualManager 欠落時の VContainer exception 露出
 - **検出**: Vf-a Codex review
 - **対象**: `RootLifetimeScope.Configure` (NodeVisualManager / EdgeVisualManager 条件登録) +
