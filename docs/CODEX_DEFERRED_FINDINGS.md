@@ -195,6 +195,45 @@ faithful move の原則に従い据え置き、Ableton wiring の本格的な SR
 
 ---
 
+## V-final sub-step a (GameBootstrap god-object 解体 + Bootstrap.Services / Wiring 新設)
+
+Vf-a で GameBootstrap.cs を 379 → 50 行 (87% 削減) の薄い shim 化、残置責務すべてを
+Bootstrap.Services / Bootstrap.Wiring に移送。Codex review (`ad3f33ebd5fdf111b`) で
+5/7 PASS、2 件の軽微 FAIL を以下に deferred 記録する。
+
+### F-Vf-a.1: Bootstrap.Services 内のビジネスロジック (§15 transitional violation)
+- **検出**: Vf-a Codex review
+- **対象**: `Bootstrap/Services/NodeSpawnService.cs`, `SceneObjectRegistrationService.cs`,
+  `MenuNodeSpawnCoordinator.cs`, `GraphLoadCoordinator.cs`, `Object3DProxyBindService.cs`
+- **指摘内容**: Plan v5.4 §15 「Bootstrap は業務ロジック禁止」に違反。グラフ変異 / UI visual 生成 /
+  Object3D Proxy bind 等のビジネスロジックが Bootstrap asmdef 内に集約されている。
+- **実害評価**: 軽微・**意図的 transitional**。本来 Interaction.GraphAdapter / UI.GraphAdapter /
+  Scene.GraphAdapter へ置くべきだが、Nodes.Input/Time/Utility/Modules / NodeCatalog.Runtime /
+  NodeVisualManager への参照を要するため Bootstrap に集約。各 service にこの旨を明記済。
+- **将来 trigger**:
+  - V-final 完了後の adapter 分離 phase (Phase 9 UI クラス分割 や別 sub-phase) で
+    各 GraphAdapter asmdef へ細分化
+  - 細分化に伴って Bootstrap asmdef は §15 通り「Installers / Wiring / ITickable adapter のみ」に純化
+
+### F-Vf-a.2: VisualManager / EdgeVisualManager 欠落時の VContainer exception 露出
+- **検出**: Vf-a Codex review
+- **対象**: `RootLifetimeScope.Configure` (NodeVisualManager / EdgeVisualManager 条件登録) +
+  `EntryPointBootstrapper.Launch` (MenuNodeSpawnCoordinator / GraphLoadCoordinator 等を無条件 resolve)
+- **指摘内容**: scene refs が NodeVisualManager / EdgeVisualManager を持たない場合、
+  `Configure` が `RegisterInstance` をスキップするが、`Launch` が constructor injection を
+  要求するサービス群を無条件 `container.Resolve<>` で取得するため VContainer resolve exception が
+  露出する。旧 GameBootstrap の guarded construction パスからの軽い regression。
+- **実害評価**: Low-Medium。SampleScene では VisualManager / EdgeVisualManager は常に配線済 (実害なし)。
+  degraded scene (テスト fixture や別シーン) を作る場合に exception で boot 失敗。
+- **将来 trigger**:
+  - GameBootstrap.Awake で sceneRefs.VisualManager / EdgeVisualManager の null チェックを追加し、
+    null なら degraded boot として `_compositionRoot = null` のまま return する
+  - または RootLifetimeScope.Configure で VisualManager / EdgeVisualManager を hard requirement として
+    `throw new InvalidOperationException` し、Configure 直前で diagnostic を出す
+  - Vf-c (RootLifetimeScope シーン直接配置) で sceneRefs の hard requirement を整理する際に同時対応
+
+---
+
 ## 運用
 
 - 新規エントリは `### F-<phase>.<番号>: <タイトル>` 形式で追加
