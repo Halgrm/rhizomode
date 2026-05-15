@@ -3,7 +3,6 @@
 using System;
 using System.Collections.Generic;
 using Rhizomode.Bootstrap.Wiring;
-using Rhizomode.Input.Contracts;
 using Rhizomode.NodeCatalog.Runtime;
 using Rhizomode.Observability.Contracts;
 using Rhizomode.Observability.Runtime;
@@ -22,11 +21,10 @@ namespace Rhizomode.Bootstrap
     /// 受け取る。Vf-c で GameBootstrap が削除され RootLifetimeScope が直接シーン配置になったら、
     /// 本 factory も廃止される (一時的 transitional shim)。
     ///
-    /// Vf-a 時点で BootstrapModulePlacement / BootstrapObject3DRegistry の closure は本 factory 内に閉じる:
-    /// modulePlacement は IControllerInput? を local closure で遅延解決し、InteractionBootstrapWiring.Wire
-    /// 完了後に activeInput が確定する。Object3D registry は XrSceneReferences.Object3DGrabHandler を
-    /// 経由する。Vf-b で BootstrapModulePlacement 自体を IControllerInputAccessor 経由に refactor して
-    /// closure 依存を解消する。
+    /// Vf-b: BootstrapModulePlacement / BootstrapObject3DRegistry の closure 依存を廃止し、両者を
+    /// ModulesInstaller が <see cref="Lifetime.Singleton"/> 登録するようになったため、本 Launch 内の
+    /// local closure は不要に。activeInput は <see cref="InteractionBootstrapWiring.Wire"/> 完了後に
+    /// container 経由で resolve した <see cref="BootstrapModulePlacement"/> へ <c>SetActiveInput</c>。
     /// </remarks>
     public static class EntryPointBootstrapper
     {
@@ -41,21 +39,13 @@ namespace Rhizomode.Bootstrap
                 throw new InvalidOperationException(
                     "[EntryPointBootstrapper] graphContext is required on XrSceneReferences.");
 
-            // InteractionBootstrapWiring.Wire 完了後に activeInput が確定する。BootstrapModulePlacement は
-            // local closure で遅延解決する (Vf-b で IControllerInputAccessor 経由に refactor 予定)。
-            IControllerInput? activeInput = null;
-            var modulePlacement = new BootstrapModulePlacement(() => activeInput);
-            var object3DRegistry = new BootstrapObject3DRegistry(
-                proxy => sceneRefs.Object3DGrabHandler?.Register(proxy),
-                proxy => sceneRefs.Object3DGrabHandler?.Unregister(proxy));
-
             // 子 GameObject を「非アクティブ生成 → AddComponent → SetHosts → アクティブ化」の順で構築。
             // SetActive(true) で VContainer Build が同期実行され、その後 container から resolve できる。
             var scopeGo = new GameObject("RootLifetimeScope");
             scopeGo.transform.SetParent(parent, false);
             scopeGo.SetActive(false);
             var rootScope = scopeGo.AddComponent<RootLifetimeScope>();
-            rootScope.SetHosts(sceneRefs, graphContext.Context, modulePlacement, object3DRegistry);
+            rootScope.SetHosts(sceneRefs, graphContext.Context);
             scopeGo.SetActive(true);
 
             var container = rootScope.Container;
@@ -91,8 +81,12 @@ namespace Rhizomode.Bootstrap
             var menuSpawnWiring = container.Resolve<MenuSpawnBootstrapWiring>();
             var interactionWiring = container.Resolve<InteractionBootstrapWiring>();
             interactionWiring.Wire(graphContext, menuSpawnWiring.HandleSelection);
-            activeInput = interactionWiring.ActiveInput;
+            var activeInput = interactionWiring.ActiveInput;
             menuSpawnWiring.SetActiveInput(activeInput);
+
+            // Vf-b: BootstrapModulePlacement に activeInput を後付け注入 (closure 依存解消)。
+            // 以降の FreshSpawn 配置 (ModuleLifecycleProcessor 経由) が head pose を参照できる。
+            container.Resolve<BootstrapModulePlacement>().SetActiveInput(activeInput);
 
             // === Phase 5: activeInput 依存の wiring 群 ===
             //

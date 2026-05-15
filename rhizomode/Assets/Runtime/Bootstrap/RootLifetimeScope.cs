@@ -2,7 +2,6 @@
 
 using Rhizomode.Bootstrap.Installers;
 using Rhizomode.Graph.Model;
-using Rhizomode.Modules;
 using UnityEngine;
 using VContainer;
 using VContainer.Unity;
@@ -13,48 +12,44 @@ namespace Rhizomode.Bootstrap
     /// アプリ唯一の VContainer composition root。Plan v5.4 §15 — Bootstrap だけが VContainer を参照する。
     /// </summary>
     /// <remarks>
-    /// V3 transitional shape: GameBootstrap が scene 由来の値 (<see cref="XrSceneReferences"/> /
-    /// GraphState / IModulePlacementService / IObject3DProxyRegistry) を <see cref="SetHosts"/> で
-    /// 渡す。scope GameObject は「非アクティブ生成 → AddComponent → SetHosts → アクティブ化」の順で
-    /// 構築されるため、Awake (= VContainer Build) 時点で値は必ず揃う。
+    /// V-final (Vf-b) transitional shape: GameBootstrap (XR asmdef の薄い shim) が
+    /// <see cref="XrSceneReferences"/> + <see cref="GraphState"/> を <see cref="SetHosts"/> 経由で渡す。
+    /// scope GameObject は「非アクティブ生成 → AddComponent → SetHosts → アクティブ化」の順で構築されるため、
+    /// Awake (= VContainer Build) 時点で値は必ず揃う。
+    ///
+    /// Vf-b で <c>IModulePlacementService</c> / <c>IObject3DProxyRegistry</c> の closure 依存を解消したため、
+    /// 旧 SetHosts の 4 引数 (sceneRefs / graphState / modulePlacement / object3DRegistry) が 2 引数に縮小。
+    /// BootstrapModulePlacement / BootstrapObject3DRegistry は ModulesInstaller が
+    /// <see cref="Lifetime.Singleton"/> で構築する。
     ///
     /// <see cref="Configure"/> は per-bounded-context の Installer を順に Install する。Installer 間に
-    /// 構築順依存はない (各 Installer は登録のみ、依存解決は Build 後)。GameBootstrap は Build 後に
-    /// container から pure-C# サービスを resolve する。
+    /// 構築順依存はない (各 Installer は登録のみ、依存解決は Build 後)。
+    /// <see cref="EntryPointBootstrapper.Launch"/> が Build 後に全 wiring を eager 駆動する。
     ///
-    /// V3 時点で GraphSaveLoad の Configure / HydrationPlanExecutor は引き続き GameBootstrap が
-    /// wiring する (scene MonoBehaviour 操作のため)。GameBootstrap の完全解体は V-final。
+    /// Vf-c で GameBootstrap.cs が削除されたら RootLifetimeScope をシーン直接配置にし、
+    /// EntryPointBootstrapper 自体も廃止する。
     /// </remarks>
     [DisallowMultipleComponent]
     public sealed class RootLifetimeScope : LifetimeScope
     {
         private XrSceneReferences? _sceneRefs;
         private GraphState? _graphState;
-        private IModulePlacementService? _modulePlacement;
-        private IObject3DProxyRegistry? _object3DRegistry;
 
         /// <summary>
         /// VContainer Build 前 (= GameObject をアクティブ化する前) に呼ぶこと。
         /// 呼び出し元は同 asmdef の <see cref="EntryPointBootstrapper"/> のみ。
         /// </summary>
-        internal void SetHosts(
-            XrSceneReferences sceneRefs,
-            GraphState graphState,
-            IModulePlacementService modulePlacement,
-            IObject3DProxyRegistry object3DRegistry)
+        internal void SetHosts(XrSceneReferences sceneRefs, GraphState graphState)
         {
             _sceneRefs = sceneRefs;
             _graphState = graphState;
-            _modulePlacement = modulePlacement;
-            _object3DRegistry = object3DRegistry;
         }
 
         protected override void Configure(IContainerBuilder builder)
         {
             // 防御: SetHosts が Build 前に呼ばれていれば全フィールドは非 null
             // (EntryPointBootstrapper.Launch の構築プロトコルが保証する)。
-            if (_graphState == null || _sceneRefs == null ||
-                _modulePlacement == null || _object3DRegistry == null)
+            if (_graphState == null || _sceneRefs == null)
             {
                 Debug.LogWarning(
                     "[RootLifetimeScope] Configure skipped — SetHosts が Build 前に呼ばれていない。");
@@ -85,7 +80,7 @@ namespace Rhizomode.Bootstrap
             new SceneInstaller(_sceneRefs).Install(builder);
             new OscMidiInstaller(_sceneRefs).Install(builder);
             new AbletonInstaller(_sceneRefs).Install(builder);
-            new ModulesInstaller(_modulePlacement, _object3DRegistry).Install(builder);
+            new ModulesInstaller().Install(builder);
             new NodesInstaller().Install(builder);
             new InputInstaller(_sceneRefs).Install(builder);
             new InteractionGraphAdapterInstaller().Install(builder);
