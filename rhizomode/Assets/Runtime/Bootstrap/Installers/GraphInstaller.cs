@@ -4,7 +4,6 @@ using Rhizomode.Graph.CatalogBridge;
 using Rhizomode.Graph.Events;
 using Rhizomode.Graph.Model;
 using Rhizomode.Graph.Mutation;
-using Rhizomode.Interaction.GraphAdapter;
 using Rhizomode.NodeCatalog.Runtime;
 using VContainer;
 using VContainer.Unity;
@@ -50,12 +49,11 @@ namespace Rhizomode.Bootstrap.Installers
             builder.Register<GraphEventBus>(Lifetime.Singleton);
             builder.Register<GraphMutationApplier>(Lifetime.Singleton);
 
-            // GraphCommandDispatcher / SpatialIntentToCommandTranslator は optional 引数
-            // (maxHistorySize=64 / id provider=null) を持つ。VContainer は C# の既定引数を尊重せず
-            // 全引数を resolve しようとして失敗するため、factory delegate で既定値を明示する。
+            // GraphCommandDispatcher は optional 引数 (maxHistorySize=64) を持つ。VContainer は
+            // C# の既定引数を尊重せず全引数を resolve しようとして失敗するため、factory delegate で
+            // 既定値を明示する。SpatialIntentToCommandTranslator の登録は V3c で
+            // InteractionGraphAdapterInstaller へ移送済 (本来の bounded context)。
             builder.Register(r => new GraphCommandDispatcher(r.Resolve<GraphMutationApplier>()),
-                Lifetime.Singleton);
-            builder.Register(r => new SpatialIntentToCommandTranslator(r.Resolve<GraphCommandDispatcher>()),
                 Lifetime.Singleton);
 
             builder.Register<MainThreadGraphCommandQueue>(Lifetime.Singleton);

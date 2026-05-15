@@ -54,17 +54,6 @@ namespace Rhizomode.XR
         [SerializeField] private XrSceneReferences? sceneRefs;
 
         [SerializeField] private GraphContextBehaviour? graphContext;
-        [SerializeField] private NodeVisualManager? visualManager;
-        [SerializeField] private ControllerInputRouter? controllerInput;
-        [SerializeField] private EdgeVisualManager? edgeVisualManager;
-        [SerializeField] private EdgeDragHandler? edgeDragHandler;
-        [SerializeField] private EdgeCutHandler? edgeCutHandler;
-        [SerializeField] private NodeDeleteHandler? nodeDeleteHandler;
-        [SerializeField] private NodeGrabHandler? nodeGrabHandler;
-        [SerializeField] private UIRaycastDriver? uiRaycastDriver;
-        [SerializeField] private SharedRaycastService? sharedRaycastService;
-        [SerializeField] private ScrollMenuVisualController? scrollMenuVisual;
-        [SerializeField] private ScrollMenuInteractionHandler? scrollMenuInteraction;
         [SerializeField] private CinemachineModule[]? cinemachineModules;
         [SerializeField] private PresetManager? presetManager;
         [SerializeField] private SpoutSenderController? spoutSender;
@@ -74,22 +63,15 @@ namespace Rhizomode.XR
         [SerializeField] private MirrorOutputController? mirrorOutput;
         [SerializeField] private CameraManagerPanelController? cameraManagerPanel;
         [SerializeField] private DesktopMirrorBlitter? desktopBlitter;
-        [SerializeField] private PathControlPointVisualManager? pathEditorManager;
-        [SerializeField] private PathControlPointGrabHandler? pathControlPointGrabHandler;
         [SerializeField] private GraphSaveLoadManager? graphSaveLoad;
 
-        [Header("Object3D")]
-        [SerializeField] private Object3DGrabHandler? object3DGrabHandler;
-
         [Header("Desktop Debug")]
-        [SerializeField] private DesktopInputRouter? desktopInput;
         [SerializeField] private CinemachinePreviewMonitor? cinemachinePreview;
 
-        // V3a: Audio / OSC / MIDI / Ableton の scene 参照は XrSceneReferences へ移送。
-        // V3b: Scene / Modules / Nodes 系 (sceneLoader / moduleDefinitions / object3DPrefabs) も
-        // XrSceneReferences へ移送し、LifecycleProcessor / NodeRuntime の構築は Installer 化済。
-        // GameBootstrap は object3DGrabHandler (XR asmdef、§19 上 XrSceneReferences に置けない) のみ
-        // 残置し、BootstrapObject3DRegistry の closure 経由で Modules layer へ渡す。
+        // V3a-c: Audio / OSC / MIDI / Ableton / Scene / Modules / Nodes / Input / Interaction の
+        // scene 参照は XrSceneReferences へ移送済。LifecycleProcessor / NodeRuntime / interaction
+        // handler の構築・配線は各 Installer + InteractionBootstrapWiring が担当。GameBootstrap は
+        // sceneRefs 経由で参照を取り、CompositionRoot 経由で resolve 済サービスを受け取る。
 
         private NodeTypeRegistry? _typeRegistry;
 
@@ -175,7 +157,9 @@ namespace Rhizomode.XR
                 // Phase 8 Round C: NodeSpawnService を初期化 (graph mutation 部、visual は GameBootstrap)。
                 _nodeSpawnService = new NodeSpawnService(graphContext.Context, _nodeRuntime);
 
-                // Phase 9 Round F: visual coordinator を初期化。
+                // Phase 9 Round F: visual coordinator を初期化 (V3c: 参照は XrSceneReferences 経由)。
+                var visualManager = sceneRefs != null ? sceneRefs.VisualManager : null;
+                var edgeVisualManager = sceneRefs != null ? sceneRefs.EdgeVisualManager : null;
                 if (visualManager != null && edgeVisualManager != null)
                 {
                     _graphLoadCoordinator = new GraphLoadCoordinator(visualManager, edgeVisualManager);
@@ -224,9 +208,10 @@ namespace Rhizomode.XR
                 return;
             }
 
-            // ModuleLifecycleProcessor の placement / object3D registry は XR asmdef の closure を
-            // 要するため GameBootstrap が構築。BootstrapModulePlacement は Func で _activeInput を
-            // 遅延解決する (InitializeInteractionHandlers より前に呼ばれるため)。
+            // ModuleLifecycleProcessor の placement / object3D registry は GameBootstrap が構築する
+            // (BootstrapModulePlacement は Func で _activeInput を遅延解決 — _activeInput は
+            // InteractionBootstrapWiring.Wire 後に確定する)。object3DGrabHandler は XrSceneReferences 経由。
+            var object3DGrabHandler = sceneRefs.Object3DGrabHandler;
             var modulePlacement = new Rhizomode.Bootstrap.BootstrapModulePlacement(() => _activeInput);
             var object3DRegistry = new Rhizomode.Bootstrap.BootstrapObject3DRegistry(
                 proxy => object3DGrabHandler?.Register(proxy),
@@ -260,6 +245,8 @@ namespace Rhizomode.XR
         {
             if (_typeRegistry == null) return;
 
+            // V3c: visualManager 参照は XrSceneReferences 経由 (Installer 化は V3d)。
+            var visualManager = sceneRefs != null ? sceneRefs.VisualManager : null;
             if (visualManager != null)
                 visualManager.Initialize(_typeRegistry);
 
@@ -268,7 +255,11 @@ namespace Rhizomode.XR
             if (audioDriver != null && graphContext != null)
                 audioDriver.Initialize(graphContext);
 
-            InitializeInteractionHandlers();
+            // V3c: interaction handler の選択・配線は InteractionBootstrapWiring へ移送。
+            // GraphContextBehaviour と ScrollMenu のノード選択コールバック (OnScrollMenuNodeSelected) を
+            // transitional に渡す (一時的 Plan v5.4 違反 — V-final で解消)。Wire 後に _activeInput が確定。
+            _compositionRoot?.InteractionWiring.Wire(graphContext, OnScrollMenuNodeSelected);
+            _activeInput = _compositionRoot?.InteractionWiring.ActiveInput;
         }
 
         /// <summary>
@@ -277,6 +268,7 @@ namespace Rhizomode.XR
         /// </summary>
         private void RegisterSceneObjects()
         {
+            var visualManager = sceneRefs != null ? sceneRefs.VisualManager : null;
             if (visualManager == null || _sceneObjectService == null) return;
 
             _sceneObjectService.RegisterTypeAndFactory();
@@ -287,24 +279,12 @@ namespace Rhizomode.XR
             foreach (var r in results)
             {
                 var visual = visualManager.CreateNodeVisual(new NodeViewAdapter(r.Node), r.SpawnPosition);
-                if (visual != null && controllerInput != null)
+                if (visual != null && _activeInput != null)
                 {
-                    var headPos = _activeInput!.HeadPosition;
+                    var headPos = _activeInput.HeadPosition;
                     visual.transform.rotation = Quaternion.LookRotation(r.SpawnPosition - headPos);
                 }
             }
-        }
-
-
-        /// <summary>V2b: GraphInstaller 産の IntentTranslator を 3 handler に注入する薄い wrapper。</summary>
-        private void WireIntentSink()
-        {
-            if (_compositionRoot == null) return;
-            var translator = _compositionRoot.IntentTranslator;
-            edgeDragHandler?.SetIntentSink(translator);
-            edgeCutHandler?.SetIntentSink(translator);
-            nodeDeleteHandler?.SetIntentSink(translator);
-            Debug.Log("[GameBootstrap] IntentSink wired up for 3 handlers.");
         }
 
         /// <summary>
@@ -375,12 +355,13 @@ namespace Rhizomode.XR
                 graphSaveLoad.OnGraphLoaded -= OnGraphLoaded;
             }
 
-            if (scrollMenuVisual != null)
-                scrollMenuVisual.OnNodeTypeSelected -= OnScrollMenuNodeSelected;
+            // V3c: ScrollMenu の OnNodeTypeSelected 購読解除は InteractionBootstrapWiring.Dispose が担う
+            // (container 所有 Lifetime.Singleton)。_compositionRoot.Dispose() で scope 破棄時に解放される。
 
-            // V3a/V3b: AudioDeviceSelectorWiring / AbletonBootstrapWiring / ModuleLifecycleProcessor /
-            // GraphEventBus は全て container 所有 (Lifetime.Singleton)。_compositionRoot.Dispose() が
-            // scope を破棄した時点で container が一括 Dispose するため、GameBootstrap 側の手動 Dispose は不要。
+            // V3a/V3b: AudioDeviceSelectorWiring / AbletonBootstrapWiring / InteractionBootstrapWiring /
+            // ModuleLifecycleProcessor / GraphEventBus は全て container 所有 (Lifetime.Singleton)。
+            // _compositionRoot.Dispose() が scope を破棄した時点で container が一括 Dispose するため、
+            // GameBootstrap 側の手動 Dispose は不要。
             _moduleProcessor = null;
             _nodeRuntime = null;
 
@@ -397,7 +378,8 @@ namespace Rhizomode.XR
 
         private void OnScrollMenuNodeSelected(string nodeType)
         {
-            if (graphContext == null || visualManager == null || controllerInput == null) return;
+            if (graphContext == null || _activeInput == null) return;
+            if (sceneRefs == null || sceneRefs.VisualManager == null) return;
             if (_nodeSpawnService == null)
             {
                 Debug.LogError($"[GameBootstrap] OnScrollMenuNodeSelected aborted ({nodeType}) — _nodeSpawnService not initialized.");
@@ -407,13 +389,13 @@ namespace Rhizomode.XR
             Debug.Log($"[GameBootstrap] OnScrollMenuNodeSelected: {nodeType}");
 
             // Phase 8 Round C: graph mutation は NodeSpawnService に委譲、visual 創出はここで実行。
-            var headPos = _activeInput!.HeadPosition;
-            var headFwd = _activeInput!.HeadForward;
+            var headPos = _activeInput.HeadPosition;
+            var headFwd = _activeInput.HeadForward;
             var spawnResult = _nodeSpawnService.TrySpawnFromMenu(nodeType, headPos, headFwd);
             if (spawnResult == null) return;
 
             // ノード生成後にスクロールメニューを閉じる
-            scrollMenuInteraction?.CloseMenu();
+            sceneRefs.ScrollMenuInteraction?.CloseMenu();
 
             // Object3D の Proxy 観測 bind (visual 創出と同層、GraphState 必要)
             if (spawnResult.Node is Object3DNode obj3d) BindObject3DProxyObservables(obj3d);

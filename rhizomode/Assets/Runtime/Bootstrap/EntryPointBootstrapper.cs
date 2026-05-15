@@ -6,7 +6,6 @@ using Rhizomode.Graph.CatalogBridge;
 using Rhizomode.Graph.Model;
 using Rhizomode.Graph.Runtime;
 using Rhizomode.Graph.Serialization;
-using Rhizomode.Interaction.GraphAdapter;
 using Rhizomode.Modules;
 using Rhizomode.NodeCatalog.Runtime;
 using Rhizomode.Observability.Contracts;
@@ -88,13 +87,13 @@ namespace Rhizomode.Bootstrap
                 container.Resolve<NodeTypeRegistry>(),
                 healthAggregator,
                 container.Resolve<INodeFactory>(),
-                container.Resolve<SpatialIntentToCommandTranslator>(),
                 container.Resolve<IGraphRepository>(),
                 container.Resolve<GraphHydrator>(),
                 container.Resolve<ISavePathProvider>(),
                 abletonWiring,
                 container.Resolve<NodeRuntime>(),
-                container.Resolve<ModuleLifecycleProcessor>());
+                container.Resolve<ModuleLifecycleProcessor>(),
+                container.Resolve<InteractionBootstrapWiring>());
         }
     }
 }

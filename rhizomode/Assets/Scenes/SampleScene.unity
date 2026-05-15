@@ -2483,7 +2483,7 @@ PrefabInstance:
     - target: {fileID: 6232745470614056090, guid: f6336ac4ac8b4d34bc5072418cdc62a0, type: 3}
       propertyPath: m_Material
       value: 
-      objectReference: {fileID: 1604240869}
+      objectReference: {fileID: 1385523682}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -2601,17 +2601,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: Rhizomode.XR::Rhizomode.XR.GameBootstrap
   sceneRefs: {fileID: 1213701957}
   graphContext: {fileID: 239156527}
-  visualManager: {fileID: 239156526}
-  controllerInput: {fileID: 1213701926}
-  edgeVisualManager: {fileID: 239156530}
-  edgeDragHandler: {fileID: 239156529}
-  edgeCutHandler: {fileID: 1213701931}
-  nodeDeleteHandler: {fileID: 1213701930}
-  nodeGrabHandler: {fileID: 1213701945}
-  uiRaycastDriver: {fileID: 1213701938}
-  sharedRaycastService: {fileID: 239156532}
-  scrollMenuVisual: {fileID: 864408690}
-  scrollMenuInteraction: {fileID: 864408689}
   cinemachineModules: []
   presetManager: {fileID: 0}
   spoutSender: {fileID: 1714549741}
@@ -2619,11 +2608,7 @@ MonoBehaviour:
   mirrorOutput: {fileID: 51798893}
   cameraManagerPanel: {fileID: 314959824}
   desktopBlitter: {fileID: 104243479}
-  pathEditorManager: {fileID: 712178745}
-  pathControlPointGrabHandler: {fileID: 712178744}
   graphSaveLoad: {fileID: 0}
-  object3DGrabHandler: {fileID: 1213701954}
-  desktopInput: {fileID: 1503423582}
   cinemachinePreview: {fileID: 463111290}
 --- !u!114 &1213701930
 MonoBehaviour:
@@ -2792,6 +2777,21 @@ MonoBehaviour:
   - {fileID: 11400000, guid: a5f2585d30506eb49874b12b8b3e726a, type: 2}
   - {fileID: 11400000, guid: f899741e6a242dd42b91c1b1210baa47, type: 2}
   object3DPrefabs: {fileID: 11400000, guid: 459bd17f17f110c4bb3fd058f936cb15, type: 2}
+  controllerInput: {fileID: 1213701926}
+  desktopInput: {fileID: 1503423582}
+  sharedRaycastService: {fileID: 239156532}
+  visualManager: {fileID: 239156526}
+  edgeVisualManager: {fileID: 239156530}
+  edgeDragHandler: {fileID: 239156529}
+  edgeCutHandler: {fileID: 1213701931}
+  nodeDeleteHandler: {fileID: 1213701930}
+  nodeGrabHandler: {fileID: 1213701945}
+  pathControlPointGrabHandler: {fileID: 712178744}
+  pathEditorManager: {fileID: 712178745}
+  object3DGrabHandler: {fileID: 1213701954}
+  uiRaycastDriver: {fileID: 1213701938}
+  scrollMenuVisual: {fileID: 864408690}
+  scrollMenuInteraction: {fileID: 864408689}
 --- !u!1 &1297971205
 GameObject:
   m_ObjectHideFlags: 0
@@ -2823,6 +2823,19 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 81.675, y: 0, z: 0}
+--- !u!134 &1385523682
+PhysicsMaterial:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: ' (Instance) (Instance) (Instance) (Instance)'
+  serializedVersion: 2
+  m_DynamicFriction: 0.6
+  m_StaticFriction: 0.6
+  m_Bounciness: 0
+  m_FrictionCombine: 0
+  m_BounceCombine: 0
 --- !u!1 &1432822253 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 1767192433, guid: f6336ac4ac8b4d34bc5072418cdc62a0, type: 3}
@@ -3017,19 +3030,6 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!134 &1604240869
-PhysicsMaterial:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_Name: ' (Instance) (Instance) (Instance)'
-  serializedVersion: 2
-  m_DynamicFriction: 0.6
-  m_StaticFriction: 0.6
-  m_Bounciness: 0
-  m_FrictionCombine: 0
-  m_BounceCombine: 0
 --- !u!1 &1632498950
 GameObject:
   m_ObjectHideFlags: 0

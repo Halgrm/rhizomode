@@ -51,15 +51,18 @@ namespace Rhizomode.XR
                 var floatOutputCatalog = new GraphStateFloatOutputCatalog(() => graphContext.Context);
                 cameraManagerPanel.Initialize(floatOutputCatalog);
                 // 編集モード中はエッジ接続・切断・ノード削除を一時無効化
+                // V3c: handler 参照は XrSceneReferences 経由 (Installer 化済)。
                 cameraManagerPanel.AddEditModeListener(isEditing =>
                 {
-                    edgeDragHandler?.SetEnabled(!isEditing);
-                    edgeCutHandler?.SetEnabled(!isEditing);
-                    nodeDeleteHandler?.SetEnabled(!isEditing);
+                    sceneRefs?.EdgeDragHandler?.SetEnabled(!isEditing);
+                    sceneRefs?.EdgeCutHandler?.SetEnabled(!isEditing);
+                    sceneRefs?.NodeDeleteHandler?.SetEnabled(!isEditing);
                 });
             }
 
             // MirrorOutputController → Spout/NDI
+            var desktopInput = sceneRefs != null ? sceneRefs.DesktopInput : null;
+            var controllerInput = sceneRefs != null ? sceneRefs.ControllerInput : null;
             var headTransform = desktopInput != null && desktopInput.gameObject.activeInHierarchy
                 ? desktopInput.HeadTransform
                 : controllerInput?.HeadTransform;
@@ -89,14 +92,13 @@ namespace Rhizomode.XR
             }
 
             // V3a: AudioDeviceSelector wiring は EntryPointBootstrapper が Build 後即時駆動済
-            // (AudioDeviceSelectorWiring)。Ableton OSC wiring は入力ルーター /
-            // SharedRaycastService を要するためここで駆動する (InitializeInteractionHandlers が
+            // (AudioDeviceSelectorWiring)。Ableton OSC wiring は入力ルーター / SharedRaycastService を
+            // 要するためここで駆動する (InitializeSystems で InteractionBootstrapWiring.Wire が
             // _activeInput を解決済)。CompositionRoot 経由なのは Plan v5.4 §19 (VContainer 型は
-            // Bootstrap asmdef のみ) を守るため — 一時的 Plan v5.4 違反、V3c で解消。
+            // Bootstrap asmdef のみ) を守るため — 一時的 Plan v5.4 違反、V-final で解消。
             // degraded 起動 (_typeRegistry == null で InitializeSystems が early return) では
-            // _activeInput が null のまま渡るが、Wire は panel 表示を skip して fail-open する
-            // (旧 InitializeAbletonOsc の ShowSetupPanel/ResolveGridPose と同一挙動)。
-            _compositionRoot?.AbletonWiring.Wire(_activeInput, sharedRaycastService);
+            // _activeInput が null のまま渡るが、Wire は panel 表示を skip して fail-open する。
+            _compositionRoot?.AbletonWiring.Wire(_activeInput, sceneRefs != null ? sceneRefs.SharedRaycastService : null);
 
             // Phase 12D: health monitor 登録は各 transport Installer + EntryPointBootstrapper が実施済。
             InitializeHealthMonitoring();
@@ -123,139 +125,8 @@ namespace Rhizomode.XR
                 _healthSubscription = _healthAggregator.OnHealthChange.Subscribe(statusPanel.SetHealth);
         }
 
-        private void InitializeInteractionHandlers()
-        {
-            // VR / デスクトップ入力ルーター切替
-            bool isDesktop = desktopInput != null && desktopInput.gameObject.activeInHierarchy;
-
-            if (isDesktop)
-            {
-                _activeInput = desktopInput;
-                // VR入力ルーターを無効化（競合防止）
-                if (controllerInput != null) controllerInput.enabled = false;
-                Debug.Log("[GameBootstrap] Desktop debug mode active");
-            }
-            else
-            {
-                _activeInput = controllerInput;
-            }
-
-            if (_activeInput == null)
-            {
-                Debug.LogError("[GameBootstrap] No input router available!");
-                return;
-            }
-
-            if (sharedRaycastService == null)
-                Debug.LogError("[GameBootstrap] sharedRaycastService is not assigned!");
-
-            var input = _activeInput;
-            IRayProvider rayProvider = (IRayProvider)input;
-            IControllerPose controllerPose = (IControllerPose)input;
-            ILeftHandRay leftHandRay = (ILeftHandRay)input;
-            ILeftHandInput leftHandInput = (ILeftHandInput)input;
-
-            // 共有レイキャストサービスの初期化（全ハンドラの前に）
-            if (sharedRaycastService != null)
-                sharedRaycastService.Initialize(rayProvider);
-
-            if (edgeVisualManager != null && visualManager != null)
-                edgeVisualManager.Initialize(visualManager);
-
-            if (edgeDragHandler != null && visualManager != null &&
-                graphContext != null && edgeVisualManager != null &&
-                sharedRaycastService != null)
-            {
-                edgeDragHandler.Initialize(
-                    rayProvider, input, visualManager,
-                    graphContext, edgeVisualManager, sharedRaycastService);
-
-                // グラブ中はエッジ接続をスキップ
-                if (nodeGrabHandler != null)
-                    edgeDragHandler.SetGrabbingCheck(() => nodeGrabHandler.IsGrabbing);
-            }
-
-            if (edgeCutHandler != null && edgeVisualManager != null && graphContext != null)
-            {
-                edgeCutHandler.Initialize(input, rayProvider, edgeVisualManager, graphContext);
-            }
-
-            if (nodeDeleteHandler != null && visualManager != null &&
-                graphContext != null && edgeVisualManager != null &&
-                sharedRaycastService != null)
-            {
-                nodeDeleteHandler.Initialize(
-                    input, sharedRaycastService, visualManager,
-                    graphContext, edgeVisualManager);
-                // Phase 6 Round A: DestroyModuleInstance → _moduleProcessor.DestroyInstance に委譲
-                nodeDeleteHandler.SetDeleteDependencies(edgeDragHandler,
-                    _moduleProcessor != null ? _moduleProcessor.DestroyInstance : (Action<string>?)null);
-            }
-
-            if (nodeGrabHandler != null && visualManager != null &&
-                sharedRaycastService != null && edgeVisualManager != null)
-            {
-                nodeGrabHandler.Initialize(
-                    input, controllerPose, leftHandRay, leftHandInput,
-                    sharedRaycastService, visualManager, edgeVisualManager);
-            }
-
-            if (pathControlPointGrabHandler != null && pathEditorManager != null &&
-                sharedRaycastService != null)
-            {
-                pathControlPointGrabHandler.Initialize(
-                    input, controllerPose, sharedRaycastService, pathEditorManager);
-            }
-
-            if (object3DGrabHandler != null)
-            {
-                // Turn入力: VRならControllerInputRouter.OnTurnInput、デスクトップならDesktopInputRouter.OnTurnInput
-                Observable<Vector2> turnInput = isDesktop
-                    ? desktopInput!.OnTurnInput
-                    : controllerInput!.OnTurnInput;
-                object3DGrabHandler.Initialize(
-                    input, controllerPose, leftHandRay, leftHandInput, turnInput);
-            }
-
-            if (uiRaycastDriver != null && sharedRaycastService != null)
-                uiRaycastDriver.Initialize(input, sharedRaycastService);
-
-            // 巻物メニューの初期化
-            if (scrollMenuVisual != null && _typeRegistry != null)
-            {
-                scrollMenuVisual.Initialize(_typeRegistry);
-
-                // ノード選択イベント: GraphContextのファクトリでノード生成
-                scrollMenuVisual.OnNodeTypeSelected += OnScrollMenuNodeSelected;
-            }
-
-            if (scrollMenuInteraction != null && scrollMenuVisual != null &&
-                sharedRaycastService != null)
-            {
-                scrollMenuInteraction.Initialize(
-                    input, leftHandRay, leftHandInput,
-                    sharedRaycastService, scrollMenuVisual);
-
-                if (isDesktop)
-                    scrollMenuInteraction.SetDesktopMode(true);
-
-                // メニューオープン中にエッジ接続を無効化するための連携
-                if (edgeDragHandler != null)
-                    scrollMenuInteraction.SetEdgeDragHandler(edgeDragHandler);
-
-                // メニュー状態変更時にエッジ切断・ノード削除・クリップ発火も無効化
-                // V3a: clipFireHandler 参照は XrSceneReferences へ移送 (Installer 化は V3c)。
-                scrollMenuInteraction.SetMenuStateCallback(isIdle =>
-                {
-                    edgeCutHandler?.SetEnabled(isIdle);
-                    nodeDeleteHandler?.SetEnabled(isIdle);
-                    sceneRefs?.ClipFireHandler?.SetEnabled(isIdle);
-                });
-            }
-
-            // Plan v5.3 Phase 5 Round E: SpatialIntentToCommandTranslator wiring。
-            // 3 handler (EdgeDrag / EdgeCut / NodeDelete) を intent emit に切替。
-            WireIntentSink();
-        }
+        // V3c: 旧 InitializeInteractionHandlers (~130 行) は Bootstrap asmdef の
+        // InteractionBootstrapWiring へ移送。GameBootstrap.InitializeSystems が
+        // _compositionRoot.InteractionWiring.Wire(graphContext, OnScrollMenuNodeSelected) で駆動する。
     }
 }

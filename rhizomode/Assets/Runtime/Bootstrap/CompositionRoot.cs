@@ -5,7 +5,6 @@ using Rhizomode.Bootstrap.Wiring;
 using Rhizomode.Graph.CatalogBridge;
 using Rhizomode.Graph.Runtime;
 using Rhizomode.Graph.Serialization;
-using Rhizomode.Interaction.GraphAdapter;
 using Rhizomode.Modules;
 using Rhizomode.NodeCatalog.Runtime;
 using Rhizomode.Observability.Runtime;
@@ -44,9 +43,6 @@ namespace Rhizomode.Bootstrap
         /// <summary>GraphInstaller が構築した合成ノード factory (CompositeNodeFactory)。</summary>
         public INodeFactory NodeFactory { get; }
 
-        /// <summary>GraphInstaller が構築した IntentSink (3 handler 用)。</summary>
-        public SpatialIntentToCommandTranslator IntentTranslator { get; }
-
         /// <summary>PersistenceInstaller が構築した GraphData I/O リポジトリ。</summary>
         public IGraphRepository GraphRepository { get; }
 
@@ -75,6 +71,14 @@ namespace Rhizomode.Bootstrap
         /// </summary>
         public ModuleLifecycleProcessor ModuleProcessor { get; }
 
+        /// <summary>
+        /// InteractionInstaller が構築した interaction handler wiring。
+        /// <see cref="InteractionBootstrapWiring.Wire"/> は GraphContextBehaviour と ScrollMenu の
+        /// ノード選択コールバックを要するため GameBootstrap が Awake で駆動する (一時的 Plan v5.4 違反 —
+        /// V-final で解消)。<see cref="InteractionBootstrapWiring.ActiveInput"/> は Wire 後に確定する。
+        /// </summary>
+        public InteractionBootstrapWiring InteractionWiring { get; }
+
         private GameObject? _scopeObject;
 
         public CompositionRoot(
@@ -82,25 +86,25 @@ namespace Rhizomode.Bootstrap
             NodeTypeRegistry typeRegistry,
             HealthAggregator healthAggregator,
             INodeFactory nodeFactory,
-            SpatialIntentToCommandTranslator intentTranslator,
             IGraphRepository graphRepository,
             GraphHydrator graphHydrator,
             ISavePathProvider savePathProvider,
             AbletonBootstrapWiring abletonWiring,
             NodeRuntime nodeRuntime,
-            ModuleLifecycleProcessor moduleProcessor)
+            ModuleLifecycleProcessor moduleProcessor,
+            InteractionBootstrapWiring interactionWiring)
         {
             _scopeObject = scopeObject;
             TypeRegistry = typeRegistry;
             HealthAggregator = healthAggregator;
             NodeFactory = nodeFactory;
-            IntentTranslator = intentTranslator;
             GraphRepository = graphRepository;
             GraphHydrator = graphHydrator;
             SavePathProvider = savePathProvider;
             AbletonWiring = abletonWiring;
             NodeRuntime = nodeRuntime;
             ModuleProcessor = moduleProcessor;
+            InteractionWiring = interactionWiring;
         }
 
         /// <summary>

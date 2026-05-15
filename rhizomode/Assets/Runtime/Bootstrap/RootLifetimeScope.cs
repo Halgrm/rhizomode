@@ -74,6 +74,9 @@ namespace Rhizomode.Bootstrap
             new AbletonInstaller(_sceneRefs).Install(builder);
             new ModulesInstaller(_modulePlacement, _object3DRegistry).Install(builder);
             new NodesInstaller().Install(builder);
+            new InputInstaller(_sceneRefs).Install(builder);
+            new InteractionGraphAdapterInstaller().Install(builder);
+            new InteractionInstaller().Install(builder);
             new EntryPointsInstaller(includeAudioDriver: _sceneRefs.AudioDriver != null).Install(builder);
         }
     }

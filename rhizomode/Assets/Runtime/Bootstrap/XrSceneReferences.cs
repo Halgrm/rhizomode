@@ -1,6 +1,9 @@
 #nullable enable
 
 using Rhizomode.Audio.GraphAdapter;
+using Rhizomode.Cameras;
+using Rhizomode.Input.Desktop;
+using Rhizomode.Input.XR;
 using Rhizomode.Modules;
 using Rhizomode.OscMidi.Transport;
 using Rhizomode.Ableton.Transport;
@@ -80,6 +83,25 @@ namespace Rhizomode.Bootstrap
         [Tooltip("Object3D prefab 一覧。CatalogInstaller が Object3D_ typeName / factory を登録。")]
         [SerializeField] private Object3DPrefabList? object3DPrefabs;
 
+        [Header("Input / Interaction (V3c)")]
+        [Tooltip("VR 入力ルーター。desktopInput がアクティブならそちらが優先される。")]
+        [SerializeField] private ControllerInputRouter? controllerInput;
+        [Tooltip("デスクトップデバッグ入力ルーター。GameObject がアクティブなら VR より優先。")]
+        [SerializeField] private DesktopInputRouter? desktopInput;
+        [SerializeField] private SharedRaycastService? sharedRaycastService;
+        [SerializeField] private NodeVisualManager? visualManager;
+        [SerializeField] private EdgeVisualManager? edgeVisualManager;
+        [SerializeField] private EdgeDragHandler? edgeDragHandler;
+        [SerializeField] private EdgeCutHandler? edgeCutHandler;
+        [SerializeField] private NodeDeleteHandler? nodeDeleteHandler;
+        [SerializeField] private NodeGrabHandler? nodeGrabHandler;
+        [SerializeField] private PathControlPointGrabHandler? pathControlPointGrabHandler;
+        [SerializeField] private PathControlPointVisualManager? pathEditorManager;
+        [SerializeField] private Object3DGrabHandler? object3DGrabHandler;
+        [SerializeField] private UIRaycastDriver? uiRaycastDriver;
+        [SerializeField] private ScrollMenuVisualController? scrollMenuVisual;
+        [SerializeField] private ScrollMenuInteractionHandler? scrollMenuInteraction;
+
         public AudioDriverBehaviour? AudioDriver => audioDriver;
         public AudioDeviceSelector? AudioDeviceSelector => audioDeviceSelector;
         public OscServer? OscServer => oscServer;
@@ -101,5 +123,20 @@ namespace Rhizomode.Bootstrap
         public AdditiveSceneLoader? SceneLoader => sceneLoader;
         public ModuleDefinition[]? ModuleDefinitions => moduleDefinitions;
         public Object3DPrefabList? Object3DPrefabs => object3DPrefabs;
+        public ControllerInputRouter? ControllerInput => controllerInput;
+        public DesktopInputRouter? DesktopInput => desktopInput;
+        public SharedRaycastService? SharedRaycastService => sharedRaycastService;
+        public NodeVisualManager? VisualManager => visualManager;
+        public EdgeVisualManager? EdgeVisualManager => edgeVisualManager;
+        public EdgeDragHandler? EdgeDragHandler => edgeDragHandler;
+        public EdgeCutHandler? EdgeCutHandler => edgeCutHandler;
+        public NodeDeleteHandler? NodeDeleteHandler => nodeDeleteHandler;
+        public NodeGrabHandler? NodeGrabHandler => nodeGrabHandler;
+        public PathControlPointGrabHandler? PathControlPointGrabHandler => pathControlPointGrabHandler;
+        public PathControlPointVisualManager? PathEditorManager => pathEditorManager;
+        public Object3DGrabHandler? Object3DGrabHandler => object3DGrabHandler;
+        public UIRaycastDriver? UIRaycastDriver => uiRaycastDriver;
+        public ScrollMenuVisualController? ScrollMenuVisual => scrollMenuVisual;
+        public ScrollMenuInteractionHandler? ScrollMenuInteraction => scrollMenuInteraction;
     }
 }
