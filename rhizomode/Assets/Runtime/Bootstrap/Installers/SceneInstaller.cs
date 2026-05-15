@@ -17,6 +17,9 @@ namespace Rhizomode.Bootstrap.Installers
     /// processor は IDisposable ではないため instance 登録。NodesInstaller が NodeRuntime の
     /// processor 配列へ明示順で組み込む。loader 未配置でも consumer ノードへ null を注入する
     /// fail-open 実装。
+    ///
+    /// F-Vf-a.1 Phase C: 旧 Bootstrap.Services.SceneObjectRegistrationService を Scene.GraphAdapter へ
+    /// 移送した <see cref="SceneObjectRegistrationService"/> も本 Installer で登録 (XRInstaller から移動)。
     /// </remarks>
     internal sealed class SceneInstaller : IInstaller
     {
@@ -30,6 +33,7 @@ namespace Rhizomode.Bootstrap.Installers
         public void Install(IContainerBuilder builder)
         {
             builder.RegisterInstance(new SceneLoaderLifecycleProcessor(_sceneRefs.SceneLoader));
+            builder.Register<SceneObjectRegistrationService>(Lifetime.Singleton);
         }
     }
 }

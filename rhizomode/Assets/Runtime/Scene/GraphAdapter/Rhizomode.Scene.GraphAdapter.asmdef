@@ -4,8 +4,12 @@
     "references": [
         "Rhizomode.SharedKernel",
         "Rhizomode.Scene.Contracts",
+        "Rhizomode.NodeCatalog.Contracts",
+        "Rhizomode.NodeCatalog.Runtime",
+        "Rhizomode.Nodes.Scene",
         "Rhizomode.Graph.Model",
-        "Rhizomode.Graph.Runtime"
+        "Rhizomode.Graph.Runtime",
+        "Rhizomode.UI.Presentation"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

@@ -21,6 +21,9 @@ namespace Rhizomode.Bootstrap.Installers
     ///
     /// <see cref="ModuleLifecycleProcessor"/> は IDisposable のため <see cref="Lifetime.Singleton"/> 登録で
     /// container が生成・所有・Dispose する。NodesInstaller が NodeRuntime の processor 配列へ組み込む。
+    ///
+    /// F-Vf-a.1 Phase B: 旧 Bootstrap.Services.Object3DProxyBindService を Modules.Runtime へ移送した
+    /// <see cref="Object3DProxyBindService"/> も本 Installer で登録 (XRInstaller から移動)。
     /// </remarks>
     internal sealed class ModulesInstaller : IInstaller
     {
@@ -33,6 +36,7 @@ namespace Rhizomode.Bootstrap.Installers
                 .AsImplementedInterfaces()
                 .AsSelf();
             builder.Register<ModuleLifecycleProcessor>(Lifetime.Singleton);
+            builder.Register<Object3DProxyBindService>(Lifetime.Singleton);
         }
     }
 }

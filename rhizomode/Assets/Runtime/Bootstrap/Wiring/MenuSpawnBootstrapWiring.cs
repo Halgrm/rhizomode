@@ -1,7 +1,10 @@
 #nullable enable
 
 using Rhizomode.Input.Contracts;
+using Rhizomode.Interaction;
+using Rhizomode.Modules;
 using Rhizomode.Nodes.Modules;
+using Rhizomode.UI;
 using UnityEngine;
 
 namespace Rhizomode.Bootstrap.Wiring
@@ -76,9 +79,13 @@ namespace Rhizomode.Bootstrap.Wiring
             // Object3D の Proxy 観測 bind
             if (spawnResult.Node is Object3DNode obj3d) _proxyBindService.Bind(obj3d);
 
-            // visual 創出 + 入力ノード自動 spawn の visual 構築
+            // visual 創出 + 入力ノード自動 spawn (graph mutation) + その visual 構築。
+            // Plan v5.4 §15 F-Vf-a.1 Phase A/D: graph mutation (SpawnInputNodes) は Rhizomode.Interaction が担当、
+            // visual creation (SpawnInputVisuals) は Rhizomode.UI.GraphAdapter が担当 — 結果データ
+            // (InputSpawnResult list) のみ本 wiring が橋渡しする。
             _menuCoordinator.CreatePrimaryVisual(spawnResult.Node, spawnResult.Position, headPos);
-            _menuCoordinator.SpawnInputVisuals(spawnResult.Node, spawnResult.Position, headPos);
+            var inputResults = _nodeSpawnService.SpawnInputNodes(spawnResult.Node, spawnResult.Position, headPos);
+            _menuCoordinator.SpawnInputVisuals(inputResults, headPos);
 
             Debug.Log($"[MenuSpawnBootstrapWiring] Node setup complete: {spawnResult.Node.NodeType}");
         }

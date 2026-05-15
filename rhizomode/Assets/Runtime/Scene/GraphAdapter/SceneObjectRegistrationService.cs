@@ -11,19 +11,18 @@ using UnityEngine;
 using Rhizomode.NodeCatalog.Contracts;
 using Rhizomode.NodeCatalog.Runtime;
 
-namespace Rhizomode.Bootstrap
+namespace Rhizomode.Scene.GraphAdapter
 {
     /// <summary>
-    /// シーン上の <see cref="SceneObjectBridge"/> を検出して SceneObjectNode を auto-spawn する service。
+    /// シーン上の <c>SceneObjectBridge</c> (Rhizomode.UI) を検出して SceneObjectNode を auto-spawn する service。
     /// </summary>
     /// <remarks>
-    /// Plan v5.4 V-final (Vf-a): 旧 Rhizomode.XR.SceneObjectRegistrationService を Bootstrap asmdef へ verbatim 移送。
-    /// Plan v5.4 §15 「Bootstrap は業務ロジック禁止」に対する transitional 違反 (F-Vf-a.1) —
-    /// 本来 Scene.GraphAdapter へ置くべきだが NodeTypeRegistry (NodeCatalog.Runtime) と
-    /// SceneObjectBridge (Nodes.Scene) への参照を要するため Bootstrap に集約。
+    /// Plan v5.4 §15 F-Vf-a.1 Phase C: 旧 Rhizomode.Bootstrap.SceneObjectRegistrationService を
+    /// Scene.GraphAdapter asmdef へ移送。Scene.GraphAdapter の asmdef refs に
+    /// NodeCatalog.Contracts/Runtime + Nodes.Scene + UI.Presentation を追加することで本来の所属層へ集約した。
     ///
     /// graph mutation 部 (type 登録 + 各 bridge に対する node 生成 + RegisterNode) を担当。
-    /// visual 創出 + orientation は <see cref="SceneObjectsBootstrapWiring"/> が担当。
+    /// visual 創出 + orientation は <c>SceneObjectsBootstrapWiring</c> (Bootstrap.Wiring) が担当。
     /// </remarks>
     public sealed class SceneObjectRegistrationService
     {

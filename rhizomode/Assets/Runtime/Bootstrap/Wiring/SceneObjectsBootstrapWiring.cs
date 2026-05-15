@@ -1,6 +1,7 @@
 #nullable enable
 
 using Rhizomode.Input.Contracts;
+using Rhizomode.Scene.GraphAdapter;
 using Rhizomode.UI;
 using UnityEngine;
 

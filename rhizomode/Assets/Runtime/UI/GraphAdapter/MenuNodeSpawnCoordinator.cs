@@ -1,38 +1,36 @@
 #nullable enable
 
+using System.Collections.Generic;
 using Rhizomode.Graph.Model;
 using Rhizomode.SharedKernel;
-using Rhizomode.UI;
 using Rhizomode.UI.Contracts;
 using UnityEngine;
 
-namespace Rhizomode.Bootstrap
+namespace Rhizomode.UI
 {
     /// <summary>
     /// ScrollMenu 選択経由でノード spawn が成立した後の visual 創出を担う coordinator。
     /// </summary>
     /// <remarks>
-    /// Plan v5.4 V-final (Vf-a): 旧 Rhizomode.XR.MenuNodeSpawnCoordinator を Bootstrap asmdef へ verbatim 移送。
-    /// Plan v5.4 §15 「Bootstrap は業務ロジック禁止」に対する transitional 違反 (F-Vf-a.1) —
-    /// 本来 UI.GraphAdapter へ置くべきだが NodeVisualManager / EdgeVisualManager の創出を扱うため
-    /// Bootstrap に集約。
+    /// Plan v5.4 §15 F-Vf-a.1 Phase A: 旧 Rhizomode.Bootstrap.MenuNodeSpawnCoordinator を UI.GraphAdapter
+    /// asmdef へ移送。同時に NodeSpawnService への直接依存を解消し、graph mutation 結果
+    /// (<see cref="InputSpawnResult"/> リスト) を caller から受け取る形に変更
+    /// — 本 coordinator は純粋な visual side-effects のみを担当する。
     ///
-    /// graph mutation は <see cref="NodeSpawnService"/> が担当。本 coordinator は visual side-effects のみ。
+    /// graph mutation は <c>Rhizomode.Bootstrap.NodeSpawnService</c> (Phase D で
+    /// Interaction.GraphAdapter へ移送予定) が担当。
     /// </remarks>
     public sealed class MenuNodeSpawnCoordinator
     {
         private readonly NodeVisualManager _visualManager;
         private readonly EdgeVisualManager _edgeVisualManager;
-        private readonly NodeSpawnService _nodeSpawnService;
 
         public MenuNodeSpawnCoordinator(
             NodeVisualManager visualManager,
-            EdgeVisualManager edgeVisualManager,
-            NodeSpawnService nodeSpawnService)
+            EdgeVisualManager edgeVisualManager)
         {
             _visualManager = visualManager;
             _edgeVisualManager = edgeVisualManager;
-            _nodeSpawnService = nodeSpawnService;
         }
 
         /// <summary>
@@ -50,17 +48,16 @@ namespace Rhizomode.Bootstrap
         /// <summary>
         /// 主ノードの入力ポートに対する自動 spawn (Const/Toggle/Trigger) の visual 群を生成する。
         /// </summary>
-        public void SpawnInputVisuals(NodeBase targetNode, Vector3 nodePos, Vector3 headPos)
+        /// <param name="results">caller が NodeSpawnService.SpawnInputNodes で得た mutation 結果。</param>
+        /// <param name="headPos">プレイヤー head 位置 (visual rotation 計算用)。</param>
+        public void SpawnInputVisuals(IReadOnlyList<InputSpawnResult> results, Vector3 headPos)
         {
-            var results = _nodeSpawnService.SpawnInputNodes(targetNode, nodePos, headPos);
             foreach (var r in results)
             {
-                // Source ノード (Const/Toggle) の visual
                 var sourceVisual = _visualManager.CreateNodeVisual(new NodeViewAdapter(r.Source), r.SourcePosition);
                 if (sourceVisual != null)
                     sourceVisual.transform.rotation = Quaternion.LookRotation(r.SourcePosition - headPos);
 
-                // Source → target 間の edge visual (接続成功時のみ)
                 if (r.PrimaryEdge != null)
                 {
                     var pe = r.PrimaryEdge;
@@ -69,7 +66,6 @@ namespace Rhizomode.Bootstrap
                         r.PortType);
                 }
 
-                // Trigger ノードがあれば visual + edge visual
                 if (r.TriggerNode != null)
                 {
                     var triggerVisual = _visualManager.CreateNodeVisual(new NodeViewAdapter(r.TriggerNode), r.TriggerPosition);

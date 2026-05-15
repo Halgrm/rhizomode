@@ -1,13 +1,14 @@
 #nullable enable
 
 using Rhizomode.Bootstrap.Wiring;
+using Rhizomode.Interaction;
 using VContainer;
 using VContainer.Unity;
 
 namespace Rhizomode.Bootstrap.Installers
 {
     /// <summary>
-    /// VContainer Installer — Interaction bounded context の wiring を登録する。
+    /// VContainer Installer — Interaction bounded context の wiring + service を登録する。
     /// </summary>
     /// <remarks>
     /// Plan v5.4 §15 の <c>InteractionInstaller</c>。V3c で GameBootstrap.InitializeInteractionHandlers
@@ -16,15 +17,15 @@ namespace Rhizomode.Bootstrap.Installers
     /// ModuleLifecycleProcessor / SpatialIntentToCommandTranslator は他 Installer が登録済 — VContainer の
     /// ctor injection で解決される。
     ///
-    /// <see cref="InteractionBootstrapWiring.Wire"/> は GraphContextBehaviour と ScrollMenu の
-    /// ノード選択コールバックを transitional に要するため Build 後即時には駆動できない。GameBootstrap が
-    /// CompositionRoot 経由で駆動する (一時的 Plan v5.4 違反 — V-final で解消)。
+    /// F-Vf-a.1 Phase D: 旧 Bootstrap.Services.NodeSpawnService を Rhizomode.Interaction へ移送した
+    /// <see cref="NodeSpawnService"/> も本 Installer で登録 (XRInstaller から移動)。
     /// </remarks>
     internal sealed class InteractionInstaller : IInstaller
     {
         public void Install(IContainerBuilder builder)
         {
             builder.Register<InteractionBootstrapWiring>(Lifetime.Singleton);
+            builder.Register<NodeSpawnService>(Lifetime.Singleton);
         }
     }
 }

@@ -10,22 +10,27 @@ using Rhizomode.Nodes.Modules;
 using Rhizomode.Nodes.Input;
 using Rhizomode.Nodes.Time;
 using Rhizomode.Nodes.Utility;
+using Rhizomode.UI;
 using UnityEngine;
 
-namespace Rhizomode.Bootstrap
+namespace Rhizomode.Interaction
 {
     /// <summary>
     /// ScrollMenu 選択 + Const/Toggle/Trigger 自動 spawn の graph mutation ロジックを集約する service。
     /// </summary>
     /// <remarks>
-    /// Plan v5.4 V-final (Vf-a): 旧 Rhizomode.XR.NodeSpawnService を Bootstrap asmdef へ verbatim 移送。
-    /// Plan v5.4 §15 「Bootstrap は業務ロジック禁止」に対する transitional 違反 (F-Vf-a.1) —
-    /// 本来 Interaction.GraphAdapter へ置くべきだが Nodes.Input/Time/Utility/Modules への参照が必要なため
-    /// Bootstrap に集約する。Vf-final 後の整理 phase で各 GraphAdapter asmdef へ細分化する。
+    /// Plan v5.4 §15 F-Vf-a.1 Phase D: 旧 Rhizomode.Bootstrap.NodeSpawnService を Rhizomode.Interaction
+    /// asmdef へ移送 (Interaction asmdef は Nodes.Standard / Modules.Runtime / Graph.Model/Runtime 全てを
+    /// 参照済 — ScrollMenu 入力を graph mutation へ翻訳する layer として本来の所属先)。
+    ///
+    /// 将来 IGraphCommand 経由 (AddNodeFromMenuCommand + AutoSpawnInputsCommand) へ refactor する候補は
+    /// CODEX_DEFERRED_FINDINGS.md に F-Vf-d.1 として記録。現状は直接 NodeRuntime.RegisterNode + AddEdge を
+    /// 呼ぶ実装を保持 (ModuleNodeBase.IsEvent + ConstFloatNode/ConstColorNode の初期値再発行など、
+    /// Graph.Mutation Applier から抽象化困難な箇所が残るため)。
     ///
     /// graph mutation 部 (NodeRuntime.RegisterNode + AddEdge) を担当、visual 創出 (NodeVisualManager /
-    /// EdgeVisualManager) は <see cref="MenuNodeSpawnCoordinator"/> が担当 — service は "data 層"、
-    /// coordinator は "UI 反映層"。
+    /// EdgeVisualManager) は <see cref="Rhizomode.UI.MenuNodeSpawnCoordinator"/> (UI.GraphAdapter) が
+    /// 担当 — service は "data 層"、coordinator は "UI 反映層"。
     /// </remarks>
     public sealed class NodeSpawnService
     {
@@ -183,16 +188,4 @@ namespace Rhizomode.Bootstrap
 
     /// <summary>ScrollMenu spawn 結果 (visual 創出は coordinator が担当)。</summary>
     public sealed record SpawnResult(NodeBase Node, Vector3 Position);
-
-    /// <summary>
-    /// 入力 spawn の 1 件分。Toggle 入力の場合は <see cref="TriggerNode"/> も入る。
-    /// </summary>
-    public sealed record InputSpawnResult(
-        NodeBase Source,
-        Vector3 SourcePosition,
-        ParamType PortType,
-        Edge? PrimaryEdge,
-        NodeBase? TriggerNode,
-        Vector3 TriggerPosition,
-        Edge? TriggerEdge);
 }

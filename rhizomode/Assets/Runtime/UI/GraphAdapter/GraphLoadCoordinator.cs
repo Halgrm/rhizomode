@@ -4,20 +4,18 @@ using System.Collections.Generic;
 using Rhizomode.Graph.Model;
 using Rhizomode.Input.Contracts;
 using Rhizomode.SharedKernel;
-using Rhizomode.UI;
 using Rhizomode.UI.Contracts;
 using UnityEngine;
 
-namespace Rhizomode.Bootstrap
+namespace Rhizomode.UI
 {
     /// <summary>
     /// グラフロード完了時のビジュアル再構築を担う coordinator。
     /// </summary>
     /// <remarks>
-    /// Plan v5.4 V-final (Vf-a): 旧 Rhizomode.XR.GraphLoadCoordinator を Bootstrap asmdef へ verbatim 移送。
-    /// Plan v5.4 §15 「Bootstrap は業務ロジック禁止」に対する transitional 違反 (F-Vf-a.1) —
-    /// 本来 UI.GraphAdapter へ置くべきだが NodeVisualManager / EdgeVisualManager (Rhizomode.UI asmdef)
-    /// + NodeViewAdapter (UI.GraphAdapter) の両方を要するため Bootstrap に集約。
+    /// Plan v5.4 §15 F-Vf-a.1 Phase A: 旧 Rhizomode.Bootstrap.GraphLoadCoordinator を UI.GraphAdapter asmdef へ
+    /// 移送 (NodeVisualManager / EdgeVisualManager は Rhizomode.UI asmdef、NodeViewAdapter は UI.GraphAdapter
+    /// asmdef — UI.GraphAdapter は両方を参照済のため adapter 層として自然な所属先)。
     /// </remarks>
     public sealed class GraphLoadCoordinator
     {
