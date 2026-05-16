@@ -26,6 +26,10 @@ namespace Rhizomode.Graph.Model
         private readonly Dictionary<string, NodeBase> _nodes = new();
         private readonly List<Edge> _edges = new();
         private readonly Dictionary<string, Func<string, NodeBase>> _nodeFactories = new();
+        // N1 fix (2026-05-16): constructor 依存ノード (SceneObjectNode 等) 用に paramsJson を
+        // 受け取るファクトリも別系統で登録できる。Deserialize/MergePreset で paramsJson が
+        // ある場合に優先して使われる。
+        private readonly Dictionary<string, Func<string, string, NodeBase>> _nodeFactoriesWithParams = new();
 
         public IReadOnlyDictionary<string, NodeBase> Nodes => _nodes;
         public IReadOnlyList<Edge> Edges => _edges;
@@ -41,19 +45,49 @@ namespace Rhizomode.Graph.Model
         }
 
         /// <summary>
+        /// constructor で paramsJson を必要とするノード (SceneObjectNode 等) 用のファクトリを登録する。
+        /// </summary>
+        /// <remarks>
+        /// N1 fix: 旧 <see cref="RegisterNodeFactory(string, Func{string, NodeBase})"/> は (id) のみを
+        /// 渡すため、constructor 引数で port 構成が決まるノードは Restore 時に元の構成を再現できなかった。
+        /// 本 overload は (id, paramsJson) を渡し、factory が paramsJson を parse して正しい引数を渡せる。
+        /// Deserialize / MergePreset は paramsJson 付き factory がある type を優先する。
+        /// </remarks>
+        public void RegisterNodeFactory(string nodeType, Func<string, string, NodeBase> factory)
+        {
+            _nodeFactoriesWithParams[nodeType] = factory;
+        }
+
+        /// <summary>
         /// ファクトリを使ってノードを生成する。登録は行わない。
         /// 未登録のタイプの場合はnullを返す。
         /// </summary>
         public NodeBase? CreateNode(string nodeType)
         {
-            if (!_nodeFactories.TryGetValue(nodeType, out var factory))
+            if (_nodeFactories.TryGetValue(nodeType, out var factory))
             {
-                Debug.LogWarning($"[GraphState] No factory for node type: {nodeType}");
-                return null;
+                var nodeId = Guid.NewGuid().ToString();
+                return factory(nodeId);
             }
+            if (_nodeFactoriesWithParams.TryGetValue(nodeType, out var paramFactory))
+            {
+                var nodeId = Guid.NewGuid().ToString();
+                return paramFactory(nodeId, string.Empty);
+            }
+            Debug.LogWarning($"[GraphState] No factory for node type: {nodeType}");
+            return null;
+        }
 
-            var nodeId = Guid.NewGuid().ToString();
-            return factory(nodeId);
+        /// <summary>
+        /// paramsJson を伴うファクトリ呼び出し (Deserialize/MergePreset 内部用)。
+        /// </summary>
+        private NodeBase? InvokeFactory(string nodeType, string nodeId, string paramsJson)
+        {
+            if (_nodeFactoriesWithParams.TryGetValue(nodeType, out var paramFactory))
+                return paramFactory(nodeId, paramsJson);
+            if (_nodeFactories.TryGetValue(nodeType, out var factory))
+                return factory(nodeId);
+            return null;
         }
 
         /// <summary>
@@ -331,7 +365,8 @@ namespace Rhizomode.Graph.Model
 
                 foreach (var nodeData in data.nodes)
                 {
-                    if (!_nodeFactories.TryGetValue(nodeData.type, out var factory))
+                    var node = InvokeFactory(nodeData.type, nodeData.id, nodeData.paramsJson);
+                    if (node == null)
                     {
                         Debug.LogWarning($"[GraphState] Unknown node type: {nodeData.type}");
                         continue;
@@ -339,7 +374,6 @@ namespace Rhizomode.Graph.Model
 
                     try
                     {
-                        var node = factory(nodeData.id);
                         node.Position = nodeData.ToVector3();
                         node.RestoreParamsFromJson(nodeData.paramsJson);
                         RegisterNode(node);
@@ -372,8 +406,8 @@ namespace Rhizomode.Graph.Model
                 Clear();
                 foreach (var nodeData in backup.nodes)
                 {
-                    if (!_nodeFactories.TryGetValue(nodeData.type, out var factory)) continue;
-                    var node = factory(nodeData.id);
+                    var node = InvokeFactory(nodeData.type, nodeData.id, nodeData.paramsJson);
+                    if (node == null) continue;
                     node.Position = nodeData.ToVector3();
                     node.RestoreParamsFromJson(nodeData.paramsJson);
                     RegisterNode(node);
@@ -412,7 +446,8 @@ namespace Rhizomode.Graph.Model
             {
                 var newId = idMap[nodeData.id];
 
-                if (!_nodeFactories.TryGetValue(nodeData.type, out var factory))
+                var node = InvokeFactory(nodeData.type, newId, nodeData.paramsJson);
+                if (node == null)
                 {
                     Debug.LogWarning($"[GraphState] MergePreset: Unknown node type '{nodeData.type}'");
                     continue;
@@ -420,7 +455,6 @@ namespace Rhizomode.Graph.Model
 
                 try
                 {
-                    var node = factory(newId);
                     var pos = nodeData.ToVector3() + spawnOffset;
                     node.Position = pos;
                     node.RestoreParamsFromJson(nodeData.paramsJson);

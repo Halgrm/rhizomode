@@ -17,9 +17,10 @@ namespace Rhizomode.Bootstrap.Installers
     /// 登録するもの (Vf-d):
     /// <list type="bullet">
     ///   <item><see cref="AudioDriverHost"/> — Lifetime.Singleton で構築。
-    ///     AudioAnalyzer + GraphContextBehaviour を ctor 注入で受け取る (両者は
-    ///     RootLifetimeScope.Configure が container に RegisterInstance 済)。
-    ///     AudioDriverHostTickAdapter が ITickable から resolve する。</item>
+    ///     AudioAnalyzer + GraphState を ctor 注入で受け取る (両者は GraphInstaller / RootLifetimeScope が
+    ///     container に RegisterInstance 済)。AudioDriverHostTickAdapter が ITickable から resolve する。
+    ///     N3 fix (2026-05-16): GraphContextBehaviour 経由から GraphState 直接注入に変更し、
+    ///     Audio.GraphAdapter の Rhizomode.UI 直依存を解消した。</item>
     ///   <item><see cref="AudioDeviceSelectorWiring"/> — Lifetime.Singleton (container が Dispose)</item>
     ///   <item><see cref="AudioAnalyzerHealth"/> — IHealthMonitor として登録、Build 後に HealthAggregator へ</item>
     /// </list>

@@ -188,7 +188,7 @@ namespace Rhizomode.Nodes.Scene
         public override NodeData ToNodeData()
         {
             var data = base.ToNodeData();
-            data.paramsJson = JsonUtility.ToJson(new SceneObjectParams
+            data.paramsJson = JsonUtility.ToJson(new PersistedParams
             {
                 objectName = _objectName,
                 exposePosition = _exposePosition,
@@ -198,27 +198,23 @@ namespace Rhizomode.Nodes.Scene
             return data;
         }
 
-        /// <inheritdoc />
+        /// <summary>
+        /// JSON 復元処理。port 構成は constructor で確定するため、factory 側
+        /// (<c>SceneObjectRegistrationService.RegisterTypeAndFactory</c>) で paramsJson を pre-parse して
+        /// 正しい引数で <c>new SceneObjectNode</c> する責務を持つ (N1 fix)。
+        /// 本メソッドは追加の internal state 復元のための hook (現状は no-op)。
+        /// </summary>
         public override void RestoreParamsFromJson(string paramsJson)
         {
-            if (string.IsNullOrEmpty(paramsJson)) return;
-            try
-            {
-                // SceneObjectNodeのポート構成はコンストラクタで確定しているため、
-                // ここではファクトリ側でexposeフラグを復元してからnewする必要がある。
-                // 現在のファクトリは固定値(true,true,true)で生成するため、
-                // 実際のポート構成と異なる場合がありうる点に注意。
-                // → ファクトリ側でRestoreParamsFromJson相当のプレパースを行うのが正解だが、
-                //    現状はSceneObjectはランタイム自動生成のみでJSONロード非対応。
-            }
-            catch (Exception)
-            {
-                // 破損したJSONは無視
-            }
+            // ports / objectName / expose flags はすべて constructor で確定済 (factory が pre-parse して渡す)。
+            // 追加の internal state 復元が必要になったらここに足す (例: _size の persisted 初期値 等)。
         }
 
+        /// <summary>
+        /// SceneObjectNode の paramsJson 表現。factory 側で pre-parse するため公開する (N1 fix)。
+        /// </summary>
         [Serializable]
-        private struct SceneObjectParams
+        public struct PersistedParams
         {
             public string objectName;
             public bool exposePosition;

@@ -4,6 +4,11 @@
     "references": [
         "Rhizomode.SharedKernel",
         "Rhizomode.Graph.Model",
+        "Rhizomode.Graph.Snapshot",
+        "Rhizomode.Graph.Events",
+        "Rhizomode.Graph.CatalogBridge",
+        "Rhizomode.Graph.Mutation",
+        "Rhizomode.Graph.Runtime",
         "Rhizomode.Graph.Serialization",
         "Rhizomode.NodeCatalog.Contracts",
         "Rhizomode.NodeCatalog.Runtime",

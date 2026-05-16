@@ -87,7 +87,7 @@ namespace Rhizomode.Editor
         // Rule implementations (限定有効化、現状違反なし)
         // ---------------------------------------------------------------
 
-        private const int EnabledRuleCount = 10;
+        private const int EnabledRuleCount = 11;
 
         private static string[] ValidateAll()
         {
@@ -159,6 +159,15 @@ namespace Rhizomode.Editor
 
             // Rule 7: Bootstrap is the ONLY asmdef referencing VContainer
             violations.AddRange(CheckVContainerOnlyBootstrap());
+
+            // Rule 7b (2026-05-16, N3 fix): Audio.GraphAdapter ⊄ UI 直依存
+            // AudioDriverHost を GraphContextBehaviour 経由から GraphState 直接注入に切替済。
+            violations.AddRange(CheckNoReferences(
+                "Rhizomode.Audio.GraphAdapter",
+                forbidden: new[]
+                {
+                    "Rhizomode.UI", "Rhizomode.UI.Contracts", "Rhizomode.UI.Presentation", "Rhizomode.UI.GraphAdapter"
+                }));
 
             // Rule 8 (Phase 9 Round F3): UI.Presentation ⊄ Graph.Model / Graph.Serialization
             // Plan v5.3 完了条件「UI.Presentation 配下から Graph.* 参照 0 件」を CI で固定。

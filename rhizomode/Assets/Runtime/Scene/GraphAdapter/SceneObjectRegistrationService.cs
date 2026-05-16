@@ -44,14 +44,42 @@ namespace Rhizomode.Scene.GraphAdapter
         /// SceneObject タイプを <see cref="NodeTypeRegistry"/> に登録し、復元 factory を <see cref="GraphState"/>
         /// に登録する。Bootstrap 起動時に 1 度だけ呼ぶ。
         /// </summary>
+        /// <remarks>
+        /// N1 fix (2026-05-16): paramsJson を受け取る factory overload を使い、保存時の objectName /
+        /// expose flags を正しく復元する。target Transform は bridge 再連結で設定されるため null のまま OK。
+        /// </remarks>
         public void RegisterTypeAndFactory()
         {
             _typeRegistry.Register(new NodeTypeInfo(
                 SceneObjectTypeName, "Scene Object", NodeCategory.Utility));
 
-            // デシリアライズ用 factory (実体 target は bridge 再連結で設定されるため、ここでは仮の引数)
-            _graphState.RegisterNodeFactory(SceneObjectTypeName, id =>
-                new SceneObjectNode(id, "Restored", true, true, true));
+            _graphState.RegisterNodeFactory(SceneObjectTypeName,
+                (Func<string, string, NodeBase>)((id, paramsJson) =>
+                {
+                    var (objectName, exposePos, exposeRot, exposeScale) = ParseSceneObjectParams(paramsJson);
+                    return new SceneObjectNode(id, objectName, exposePos, exposeRot, exposeScale);
+                }));
+        }
+
+        /// <summary>
+        /// paramsJson から SceneObjectNode constructor 引数を取り出す。失敗時は全 expose true で fail-open。
+        /// </summary>
+        private static (string ObjectName, bool ExposePos, bool ExposeRot, bool ExposeScale)
+            ParseSceneObjectParams(string paramsJson)
+        {
+            if (string.IsNullOrEmpty(paramsJson))
+                return ("Restored", true, true, true);
+            try
+            {
+                var p = UnityEngine.JsonUtility.FromJson<SceneObjectNode.PersistedParams>(paramsJson);
+                return (
+                    string.IsNullOrEmpty(p.objectName) ? "Restored" : p.objectName,
+                    p.exposePosition, p.exposeRotation, p.exposeScale);
+            }
+            catch
+            {
+                return ("Restored", true, true, true);
+            }
         }
 
         /// <summary>

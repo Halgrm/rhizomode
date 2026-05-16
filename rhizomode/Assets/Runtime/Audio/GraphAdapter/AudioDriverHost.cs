@@ -4,7 +4,6 @@ using System.Collections.Generic;
 using Rhizomode.Audio.Analysis;
 using Rhizomode.Graph.Model;
 using Rhizomode.Nodes.Audio;
-using Rhizomode.UI;
 using UnityEngine;
 
 namespace Rhizomode.Audio.GraphAdapter
@@ -15,19 +14,17 @@ namespace Rhizomode.Audio.GraphAdapter
     /// </summary>
     /// <remarks>
     /// Plan v5.3 Phase 10D: 旧 AudioDriverBehaviour (MonoBehaviour) から純粋ロジックを抽出。
-    /// MonoBehaviour 側 (<see cref="AudioDriverBehaviour"/>) は Update() で <see cref="Tick"/> を
-    /// 呼ぶ thin wrapper となる。将来 Phase 5/12 の VContainer ITickable 移行時、Bootstrap
-    /// 側で <c>AudioDriverHostTickAdapter</c> として直接 wrap できるようにする (Plan v5.3
-    /// line 327 の tick 順序 #2)。
+    /// 将来 Phase 5/12 の VContainer ITickable 移行時、Bootstrap 側で
+    /// <c>AudioDriverHostTickAdapter</c> として直接 wrap できる (Plan v5.3 line 327 の tick 順序 #2)。
     ///
-    /// 一時 Plan v5.3 違反 (Phase 5/12 で解消):
-    /// - Audio.GraphAdapter が UI / UI.Presentation を参照 (旧 AudioDriverBehaviour 時点から、
-    ///   メモリ project_refactor_v4.md 記録済)
+    /// N3 fix (2026-05-16): UI / UI.Presentation 直依存を撤去。<see cref="GraphContextBehaviour"/> 経由
+    /// だった graph アクセスを <see cref="GraphState"/> 直接注入に切り替え、asmdef refs から
+    /// <c>Rhizomode.UI</c> / <c>Rhizomode.UI.Presentation</c> を削除した。
     /// </remarks>
     public sealed class AudioDriverHost
     {
         private readonly AudioAnalyzer _analyzer;
-        private readonly GraphContextBehaviour _graphContext;
+        private readonly GraphState _graphState;
         private readonly List<AudioTriggerNode> _audioNodeBuffer = new();
         private readonly List<AudioDeviceNode> _deviceNodeBuffer = new();
         private readonly List<AudioMonitorNode> _monitorNodeBuffer = new();
@@ -36,10 +33,10 @@ namespace Rhizomode.Audio.GraphAdapter
         private readonly float[] _waveformBuffer = new float[64];
         private readonly float[] _spectrumBuffer = new float[64];
 
-        public AudioDriverHost(AudioAnalyzer analyzer, GraphContextBehaviour graphContext)
+        public AudioDriverHost(AudioAnalyzer analyzer, GraphState graphState)
         {
             _analyzer = analyzer;
-            _graphContext = graphContext;
+            _graphState = graphState;
         }
 
         /// <summary>
@@ -75,7 +72,7 @@ namespace Rhizomode.Audio.GraphAdapter
             _bandNodeBuffer.Clear();
             _spectrumMonitorBuffer.Clear();
 
-            foreach (var node in _graphContext.Context.Nodes.Values)
+            foreach (var node in _graphState.Nodes.Values)
             {
                 switch (node)
                 {

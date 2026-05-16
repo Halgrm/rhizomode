@@ -7,9 +7,7 @@
         "Rhizomode.Audio.Analysis",
         "Rhizomode.Observability.Contracts",
         "Rhizomode.Graph.Model",
-        "Rhizomode.Nodes.Audio",
-        "Rhizomode.UI",
-        "Rhizomode.UI.Presentation"
+        "Rhizomode.Nodes.Audio"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

@@ -2,10 +2,6 @@
 
 using UnityEngine;
 
-using Rhizomode.NodeCatalog.Contracts;
-using Rhizomode.NodeCatalog.Runtime;
-using Rhizomode.Input.Contracts;
-
 namespace Rhizomode.XR
 {
     /// <summary>

@@ -2,19 +2,10 @@
 
 using System;
 using System.Collections.Generic;
-using Rhizomode.SharedKernel;
 using Rhizomode.Graph.Model;
 using Rhizomode.Modules;
-using Rhizomode.Nodes.Ableton;
-using Rhizomode.Nodes.OscMidi;
-using Rhizomode.Nodes.Audio;
 using Rhizomode.Nodes.Scene;
-using Rhizomode.Nodes.Generators;
-using Rhizomode.Nodes.Input;
-using Rhizomode.Nodes.Math;
 using Rhizomode.Nodes.Modules;
-using Rhizomode.Nodes.Time;
-using Rhizomode.Nodes.Utility;
 using UnityEngine;
 
 using Rhizomode.NodeCatalog.Contracts;
@@ -38,50 +29,20 @@ namespace Rhizomode.Bootstrap
     internal sealed class NodeRegistrationOrchestrator
     {
         /// <summary>
-        /// 静的ノード factory 辞書。typeName → factory delegate。
-        /// SceneDark/SceneWhite/SceneNature の 3 件は Phase 5 で SceneTriggerCatalog SO に
-        /// 置換予定だがハードコードで残置 (旧 GameBootstrap.NodeFactoryMap と同一)。
+        /// 動的 ctor 引数を持つノードの手動 factory 辞書。Scanner では [NodeType] と 1:1 で対応しない
+        /// (1 クラス→複数 typeName) ノードを別管理する。
         /// </summary>
-        private static readonly Dictionary<string, Func<string, NodeBase>> StaticFactoryMap = new()
+        /// <remarks>
+        /// N2 fix (2026-05-16): 旧 StaticFactoryMap (35+ entries) を <see cref="NodeTypeAttributeScanner"/>
+        /// 出力に一本化。新ノード追加時に本 orchestrator を触らずに済むようになった。
+        /// 残置: SceneTriggerNode は 1 クラスを 3 typeName (Dark/White/Nature) に展開するため、
+        /// 別 ctor 引数が必要 → 個別 factory のままにする。
+        /// </remarks>
+        private static readonly Dictionary<string, Func<string, NodeBase>> DynamicCtorFactoryMap = new()
         {
-            ["ConstFloat"] = id => new ConstFloatNode(id),
-            ["ConstColor"] = id => new ConstColorNode(id),
-            ["AudioDevice"] = id => new AudioDeviceNode(id),
-            ["AudioTrigger"] = id => new AudioTriggerNode(id),
-            ["BeatDetector"] = id => new BeatDetectorNode(id),
-            ["TapTempo"] = id => new TapTempoNode(id),
-            ["OscReceiver"] = id => new OscReceiverNode(id),
-            ["MidiCC"] = id => new MidiCCNode(id),
-            ["Multiply"] = id => new MultiplyNode(id),
-            ["Smooth"] = id => new SmoothNode(id),
-            ["Time"] = id => new TimeNode(id),
-            ["LFO"] = id => new LfoNode(id),
-            ["Noise"] = id => new NoiseNode(id),
-            ["Threshold"] = id => new ThresholdNode(id),
-            ["Toggle"] = id => new ToggleNode(id),
-            ["AudioMonitor"] = id => new AudioMonitorNode(id),
-            ["FloatMonitor"] = id => new FloatMonitorNode(id),
-            ["BoolMonitor"] = id => new BoolMonitorNode(id),
-            ["ColorMonitor"] = id => new ColorMonitorNode(id),
-            ["Add"] = id => new AddNode(id),
-            ["Remap"] = id => new RemapNode(id),
-            ["Delay"] = id => new DelayNode(id),
-            ["Timer"] = id => new TimerNode(id),
-            ["ColorToFloats"] = id => new ColorToFloatsNode(id),
-            ["FloatsToColor"] = id => new FloatsToColorNode(id),
-            ["ColorToHSV"] = id => new ColorToHSVNode(id),
-            ["HSVToColor"] = id => new HSVToColorNode(id),
-            ["AudioBand"] = id => new AudioBandNode(id),
-            ["SpectrumMonitor"] = id => new SpectrumMonitorNode(id),
-            ["Trigger"] = id => new TriggerNode(id),
-            ["SceneSwitch"] = id => new SceneSwitchNode(id),
             ["SceneDark"] = id => new SceneTriggerNode(id, "SceneDark", 0),
             ["SceneWhite"] = id => new SceneTriggerNode(id, "SceneWhite", 1),
             ["SceneNature"] = id => new SceneTriggerNode(id, "SceneNature", 2),
-            ["AbletonTempo"] = id => new AbletonTempoNode(id),
-            ["AbletonTransport"] = id => new AbletonTransportNode(id),
-            ["AbletonTrackVolume"] = id => new AbletonTrackVolumeNode(id),
-            ["AbletonClipFire"] = id => new AbletonClipFireNode(id),
         };
 
         private readonly NodeTypeRegistry _typeRegistry;
@@ -109,44 +70,45 @@ namespace Rhizomode.Bootstrap
         /// </summary>
         public void RegisterAll()
         {
-            RegisterStaticTypesFromScanner();
-            RegisterStaticFactories();
+            RegisterStaticTypesAndFactoriesFromScanner();
+            RegisterDynamicCtorTypes();
             RegisterModuleTypes();
             RegisterObject3DTypes();
             // CinemachineModule 用 factory は未実装のため type 登録も skip (Phase 4F 注記参照)
         }
 
         /// <summary>
-        /// [NodeType] 属性付きクラスを Scanner で発見して NodeTypeRegistry に流し込む。
-        /// 動的 SceneTrigger 3 件 (SceneDark/SceneWhite/SceneNature) は UI menu 用に手動補完。
+        /// [NodeType] 属性付きクラスを Scanner で発見し、type / factory の両方を一括登録する。
         /// </summary>
-        private void RegisterStaticTypesFromScanner()
+        /// <remarks>
+        /// N2 fix (2026-05-16): 旧 RegisterStaticTypesFromScanner + RegisterStaticFactories の二段登録を統合。
+        /// Scanner が <c>NodeTypeRegistration.Factory</c> (reflection ctor invoke) を構築済のため、
+        /// それをそのまま <see cref="GraphState.RegisterNodeFactory(string, Func{string, NodeBase})"/> に流す。
+        /// 新ノード追加は [NodeType] 属性付与のみで完結し、本 orchestrator は触らずに済む。
+        /// </remarks>
+        private void RegisterStaticTypesAndFactoriesFromScanner()
         {
             var scanner = new NodeTypeAttributeScanner();
             foreach (var registration in scanner.Scan())
             {
                 var d = registration.Display;
                 _typeRegistry.Register(new NodeTypeInfo(d.TypeName, d.Label, d.Category));
+                _graphState.RegisterNodeFactory(d.TypeName, registration.Factory);
             }
-
-            _typeRegistry.Register(new NodeTypeInfo("SceneDark", "Dark", NodeCategory.Scene));
-            _typeRegistry.Register(new NodeTypeInfo("SceneWhite", "White", NodeCategory.Scene));
-            _typeRegistry.Register(new NodeTypeInfo("SceneNature", "Nature", NodeCategory.Scene));
         }
 
         /// <summary>
-        /// NodeTypeRegistry に登録済の typeName に対応する factory を StaticFactoryMap から取得して GraphState に登録。
+        /// 動的 ctor 引数を持つノード (SceneTrigger 3 件) を type + factory ともに登録する。
         /// </summary>
-        private void RegisterStaticFactories()
+        private void RegisterDynamicCtorTypes()
         {
-            foreach (var typeName in _typeRegistry.AllTypes.Keys)
+            _typeRegistry.Register(new NodeTypeInfo("SceneDark", "Dark", NodeCategory.Scene));
+            _typeRegistry.Register(new NodeTypeInfo("SceneWhite", "White", NodeCategory.Scene));
+            _typeRegistry.Register(new NodeTypeInfo("SceneNature", "Nature", NodeCategory.Scene));
+
+            foreach (var kvp in DynamicCtorFactoryMap)
             {
-                if (!StaticFactoryMap.TryGetValue(typeName, out var factory))
-                {
-                    Debug.LogError($"[NodeRegistrationOrchestrator] No factory for registered type: {typeName}");
-                    continue;
-                }
-                _graphState.RegisterNodeFactory(typeName, factory);
+                _graphState.RegisterNodeFactory(kvp.Key, kvp.Value);
             }
         }
 
