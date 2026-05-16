@@ -128,5 +128,65 @@ namespace Rhizomode.Graph.Tests
             Assert.IsFalse(ok);
             Assert.AreEqual(0, scope.CommittedCount);
         }
+
+        [Test]
+        public void Scope_AddSucceedsButConnectFails_RollsBackAddedNode()
+        {
+            // Codex re-review WARN #6 補強: AddNode が成功した後に ConnectPorts が失敗するケースで、
+            // 既に登録された node が rollback されることを検証。
+            // ConnectPorts は target node が存在しないと TryConnect が false を返して失敗する。
+            var (state, dispatcher) = CreateSystem();
+
+            using var scope = dispatcher.BeginScope();
+            Assert.IsTrue(scope.TryExecute(new AddNodeCommand(
+                CommandOrigin.Test, "src", "Stub", RzVector3.Zero)));
+            Assert.AreEqual(1, state.Nodes.Count, "AddNode 直後に src が登録されている");
+
+            UnityEngine.TestTools.LogAssert.Expect(
+                UnityEngine.LogType.Warning,
+                new System.Text.RegularExpressions.Regex(".*Target node not found.*"));
+            var ok = scope.TryExecute(new ConnectPortsCommand(
+                CommandOrigin.Test, "e1",
+                "src", "OutPort",
+                "missing_target", "InPort"));
+
+            Assert.IsFalse(ok, "ConnectPorts は missing target で失敗する");
+            Assert.IsTrue(scope.HasFailed);
+            Assert.AreEqual(0, state.Nodes.Count, "src が rollback で削除されている");
+            Assert.AreEqual(0, state.Edges.Count);
+            Assert.AreEqual(0, dispatcher.UndoStackCount, "rollback された scope は Undo に積まれない");
+        }
+
+        [Test]
+        public void Scope_Nested_ThrowsInvalidOperationException()
+        {
+            // F-Vf-d.2 re-review fix (New WARN: Nested scope unguarded): outer scope が active 中の
+            // BeginScope() 呼び出しは InvalidOperationException を投げる。
+            var (_, dispatcher) = CreateSystem();
+
+            using var outer = dispatcher.BeginScope();
+            Assert.Throws<System.InvalidOperationException>(() => dispatcher.BeginScope());
+        }
+
+        [Test]
+        public void Scope_AfterFirstFinalized_BeginScopeSucceeds()
+        {
+            // nested 検出は IsFinalized で行うため、Commit / Dispose 後の再 BeginScope は許可される。
+            var (_, dispatcher) = CreateSystem();
+
+            using (var first = dispatcher.BeginScope())
+            {
+                Assert.IsTrue(first.TryExecute(new AddNodeCommand(
+                    CommandOrigin.Test, "n1", "Stub", RzVector3.Zero)));
+                first.Commit();
+            }
+
+            // 第 2 scope は OK
+            Assert.DoesNotThrow(() =>
+            {
+                using var second = dispatcher.BeginScope();
+                second.Commit();
+            });
+        }
     }
 }

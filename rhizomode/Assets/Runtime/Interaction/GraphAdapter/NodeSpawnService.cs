@@ -21,7 +21,7 @@ namespace Rhizomode.Interaction.GraphAdapter
     /// に整合させた (feedback_command_origin 参照)。
     ///
     /// 全 graph mutation は <see cref="GraphCommandDispatcher.BeginScope"/> 経由で atomic に実行する
-    /// (Codex review #3 NON_ATOMIC_MULTI_DISPATCH 解消)。<see cref="GraphMutationScope.TryExecute"/> が
+    /// (Codex review #3 NON_ATOMIC_MULTI_DISPATCH 解消)。<see cref="GraphCommandScope.TryExecute"/> が
     /// 1 件でも失敗すれば scope 全体が entry snapshot に rollback され、孤児ノードが残らない。
     ///
     /// ParamType → source ノード解決は <see cref="ParamTypeNodeMap.GetSourceDescriptor"/> 経由で

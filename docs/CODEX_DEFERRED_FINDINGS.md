@@ -285,6 +285,21 @@ Bootstrap.Services / Bootstrap.Wiring に移送。Codex review (`ad3f33ebd5fdf11
   「全 mutation IGraphCommand 経由」原則を完全達成。新 record (`AddNodeFromMenuCommand` /
   `AutoSpawnInputsCommand`) は不要 (既存 `AddNodeCommand` + `ConnectPortsCommand` 連投で代替)。
 
+### F-Vf-d.3: CommandAuditLog の transactional rollback (deferred, post-launch)
+- **検出**: F-Vf-d.2 Codex re-review (commit 498266a9 + a/b/c 修正後の 軽微 WARN 残)
+- **対象**: `Graph.Mutation/CommandAuditLog.cs`, `GraphCommandScope.TryExecute`, `GraphCommandDispatcher.RecordScopeUndoEntry`
+- **指摘内容**: `GraphCommandScope` の rollback は graph state のみ復元し、`CommandAuditLog` の sub-command
+  Record は巻き戻されない。失敗 scope の sub-command 群が audit log に "実行された" として残る (実際は
+  rollback されている)。また `CompositeCommand` marker が `_auditLog.Record` されないため、audit trace には
+  scope の boundary が見えない。
+- **実害評価**: 軽微。Audit log は現状 debug + multi-origin 検出のみで使われ、Undo/Redo の正しさには
+  影響しない。launch を block しない。
+- **将来 trigger**:
+  - `CommandAuditLog.SaveCheckpoint()` + `RollbackToCheckpoint(int)` API を追加
+  - `GraphCommandScope.TryExecute` で sub-command Record 前に checkpoint、失敗時 rollback to checkpoint
+  - `RecordScopeUndoEntry` で `CompositeCommand` marker を audit に追加 (scope の単一 boundary 記録)
+  - 完了したら本 entry を RESOLVED マーク
+
 ### F-Vf-c.1: VerticalSliceBootstrapWiring.Dispose に edit-mode listener 解除が欠落
 - **検出**: Vf-c Codex review (3 度目の試行、commit `1a0ba0fb`、`abeacbe1eda90a1c5`)
 - **対象**: `Bootstrap/Wiring/VerticalSliceBootstrapWiring.cs:67-72` Wire 内

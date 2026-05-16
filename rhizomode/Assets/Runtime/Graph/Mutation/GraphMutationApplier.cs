@@ -62,7 +62,7 @@ namespace Rhizomode.Graph.Mutation
         /// </summary>
         /// <remarks>
         /// F-Vf-d.2 で <see cref="TryApply"/> へ delegate する形に変更。失敗判定が必要な caller は
-        /// <see cref="TryApply"/> を直接呼ぶか、<see cref="GraphMutationScope"/> 経由で atomic 単位を作る。
+        /// <see cref="TryApply"/> を直接呼ぶか、<see cref="GraphCommandScope"/> 経由で atomic 単位を作る。
         /// </remarks>
         public void Apply(IGraphCommand command) => TryApply(command);
 
@@ -70,7 +70,7 @@ namespace Rhizomode.Graph.Mutation
         /// command を解釈して <see cref="GraphState"/> に適用する。成功時 true、失敗時 false。
         /// </summary>
         /// <remarks>
-        /// F-Vf-d.2 (Codex review #3 NON_ATOMIC_MULTI_DISPATCH): <see cref="GraphMutationScope"/> が
+        /// F-Vf-d.2 (Codex review #3 NON_ATOMIC_MULTI_DISPATCH): <see cref="GraphCommandScope"/> が
         /// 連投 dispatch を atomic に扱うため、各 Apply の成否を返す必要があった。Phase 8: GraphState
         /// の mutation メソッド (RegisterNode/RemoveNode/TryConnect/Disconnect/Clear) は internal 化。
         /// Graph.Mutation は InternalsVisibleTo で許可された正規 consumer。
@@ -160,7 +160,7 @@ namespace Rhizomode.Graph.Mutation
                 // Note (Codex review): individual param change events are intentionally NOT emitted here.
                 // High-frequency callers (LFO / Ableton macros) would allocate per call. Subscribers that
                 // care about param drift should bind to the node's port chain instead, or batch via
-                // GraphMutationScope when applying many param commands at once.
+                // GraphCommandScope when applying many param commands at once.
                 return true;
             }
             return false;

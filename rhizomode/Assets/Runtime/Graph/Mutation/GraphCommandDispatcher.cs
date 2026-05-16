@@ -22,6 +22,7 @@ namespace Rhizomode.Graph.Mutation
         private readonly LinkedList<(IGraphCommand Command, GraphSnapshot PreSnapshot)> _undoHistory = new();
         private readonly Stack<(IGraphCommand Command, GraphSnapshot PostSnapshot)> _redoStack = new();
         private readonly int _maxHistorySize;
+        private GraphCommandScope? _activeScope;
 
         public CommandAuditLog AuditLog => _auditLog;
         public int UndoStackCount => _undoHistory.Count;
@@ -40,8 +41,20 @@ namespace Rhizomode.Graph.Mutation
         /// F-Vf-d.2 (Codex review #3 NON_ATOMIC_MULTI_DISPATCH): scope 内で <see cref="GraphCommandScope.TryExecute"/>
         /// を呼び、全件成功なら <see cref="GraphCommandScope.Commit"/> で 1 ステップの Undo 履歴に積む。途中失敗 or
         /// 未 commit で Dispose されたら、scope 開始時の Snapshot に rollback される。
+        ///
+        /// F-Vf-d.2 re-review fix: nested scope は未サポート (Undo / audit の整合が壊れるため)。既に active な
+        /// scope がある状態で本メソッドを呼ぶと <see cref="System.InvalidOperationException"/> を投げる。
         /// </remarks>
-        public GraphCommandScope BeginScope() => new GraphCommandScope(this, _applier, _auditLog);
+        public GraphCommandScope BeginScope()
+        {
+            if (_activeScope != null && !_activeScope.IsFinalized)
+            {
+                throw new System.InvalidOperationException(
+                    "Nested GraphCommandScope is not supported. Finalize (Commit/Dispose) the active scope before starting a new one.");
+            }
+            _activeScope = new GraphCommandScope(this, _applier, _auditLog);
+            return _activeScope;
+        }
 
         /// <summary>
         /// scope 内で commit された sub-command 群を 1 ステップの Undo として履歴に積む。
