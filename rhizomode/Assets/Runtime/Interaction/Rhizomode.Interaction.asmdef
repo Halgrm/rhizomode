@@ -8,7 +8,6 @@
         "Rhizomode.NodeCatalog.Contracts",
         "Rhizomode.NodeCatalog.Runtime",
         "Rhizomode.Graph.Model",
-        "Rhizomode.Graph.Mutation",
         "Rhizomode.Graph.Runtime",
         "Rhizomode.Graph.Serialization",
         "Rhizomode.UI",

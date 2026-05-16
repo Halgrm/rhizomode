@@ -25,6 +25,9 @@ namespace Rhizomode.Bootstrap.Installers
         {
             builder.Register(r => new SpatialIntentToCommandTranslator(r.Resolve<GraphCommandDispatcher>()),
                 Lifetime.Singleton);
+
+            // F-Vf-d.2: NodeSpawnService を Rhizomode.Interaction.GraphAdapter へ移送 (Codex review #4 解消)。
+            builder.Register<NodeSpawnService>(Lifetime.Singleton);
         }
     }
 }

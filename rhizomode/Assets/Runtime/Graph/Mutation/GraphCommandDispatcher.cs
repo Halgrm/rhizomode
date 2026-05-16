@@ -33,6 +33,30 @@ namespace Rhizomode.Graph.Mutation
             _maxHistorySize = maxHistorySize < 1 ? 1 : maxHistorySize;
         }
 
+        /// <summary>
+        /// 連投 dispatch を atomic 単位として扱う <see cref="GraphCommandScope"/> を開始する。
+        /// </summary>
+        /// <remarks>
+        /// F-Vf-d.2 (Codex review #3 NON_ATOMIC_MULTI_DISPATCH): scope 内で <see cref="GraphCommandScope.TryExecute"/>
+        /// を呼び、全件成功なら <see cref="GraphCommandScope.Commit"/> で 1 ステップの Undo 履歴に積む。途中失敗 or
+        /// 未 commit で Dispose されたら、scope 開始時の Snapshot に rollback される。
+        /// </remarks>
+        public GraphCommandScope BeginScope() => new GraphCommandScope(this, _applier, _auditLog);
+
+        /// <summary>
+        /// scope 内で commit された sub-command 群を 1 ステップの Undo として履歴に積む。
+        /// </summary>
+        /// <remarks>F-Vf-d.2: <see cref="GraphCommandScope.Commit"/> 専用 API。直接呼ばないこと。</remarks>
+        internal void RecordScopeUndoEntry(GraphSnapshot preSnapshot, CompositeCommand marker)
+        {
+            _undoHistory.AddLast(((IGraphCommand)marker, preSnapshot));
+            while (_undoHistory.Count > _maxHistorySize)
+            {
+                _undoHistory.RemoveFirst();
+            }
+            _redoStack.Clear();
+        }
+
         /// <summary>command を実行し、Undo 用に pre-snapshot を積む。</summary>
         /// <remarks>
         /// TODO (Phase 4 backlog): MoveNode / SetNodeParam は drag / Ableton から 60+ Hz で流れ得る。

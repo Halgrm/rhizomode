@@ -1,7 +1,6 @@
 #nullable enable
 
 using Rhizomode.Bootstrap.Wiring;
-using Rhizomode.Interaction;
 using VContainer;
 using VContainer.Unity;
 
@@ -17,15 +16,14 @@ namespace Rhizomode.Bootstrap.Installers
     /// ModuleLifecycleProcessor / SpatialIntentToCommandTranslator は他 Installer が登録済 — VContainer の
     /// ctor injection で解決される。
     ///
-    /// F-Vf-a.1 Phase D: 旧 Bootstrap.Services.NodeSpawnService を Rhizomode.Interaction へ移送した
-    /// <see cref="NodeSpawnService"/> も本 Installer で登録 (XRInstaller から移動)。
+    /// F-Vf-d.2: 旧 <c>NodeSpawnService</c> 登録は graph mutation 翻訳 adapter として本来の所属である
+    /// <see cref="InteractionGraphAdapterInstaller"/> へ移送 (Codex review #4 解消)。
     /// </remarks>
     internal sealed class InteractionInstaller : IInstaller
     {
         public void Install(IContainerBuilder builder)
         {
             builder.Register<InteractionBootstrapWiring>(Lifetime.Singleton);
-            builder.Register<NodeSpawnService>(Lifetime.Singleton);
         }
     }
 }

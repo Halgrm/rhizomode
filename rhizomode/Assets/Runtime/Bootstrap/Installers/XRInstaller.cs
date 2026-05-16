@@ -27,7 +27,7 @@ namespace Rhizomode.Bootstrap.Installers
     ///   <item><c>MenuNodeSpawnCoordinator</c> → UIGraphAdapterInstaller (UI.GraphAdapter asmdef)</item>
     ///   <item><c>Object3DProxyBindService</c> → ModulesInstaller (Modules.Runtime asmdef)</item>
     ///   <item><c>SceneObjectRegistrationService</c> → SceneInstaller (Scene.GraphAdapter asmdef)</item>
-    ///   <item><c>NodeSpawnService</c> → InteractionInstaller (Rhizomode.Interaction asmdef)</item>
+    ///   <item><c>NodeSpawnService</c> → InteractionGraphAdapterInstaller (Rhizomode.Interaction.GraphAdapter asmdef、F-Vf-d.2 で再移送)</item>
     /// </list>
     /// </remarks>
     internal sealed class XRInstaller : IInstaller

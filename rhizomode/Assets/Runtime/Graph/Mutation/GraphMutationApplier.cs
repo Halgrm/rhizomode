@@ -57,51 +57,68 @@ namespace Rhizomode.Graph.Mutation
             return new GraphSnapshot(nodes, edges);
         }
 
-        /// <summary>command を解釈して <see cref="GraphState"/> に適用する。</summary>
-        /// <remarks>Phase 8: GraphState の mutation メソッド (RegisterNode/RemoveNode/TryConnect/
-        /// Disconnect/Clear) は internal 化。Graph.Mutation は InternalsVisibleTo で許可された
-        /// 正規 consumer。</remarks>
-        public void Apply(IGraphCommand command)
+        /// <summary>
+        /// command を解釈して <see cref="GraphState"/> に適用する (失敗を呼び出し側に通知しない void 版)。
+        /// </summary>
+        /// <remarks>
+        /// F-Vf-d.2 で <see cref="TryApply"/> へ delegate する形に変更。失敗判定が必要な caller は
+        /// <see cref="TryApply"/> を直接呼ぶか、<see cref="GraphMutationScope"/> 経由で atomic 単位を作る。
+        /// </remarks>
+        public void Apply(IGraphCommand command) => TryApply(command);
+
+        /// <summary>
+        /// command を解釈して <see cref="GraphState"/> に適用する。成功時 true、失敗時 false。
+        /// </summary>
+        /// <remarks>
+        /// F-Vf-d.2 (Codex review #3 NON_ATOMIC_MULTI_DISPATCH): <see cref="GraphMutationScope"/> が
+        /// 連投 dispatch を atomic に扱うため、各 Apply の成否を返す必要があった。Phase 8: GraphState
+        /// の mutation メソッド (RegisterNode/RemoveNode/TryConnect/Disconnect/Clear) は internal 化。
+        /// Graph.Mutation は InternalsVisibleTo で許可された正規 consumer。
+        /// </remarks>
+        public bool TryApply(IGraphCommand command)
         {
             switch (command)
             {
-                case AddNodeCommand add: ApplyAdd(add); break;
-                case RemoveNodeCommand remove: ApplyRemove(remove); break;
-                case ConnectPortsCommand connect: ApplyConnect(connect); break;
-                case DisconnectEdgeCommand disconnect: ApplyDisconnect(disconnect); break;
-                case MoveNodeCommand move: ApplyMove(move); break;
-                case SetNodeParamCommand setParam: ApplySetParam(setParam); break;
-                case LoadGraphCommand load: RestoreFromSnapshot(load.Snapshot); break;
+                case AddNodeCommand add: return TryApplyAdd(add);
+                case RemoveNodeCommand remove: return TryApplyRemove(remove);
+                case ConnectPortsCommand connect: return TryApplyConnect(connect);
+                case DisconnectEdgeCommand disconnect: return TryApplyDisconnect(disconnect);
+                case MoveNodeCommand move: return TryApplyMove(move);
+                case SetNodeParamCommand setParam: return TryApplySetParam(setParam);
+                case LoadGraphCommand load: RestoreFromSnapshot(load.Snapshot); return true;
+                case CompositeCommand: return true;
                 default:
                     Debug.LogWarning(
                         $"[GraphMutationApplier] Unhandled command type: {command.GetType().Name}. " +
-                        "Add a case in Apply() or remove the command from IGraphCommand hierarchy.");
-                    break;
+                        "Add a case in TryApply() or remove the command from IGraphCommand hierarchy.");
+                    return false;
             }
         }
 
-        private void ApplyAdd(AddNodeCommand cmd)
+        private bool TryApplyAdd(AddNodeCommand cmd)
         {
             if (!_factory.CanCreate(cmd.TypeName))
             {
                 Debug.LogWarning($"[GraphMutationApplier] Unknown typeName: {cmd.TypeName}");
-                return;
+                return false;
             }
             var node = _factory.Create(cmd.TypeName, cmd.NodeId);
-            if (node == null) return;
+            if (node == null) return false;
             node.Position = new Vector3(cmd.Position.X, cmd.Position.Y, cmd.Position.Z);
             _state.RegisterNode(node);
             _bus.EmitNodeAdded(cmd.NodeId);
+            return true;
         }
 
-        private void ApplyRemove(RemoveNodeCommand cmd)
+        private bool TryApplyRemove(RemoveNodeCommand cmd)
         {
-            if (!_state.Nodes.ContainsKey(cmd.NodeId)) return;
+            if (!_state.Nodes.ContainsKey(cmd.NodeId)) return false;
             _state.RemoveNode(cmd.NodeId);
             _bus.EmitNodeRemoved(cmd.NodeId);
+            return true;
         }
 
-        private void ApplyConnect(ConnectPortsCommand cmd)
+        private bool TryApplyConnect(ConnectPortsCommand cmd)
         {
             // Phase 8 Codex Axis A fix (re-review): cmd.EdgeId を実 edge.Id として保持。
             // 旧コードは TryConnect が新 GUID を生成しつつ bus.EmitEdgeAdded(cmd.EdgeId) で異なる id を
@@ -109,30 +126,34 @@ namespace Rhizomode.Graph.Mutation
             if (_state.TryConnect(cmd.FromNodeId, cmd.FromPortName, cmd.ToNodeId, cmd.ToPortName, cmd.EdgeId))
             {
                 _bus.EmitEdgeAdded(cmd.EdgeId);
+                return true;
             }
+            return false;
         }
 
-        private void ApplyDisconnect(DisconnectEdgeCommand cmd)
+        private bool TryApplyDisconnect(DisconnectEdgeCommand cmd)
         {
             Edge? target = null;
             foreach (var e in _state.Edges)
             {
                 if (e.Id == cmd.EdgeId) { target = e; break; }
             }
-            if (target == null) return;
+            if (target == null) return false;
             _state.Disconnect(target.FromNodeId, target.FromPort, target.ToNodeId, target.ToPort);
             _bus.EmitEdgeRemoved(cmd.EdgeId);
+            return true;
         }
 
-        private void ApplyMove(MoveNodeCommand cmd)
+        private bool TryApplyMove(MoveNodeCommand cmd)
         {
-            if (!_state.Nodes.TryGetValue(cmd.NodeId, out var node)) return;
+            if (!_state.Nodes.TryGetValue(cmd.NodeId, out var node)) return false;
             node.Position = new Vector3(cmd.NewPosition.X, cmd.NewPosition.Y, cmd.NewPosition.Z);
+            return true;
         }
 
-        private void ApplySetParam(SetNodeParamCommand cmd)
+        private bool TryApplySetParam(SetNodeParamCommand cmd)
         {
-            if (!_state.Nodes.TryGetValue(cmd.NodeId, out var node)) return;
+            if (!_state.Nodes.TryGetValue(cmd.NodeId, out var node)) return false;
             if (node is INodeParamAccessor accessor)
             {
                 accessor.TrySetParam(cmd.ParamName, cmd.Value);
@@ -140,7 +161,9 @@ namespace Rhizomode.Graph.Mutation
                 // High-frequency callers (LFO / Ableton macros) would allocate per call. Subscribers that
                 // care about param drift should bind to the node's port chain instead, or batch via
                 // GraphMutationScope when applying many param commands at once.
+                return true;
             }
+            return false;
         }
 
         /// <summary>

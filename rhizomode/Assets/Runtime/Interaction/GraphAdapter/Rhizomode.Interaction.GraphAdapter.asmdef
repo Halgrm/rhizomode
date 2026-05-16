@@ -4,9 +4,11 @@
     "references": [
         "Rhizomode.SharedKernel",
         "Rhizomode.Interaction.Contracts",
+        "Rhizomode.Graph.Model",
         "Rhizomode.Graph.Mutation",
         "Rhizomode.Graph.Snapshot",
-        "Rhizomode.NodeCatalog.Contracts"
+        "Rhizomode.NodeCatalog.Contracts",
+        "Rhizomode.UI.GraphAdapter"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

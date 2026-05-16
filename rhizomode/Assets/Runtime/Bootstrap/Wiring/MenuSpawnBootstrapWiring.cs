@@ -1,7 +1,7 @@
 #nullable enable
 
 using Rhizomode.Input.Contracts;
-using Rhizomode.Interaction;
+using Rhizomode.Interaction.GraphAdapter;
 using Rhizomode.Modules;
 using Rhizomode.Nodes.Modules;
 using Rhizomode.UI;

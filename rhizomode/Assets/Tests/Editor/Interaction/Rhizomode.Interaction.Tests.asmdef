@@ -4,8 +4,16 @@
     "references": [
         "Rhizomode.SharedKernel",
         "Rhizomode.Graph.Model",
+        "Rhizomode.Graph.Events",
+        "Rhizomode.Graph.CatalogBridge",
+        "Rhizomode.Graph.Mutation",
+        "Rhizomode.Graph.Snapshot",
         "Rhizomode.Graph.Serialization",
-        "Rhizomode.Interaction.Contracts"
+        "Rhizomode.Interaction.Contracts",
+        "Rhizomode.Interaction.GraphAdapter",
+        "Rhizomode.NodeCatalog.Contracts",
+        "Rhizomode.UI.GraphAdapter",
+        "R3.Unity"
     ],
     "includePlatforms": [
         "Editor"
@@ -14,7 +22,8 @@
     "allowUnsafeCode": false,
     "overrideReferences": true,
     "precompiledReferences": [
-        "nunit.framework.dll"
+        "nunit.framework.dll",
+        "R3.dll"
     ],
     "autoReferenced": false,
     "defineConstraints": [

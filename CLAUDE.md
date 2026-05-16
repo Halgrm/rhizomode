@@ -181,7 +181,7 @@ To add interface capability: create a new interface (e.g., `ISmoothableModule`),
 - NodeVisualController deferred bind リトライ上限
 - モジュールノード自動スポーン (ConstFloat/ConstColor プリコネクト)
 
-**v5.4 大規模リファクタ — Phase 0-13B/C + V-final + F-Vf-a.1 + F-Vf-d.1** ✅
+**v5.4 大規模リファクタ — Phase 0-13B/C + V-final + F-Vf-a.1 + F-Vf-d.1 + F-Vf-d.2** ✅
 - 48 asmdef 構成 (`SharedKernel` 最下層 + `Graph.*` 8 分割 + 各システム `Contracts/Impl/GraphAdapter` + `NodeCatalog.Contracts/Runtime` + `Nodes.Standard/Audio/OscMidi/Ableton/Scene/Defaults`)
 - `IGraphCommand` + `GraphCommandDispatcher` + `GraphMutationApplier` で全 graph 変異を統一 (Origin 付き record / Undo Snapshot)
 - VContainer 全面導入: `RootLifetimeScope` シーン直接配置、19 Installer 完備 (Plan §15 適合)
@@ -194,8 +194,14 @@ To add interface capability: create a new interface (e.g., `ISmoothableModule`),
 - **F-Vf-d.1 解消 (2026-05-16)**: `NodeSpawnService` を `GraphCommandDispatcher` 経由に refactor。
   - `NodeBase.IsInputPortEvent` + `PrimeInitialEmission` virtual を新設 (ModuleNodeBase / ConstFloat / ConstColor 各 override)
   - `ParamTypeNodeMap` (NodeCatalog.Contracts) で ParamType→typeName mapping を共通化
-  - `Interaction` asmdef refs に `Graph.Mutation` を追加。新 record (AddNodeFromMenuCommand 等) は不要 (既存 `AddNodeCommand` + `ConnectPortsCommand` 連投で代替)
+  - 新 record (AddNodeFromMenuCommand 等) は不要 (既存 `AddNodeCommand` + `ConnectPortsCommand` 連投で代替)
   - Plan v5.4 §13 「全 graph mutation は IGraphCommand 経由」原則を完全達成
+- **F-Vf-d.2 解消 (2026-05-16)**: F-Vf-d.1 Codex review 指摘 5 件を一括解消。
+  - `GraphCommandScope` + `Applier.TryApply` + `CompositeCommand` marker で atomic transaction を追加
+  - `NodeSpawnService` を `Interaction.GraphAdapter` へ移送 (CommandOrigin.Interaction 発行 layer を明示)
+  - `ParamTypeNodeMap.GetSourceDescriptor` を `SourceNodeDescriptor` 化 (typeName / port name 二重定義の解消)
+  - `InputSpawnResult.Edge` → `SpawnedEdgeInfo` record (id+endpoints) に置換、stale ref リスク除去
+  - EditMode tests 13 件追加 (GraphCommandScopeTests 5 + NodeSpawnServiceTests 8)
 - 残課題は `docs/CODEX_DEFERRED_FINDINGS.md` 参照 (F-Vf-c.1 等)
 
 ### VR UIパイプライン（重要な設計知識）

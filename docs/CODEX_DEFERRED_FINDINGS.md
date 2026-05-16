@@ -226,6 +226,40 @@ Bootstrap.Services / Bootstrap.Wiring に移送。Codex review (`ad3f33ebd5fdf11
     Scene / Interaction) で再登録。XRInstaller の責務は VR 入力配線 wiring のみに純化。
 - **§15 適合**: Bootstrap asmdef は Installers / Wiring / ITickable adapter のみを保持する状態に到達。
 
+### F-Vf-d.2: F-Vf-d.1 Codex review 指摘 5 件 **[RESOLVED 2026-05-16]**
+- **検出**: F-Vf-d.1 完了後 Codex review (commit 78f9c505 を対象)
+- **対象 (解消前)**: `Interaction/NodeSpawnService.cs` + 周辺 DTO / scope 機構
+- **指摘 5 件と解消内容**:
+  - **#1 EDGE_IDENTITY (WARN)**: `InputSpawnResult.PrimaryEdge` / `TriggerEdge` が `Edge` 直接参照
+    → 新 record `SpawnedEdgeInfo` (EdgeId + endpoints) を `UI.GraphAdapter` に追加し、
+    Snapshot 復元後の stale reference リスクを排除。
+  - **#3 NON_ATOMIC_MULTI_DISPATCH (FAIL)**: `AddNode` + `ConnectPorts` 連投で途中失敗時の
+    rollback がなかった → `GraphCommandScope` (`Graph.Mutation`) + `Applier.TryApply` を追加し、
+    1 入力 spawn 単位 (Const+Edge、Toggle+Trigger+2Edges) を atomic に扱う。失敗時は entry
+    snapshot に rollback。Commit は単一 Undo entry (`CompositeCommand` marker) を積む。
+  - **#4 COMMANDORIGIN_INVARIANT (FAIL)**: `NodeSpawnService` が `Rhizomode.Interaction` から
+    `CommandOrigin.Interaction` を発行 (invariant 違反) → file を
+    `Interaction/GraphAdapter/NodeSpawnService.cs` に移送、namespace を
+    `Rhizomode.Interaction.GraphAdapter` に変更。Installer 登録も
+    `InteractionGraphAdapterInstaller` に移送。`Interaction` asmdef から `Graph.Mutation`
+    参照を除去 (本来不要だった)。
+  - **#5 TYPENAME_DOUBLE_DEFINITION (WARN)**: `NodeSpawnService` の `"Toggle"` / `"Trigger"`
+    定数が `ParamTypeNodeMap` と独立 → `ParamTypeNodeMap.GetSourceDescriptor` を
+    `SourceNodeDescriptor` (TypeName + OutputPortName + TriggerSourceTypeName 等) に拡張、
+    全 typeName / port 名解決を 1 箇所に集約。`NodeSpawnService` から typeName 定数を削除。
+  - **#6 TEST_COVERAGE_GAP (FAIL)**: EditMode test 未整備 → 13 件追加:
+    - `Tests/Editor/Graph/GraphCommandScopeTests.cs` (5 件): atomic commit / 失敗時 rollback /
+      Dispose 時 rollback / Undo 復元 / 失敗後 TryExecute 拒否
+    - `Tests/Editor/Interaction/NodeSpawnServiceTests.cs` (8 件): 既知 typeName spawn /
+      未知 typeName 失敗 / Float port spawn + edge / Bool port + Toggle + Trigger / event port
+      skip / PrimeInitialEmission subscriber 受信 / Menu spawn Undo / Input spawn ごと Undo
+- **CI invariant 状況**: feedback_command_origin の Roslyn invariant test は本 phase でも未実装
+  (post-launch 検討)。ファイル位置 + namespace で boundary を明示することで、当面は visual
+  inspection ベース。
+- **§13 + §15 適合**: 全 graph mutation IGraphCommand 経由 + atomic transaction + GraphAdapter
+  boundary 整合の 3 つを完全達成。
+- **検証**: EditMode 155/155 + PlayMode 1/1 PASS、warnings 0。
+
 ### F-Vf-d.1: NodeSpawnService の IGraphCommand 経由化 **[RESOLVED 2026-05-16]**
 - **検出**: F-Vf-a.1 Phase D 移送時に identify
 - **対象 (解消前)**: `Interaction/NodeSpawnService.cs`

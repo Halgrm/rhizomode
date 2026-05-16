@@ -61,7 +61,7 @@ namespace Rhizomode.UI
                 {
                     var pe = r.PrimaryEdge;
                     _edgeVisualManager.CreateEdgeVisual(
-                        new EdgeViewModel(pe.Id, pe.FromNodeId, pe.FromPort, pe.ToNodeId, pe.ToPort),
+                        new EdgeViewModel(pe.EdgeId, pe.FromNodeId, pe.FromPort, pe.ToNodeId, pe.ToPort),
                         r.PortType);
                 }
 
@@ -75,7 +75,7 @@ namespace Rhizomode.UI
                     {
                         var te = r.TriggerEdge;
                         _edgeVisualManager.CreateEdgeVisual(
-                            new EdgeViewModel(te.Id, te.FromNodeId, te.FromPort, te.ToNodeId, te.ToPort),
+                            new EdgeViewModel(te.EdgeId, te.FromNodeId, te.FromPort, te.ToNodeId, te.ToPort),
                             ParamType.Bool);
                     }
                 }
