@@ -114,6 +114,12 @@ namespace Rhizomode.UI
             if (!_pointers.TryGetValue(pointerId, out var state)) return;
             state.IsHovering = false;
 
+            // Codex #3 fix (2026-05-16): pointer が完全に inactive (hover も down も無)
+            // になったら dict から除去する。multi-pointer / session 毎 id を導入したとき
+            // _pointers が増え続けるのを防ぐ。
+            if (!state.IsDown && !state.IsHovering)
+                _pointers.Remove(pointerId);
+
             // 全 pointer が hover 外なら hover element を解除
             if (!IsHovering)
                 UpdateHoveredElement(null);
@@ -151,6 +157,10 @@ namespace Rhizomode.UI
             state.CapturedTarget = null;
 
             SendPointerEvent<PointerUpEvent>(target, state.LastPosition, pointerId);
+
+            // Codex #3 fix: pointer が完全に inactive なら dict から除去
+            if (!state.IsDown && !state.IsHovering)
+                _pointers.Remove(pointerId);
         }
 
         /// <summary>

@@ -43,8 +43,15 @@ namespace Rhizomode.Audio.GraphAdapter
         /// Bootstrap の ITickable adapter から呼ばれる。MonoBehaviour 経由でも Update から
         /// 呼べる。
         /// </summary>
+        /// <remarks>
+        /// Codex #4 fix (2026-05-16): scene shutdown 中の race で <see cref="GraphState"/> が
+        /// 先に disposed になった状態で tick が走り得る (GraphContextBehaviour.OnDestroy と
+        /// LifetimeScope.OnDestroy の順序は Unity が保証しない)。IsDisposed なら早期 return。
+        /// </remarks>
         public void Tick()
         {
+            if (_graphState.IsDisposed) return;
+
             // スナップショットでイテレーション (Tick 中にノード追加/削除される可能性への対策)
             SnapshotAudioNodes();
 

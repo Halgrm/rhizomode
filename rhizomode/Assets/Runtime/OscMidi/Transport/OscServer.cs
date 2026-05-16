@@ -42,6 +42,9 @@ namespace Rhizomode.OscMidi.Transport
 
         private long _droppedMessageCount;
         private float _nextOverflowWarningTime;
+        // Codex #7 fix (2026-05-16): OnDestroy 中に OSC background callback が pending queue に
+        // 書き込むのを防ぐシャットダウンフラグ。volatile で BG/main thread 間の可視性を保証。
+        private volatile bool _isShuttingDown;
 
         /// <summary>累計 drop / overflow message 数 (status panel 表示用)。</summary>
         public long DroppedMessageCount => System.Threading.Interlocked.Read(ref _droppedMessageCount);
@@ -95,6 +98,9 @@ namespace Rhizomode.OscMidi.Transport
                 address,
                 (string addr, OscDataHandle data) =>
                 {
+                    // Codex #7 fix: shutdown 中はキューに触れない (subject dispose と server dispose の
+                    // 間に入った callback が post-dispose write を起こすのを防ぐ)。
+                    if (_isShuttingDown) return;
                     try
                     {
                         // バックグラウンドスレッドで呼ばれるためキューに詰めてUpdate()で処理
@@ -151,14 +157,19 @@ namespace Rhizomode.OscMidi.Transport
 
         private void OnDestroy()
         {
-            foreach (var subject in _addressSubjects.Values)
-                subject.Dispose();
-            _addressSubjects.Clear();
+            // Codex #7 fix (2026-05-16): まず shutdown フラグを立てて BG callback の書き込みを止め、
+            // それから server → subject の順で dispose する (callback がキューを掴んだまま
+            // subject が消える race を排除)。
+            _isShuttingDown = true;
 
 #if OSC_JACK
             _server?.Dispose();
             _server = null;
 #endif
+
+            foreach (var subject in _addressSubjects.Values)
+                subject.Dispose();
+            _addressSubjects.Clear();
         }
     }
 }

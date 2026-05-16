@@ -91,6 +91,35 @@ namespace Rhizomode.Graph.Model
         }
 
         /// <summary>
+        /// 指定 typeName のファクトリが登録されているかを問い合わせる
+        /// (Codex BUG #5 fix: 外部 <see cref="Rhizomode.Graph.CatalogBridge.INodeFactory"/> adapter 用)。
+        /// </summary>
+        public bool HasFactoryFor(string typeName) =>
+            _nodeFactories.ContainsKey(typeName) || _nodeFactoriesWithParams.ContainsKey(typeName);
+
+        /// <summary>
+        /// 指定 (typeName, nodeId, paramsJson) でファクトリを呼ぶ。未登録は null
+        /// (Codex BUG #5 fix: INodeFactory adapter 用、id を caller が指定する版)。
+        /// </summary>
+        public NodeBase? CreateNodeWithId(string typeName, string nodeId, string paramsJson = "") =>
+            InvokeFactory(typeName, nodeId, paramsJson);
+
+        /// <summary>
+        /// 登録済の全 typeName を列挙する (Codex BUG #5 fix: 診断 / Composite 重複検出用)。
+        /// </summary>
+        public IEnumerable<string> RegisteredFactoryTypeNames
+        {
+            get
+            {
+                foreach (var k in _nodeFactories.Keys) yield return k;
+                foreach (var k in _nodeFactoriesWithParams.Keys)
+                {
+                    if (!_nodeFactories.ContainsKey(k)) yield return k;
+                }
+            }
+        }
+
+        /// <summary>
         /// ノードを登録し、Setup()を呼び出す。
         /// </summary>
         internal void RegisterNode(NodeBase node)
@@ -222,28 +251,42 @@ namespace Rhizomode.Graph.Model
             }
         }
 
+        // Codex #1 (2026-05-16): WouldCreateCycle の DFS コレクションを再利用してメインスレッド GC 圧力を抑える。
+        // 旧版は呼ばれるたびに new HashSet / new Stack。TryConnect は ConnectPortsCommand 経由で
+        // インタラクション中に頻繁に走る可能性があるため、インスタンスフィールド化して Clear で再利用する。
+        // GraphState は単一スレッド前提 (R3 push は main thread)、reentrancy も想定外。
+        private readonly HashSet<string> _cycleVisitedScratch = new();
+        private readonly Stack<string> _cycleStackScratch = new();
+
         /// <summary>
         /// (fromNodeId → toNodeId) を追加すると循環が生じるかを DFS で判定する。
         /// </summary>
         /// <remarks>
         /// 既存 <see cref="CycleDetector"/> は <see cref="EdgeIndex"/> に依存しているが、GraphState は
         /// 現在 List ベースで保持しているため inline DFS で代用する (List→EdgeIndex 全面置換は
-        /// Phase 2 残課題 — メモリ allocation を増やしたくない launch 直前の最小変更)。
+        /// Phase 2 残課題)。Codex #1 fix で scratch collection をフィールド化し allocation を削減。
         /// </remarks>
         private bool WouldCreateCycle(string fromNodeId, string toNodeId)
         {
             // self-loop は呼び出し側 (TryConnect 冒頭) で既に弾いているが防御的にチェック
             if (fromNodeId == toNodeId) return true;
 
-            var visited = new HashSet<string>();
-            var stack = new Stack<string>();
+            var visited = _cycleVisitedScratch;
+            var stack = _cycleStackScratch;
+            visited.Clear();
+            stack.Clear();
             stack.Push(toNodeId);
 
             while (stack.Count > 0)
             {
                 var current = stack.Pop();
                 if (!visited.Add(current)) continue;
-                if (current == fromNodeId) return true;
+                if (current == fromNodeId)
+                {
+                    // 早期 return 前に scratch を空にしておく (次回の Clear コストを軽減)
+                    stack.Clear();
+                    return true;
+                }
 
                 for (var i = 0; i < _edges.Count; i++)
                 {
@@ -507,9 +550,17 @@ namespace Rhizomode.Graph.Model
             _nodes.Clear();
         }
 
+        /// <summary>
+        /// Dispose 済みかどうか。Codex #4 fix (2026-05-16): 外部 (AudioDriverHost 等) が
+        /// scene shutdown 中の race で disposed なグラフを tick しないようガードする。
+        /// </summary>
+        public bool IsDisposed { get; private set; }
+
         public void Dispose()
         {
+            if (IsDisposed) return;
             Clear();
+            IsDisposed = true;
         }
     }
 }

@@ -42,7 +42,12 @@ namespace Rhizomode.Bootstrap.Installers
         {
             var scanner = new NodeTypeAttributeScanner();
             var staticFactory = new AttributeScannerNodeFactory(scanner.Scan());
-            INodeFactory factory = new CompositeNodeFactory(new INodeFactory[] { staticFactory });
+            // Codex BUG #5 fix (2026-05-16): NodeRegistrationOrchestrator が GraphState dict に登録する
+            // 動的 typeName (SceneDark/SceneWhite/SceneNature/VFX_*/Shader_*/Object3D_*) を INodeFactory
+            // contract に露出する。dynamicFactory は GraphState インスタンス参照を持つだけで、登録は
+            // EntryPointBootstrapper の RegisterAll が後段で実行する (lazy lookup)。
+            var dynamicFactory = new GraphStateBackedNodeFactory(_graphState);
+            INodeFactory factory = new CompositeNodeFactory(new INodeFactory[] { staticFactory, dynamicFactory });
 
             builder.RegisterInstance(factory);
             builder.RegisterInstance(_graphState);
