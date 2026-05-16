@@ -233,6 +233,7 @@ UIToolkit Panel (WorldPanelHost上のRenderTexture)
 
 ### Post-launch / 継続課題
 
-- **F-Vf-c.1**: `VerticalSliceBootstrapWiring.Dispose` の edit-mode listener 解除欠落 (理論 leak、`CameraManagerPanel.RemoveEditModeListener` API 不在のため deferred)
 - v5.4 残: Phase 13A / 負荷テスト / `GraphStateBehaviour` rename / PanelBudget
 - カメラ・パス機能 Phase 4 (永続化)
+- GraphCommandDispatcher 高頻度コマンド (MoveNode/SetNodeParam) の Snapshot allocation 最適化 (Phase 4 backlog、`GraphCommandDispatcher.cs:73-79`)
+- BoundaryValidator 残 rule: Audio.GraphAdapter / Interaction / UI.Presentation の asmdef refs cleanup 後に有効化 (F-Vf-e.1)

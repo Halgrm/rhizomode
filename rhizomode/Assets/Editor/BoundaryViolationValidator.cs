@@ -22,6 +22,12 @@ namespace Rhizomode.Editor
     /// 限定有効化 (Plan v5.3 Phase 1G 全 rule は Phase 5/7 で違反解消後):
     /// - 現状違反なし のルールのみ enable
     /// - Phase 5 で Graph.Model→Serialization 解消後、Phase 7 で UI/Interaction→Graph 解消後に追加 rule 有効化
+    /// - 2026-05-16: Audio.Analysis (5c) + Ableton.Session (5b) を追加 (現状違反なし)
+    ///
+    /// 未有効化 rule (Phase 5/7 cleanup 後に追加予定、いずれも現状で実違反あり):
+    /// - Audio.GraphAdapter ⊄ UI.Presentation (Audio/GraphAdapter/Rhizomode.Audio.GraphAdapter.asmdef:12)
+    /// - Rhizomode.Interaction ⊄ Graph.* (Interaction/Rhizomode.Interaction.asmdef:10-12)
+    /// - Rhizomode.UI.Presentation ⊄ NodeCatalog.Runtime (UI/Presentation/Rhizomode.UI.Presentation.asmdef:9)
     /// </summary>
     internal sealed class BoundaryViolationValidator : IPreprocessBuildWithReport
     {
@@ -81,7 +87,7 @@ namespace Rhizomode.Editor
         // Rule implementations (限定有効化、現状違反なし)
         // ---------------------------------------------------------------
 
-        private const int EnabledRuleCount = 8;
+        private const int EnabledRuleCount = 10;
 
         private static string[] ValidateAll()
         {
@@ -117,6 +123,30 @@ namespace Rhizomode.Editor
             violations.AddRange(CheckNoReferences(
                 "Rhizomode.Ableton.Contracts",
                 forbidden: new[] { "Rhizomode.OscMidi.Transport", "Rhizomode.OscMidi.GraphAdapter" }));
+
+            // Rule 5b (2026-05-16): Ableton.Session ⊄ OscMidi.* (Plan v5.3 hard rule)
+            // Session.asmdef は SharedKernel / Ableton.Contracts / R3.Unity のみで現状違反なし。
+            violations.AddRange(CheckNoReferences(
+                "Rhizomode.Ableton.Session",
+                forbidden: new[]
+                {
+                    "Rhizomode.OscMidi.Contracts", "Rhizomode.OscMidi.Transport",
+                    "Rhizomode.OscMidi.GraphAdapter"
+                }));
+
+            // Rule 5c (2026-05-16): Audio.Analysis ⊄ Ableton/OscMidi/Scene/UI 系
+            // Analysis.asmdef は SharedKernel / Audio.Contracts / Lasp.Runtime のみで現状違反なし。
+            // Audio.GraphAdapter→UI.Presentation の意図的残違反は Phase 9 Round F cleanup 完了後に
+            // GraphAdapter 用 rule を追加する。
+            violations.AddRange(CheckNoReferences(
+                "Rhizomode.Audio.Analysis",
+                forbidden: new[]
+                {
+                    "Rhizomode.Ableton.Contracts", "Rhizomode.Ableton.Transport", "Rhizomode.Ableton.Session", "Rhizomode.Ableton.GraphAdapter",
+                    "Rhizomode.OscMidi.Contracts", "Rhizomode.OscMidi.Transport", "Rhizomode.OscMidi.GraphAdapter",
+                    "Rhizomode.Scene.Contracts", "Rhizomode.Scene.Runtime", "Rhizomode.Scene.GraphAdapter",
+                    "Rhizomode.UI", "Rhizomode.UI.Contracts", "Rhizomode.UI.Presentation", "Rhizomode.UI.GraphAdapter"
+                }));
 
             // Rule 6: Nodes.Defaults ⊄ Nodes.* concrete asmdefs (Plan v5.3-2 boundary)
             violations.AddRange(CheckNoReferences(

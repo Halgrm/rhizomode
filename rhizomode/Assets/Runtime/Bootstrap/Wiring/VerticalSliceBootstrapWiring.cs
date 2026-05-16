@@ -40,6 +40,8 @@ namespace Rhizomode.Bootstrap.Wiring
         private readonly HealthAggregator _healthAggregator;
 
         private IDisposable? _healthSubscription;
+        private CameraManagerPanelController? _editModePanel;
+        private Action<bool>? _editModeListener;
         private bool _wired;
 
         public VerticalSliceBootstrapWiring(XrSceneReferences refs, HealthAggregator healthAggregator)
@@ -63,13 +65,16 @@ namespace Rhizomode.Bootstrap.Wiring
                 var floatOutputCatalog = new GraphStateFloatOutputCatalog(() => graphContext.Context);
                 cameraManagerPanel.Initialize(floatOutputCatalog);
 
-                // 編集モード中はエッジ接続・切断・ノード削除を一時無効化
-                cameraManagerPanel.AddEditModeListener(isEditing =>
+                // 編集モード中はエッジ接続・切断・ノード削除を一時無効化。
+                // F-Vf-c.1: lambda を field 保持して Dispose で解除する。
+                _editModePanel = cameraManagerPanel;
+                _editModeListener = isEditing =>
                 {
                     _refs.EdgeDragHandler?.SetEnabled(!isEditing);
                     _refs.EdgeCutHandler?.SetEnabled(!isEditing);
                     _refs.NodeDeleteHandler?.SetEnabled(!isEditing);
-                });
+                };
+                cameraManagerPanel.AddEditModeListener(_editModeListener);
             }
 
             // MirrorOutputController → Spout/NDI
@@ -113,6 +118,13 @@ namespace Rhizomode.Bootstrap.Wiring
         {
             _healthSubscription?.Dispose();
             _healthSubscription = null;
+
+            if (_editModePanel != null && _editModeListener != null)
+            {
+                _editModePanel.RemoveEditModeListener(_editModeListener);
+            }
+            _editModePanel = null;
+            _editModeListener = null;
         }
     }
 }

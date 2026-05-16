@@ -304,25 +304,20 @@ Bootstrap.Services / Bootstrap.Wiring に移送。Codex review (`ad3f33ebd5fdf11
   - `Scope_DisposeWithoutCommit_AuditRolledBack`: 暗黙 rollback も audit を巻き戻す
 - **検証**: EditMode 161/161 + PlayMode 1/1 PASS、warnings 0。
 
-### F-Vf-c.1: VerticalSliceBootstrapWiring.Dispose に edit-mode listener 解除が欠落
+### F-Vf-c.1: VerticalSliceBootstrapWiring.Dispose に edit-mode listener 解除が欠落 — 解消済 (2026-05-16)
 - **検出**: Vf-c Codex review (3 度目の試行、commit `1a0ba0fb`、`abeacbe1eda90a1c5`)
 - **対象**: `Bootstrap/Wiring/VerticalSliceBootstrapWiring.cs:67-72` Wire 内
   `cameraManagerPanel.AddEditModeListener(isEditing => { ... })` の lambda 登録に対し、
-  `Dispose` 側 (line 112-116) では `_healthSubscription.Dispose()` のみで listener 解除がない
-- **指摘内容**: Lifetime.Singleton で container 所有のため LifetimeScope.OnDestroy 時に Dispose が
-  呼ばれるが、edit-mode listener の `-=` 相当処理 (RemoveEditModeListener API 不在) がないため
-  CameraManagerPanel 側の `_editModeListeners` リストに stale 参照が残り続ける理論 leak がある。
-- **実害評価**: 軽微 (V3d 由来の既存条件・regression ではない)。
-  CameraManagerPanel は MonoBehaviour でシーン上の Game Manager 配下に配置、`_editModeListeners`
-  は private List。VerticalSliceBootstrapWiring の Dispose は scene-wide unload 時に走り、
-  CameraManagerPanel も同時に Unity の GameObject destroy で List ごと解放される。
-  すなわち scene-bound entity 同士の関係で listener leak は scene の lifetime 内に閉じる。
-  GameBootstrap が wiring を抱えていた V3d 以前から同パターンで運用されており、新 regression ではない。
-- **将来 trigger**:
-  - CameraManagerPanel に `RemoveEditModeListener(Action<bool>)` API を追加 + listener を field 保持
-    + VerticalSliceBootstrapWiring.Dispose で remove (Codex 提案の fix 候補)
-  - Phase 13 (final cleanup) の Subscribe Dispose 監査 で一括対応
-  - 別 LifetimeScope を導入してシーン unload より早い phase で wiring を破棄する設計に変わった場合
+  `Dispose` 側 (line 112-116) では `_healthSubscription.Dispose()` のみで listener 解除がない。
+- **fix 内容 (2026-05-16)**:
+  - `CameraManagerPanelController.Path.cs` に `RemoveEditModeListener(Action<bool>)` API を新設
+    (`_editModeListeners.Remove(listener)`)。
+  - `VerticalSliceBootstrapWiring` に `_editModePanel` / `_editModeListener` field を追加し、
+    Wire 時に lambda を field 保持して登録、`Dispose` 時に `RemoveEditModeListener` で解除する。
+- **過去の実害評価 (記録のため残置)**: 軽微 (V3d 由来の既存条件・regression ではない)。
+  scene-bound entity 同士の関係で listener leak は scene の lifetime 内に閉じていた。
+  ただし別 LifetimeScope を導入してシーン unload より早い phase で wiring を破棄する設計に
+  変わった場合の予防策として fix 済。
 
 ### F-Vf-a.2: VisualManager / EdgeVisualManager 欠落時の VContainer exception 露出
 - **検出**: Vf-a Codex review
@@ -340,6 +335,31 @@ Bootstrap.Services / Bootstrap.Wiring に移送。Codex review (`ad3f33ebd5fdf11
   - または RootLifetimeScope.Configure で VisualManager / EdgeVisualManager を hard requirement として
     `throw new InvalidOperationException` し、Configure 直前で diagnostic を出す
   - Vf-c (RootLifetimeScope シーン直接配置) で sceneRefs の hard requirement を整理する際に同時対応
+
+### F-Vf-e.1: BoundaryValidator 限定有効化の段階拡張 (2026-05-16 追記)
+- **対象**: `Assets/Editor/BoundaryViolationValidator.cs` の有効 rule 数
+- **背景**: shell `scripts/verify-asmdef-boundaries.sh` の planned full rule 集合と突合した結果、
+  現状違反なしの 2 rule (`Audio.Analysis` / `Ableton.Session`) が Editor 側で未有効化だった
+  ことが判明。2026-05-16 に Rule 5b/5c として有効化し EnabledRuleCount を 8 → 10 に bump。
+- **残存 (Phase 5/7 cleanup 後に有効化予定、いずれも現状実違反あり)**:
+  - `Audio.GraphAdapter ⊄ UI.Presentation` (`Audio/GraphAdapter/Rhizomode.Audio.GraphAdapter.asmdef:12`)
+  - `Rhizomode.Interaction ⊄ Graph.*` (`Interaction/Rhizomode.Interaction.asmdef:10-12` で
+    Graph.Model / Graph.Runtime / Graph.Serialization を参照)
+  - `Rhizomode.UI.Presentation ⊄ NodeCatalog.Runtime` (`UI/Presentation/Rhizomode.UI.Presentation.asmdef:9`)
+- **将来 trigger**: Phase 5 で Interaction.GraphAdapter / UI への完全分離が済んだら、それぞれ追加。
+
+### F-Vf-e.2: CommandOrigin invariant の source-scan CI 実装 — 実装済 (2026-05-16)
+- **対象**: `Assets/Tests/Editor/Graph/CommandOriginAuditTests.cs`
+- **背景**: memory `feedback_command_origin.md` で約束していた「Boundary CI で Origin を検証」が
+  F-Vf-d.2 (Interaction.GraphAdapter 物理移送) 後も未実装で残っていた。Roslyn は重い + Unity から
+  扱いにくいため、`Application.dataPath` + `Directory.GetFiles` + regex の source-scan で代用。
+- **検証内容**:
+  - 各 `Runtime/*/GraphAdapter` 配下 .cs に出現する `CommandOrigin.X` が adapter の期待値と一致 (`[TestCase]`)
+  - `CommandOrigin.Test` が Runtime 配下で使われていない
+  - 行頭 `//`/`///` の comment 行は scan 対象外 (XML doc cref の false positive を防止)
+- **将来 trigger**: 「同一 command kind が 2 種類以上の Origin から発行されたら warning」と
+  「`CommandOrigin.X` の網羅性チェック」は未実装 (memory 約束の Adapter 重複 warning に相当)。
+  Adapter 数が増えるか duplicate emission が検出されたタイミングで Roslyn / runtime-replay 方式に拡張。
 
 ---
 

@@ -26,6 +26,15 @@ namespace Rhizomode.UI
             _editModeListeners.Add(listener);
         }
 
+        /// <summary>
+        /// <see cref="AddEditModeListener"/> で登録した listener を解除する (F-Vf-c.1)。
+        /// VerticalSliceBootstrapWiring など container 所有 disposable の Dispose から呼ぶ。
+        /// </summary>
+        public void RemoveEditModeListener(Action<bool> listener)
+        {
+            _editModeListeners.Remove(listener);
+        }
+
         private void OnEditPathToggleChanged(ChangeEvent<bool> e)
         {
             if (e.newValue) StartEditing();
