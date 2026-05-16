@@ -82,6 +82,9 @@ namespace Rhizomode.Nodes.Modules
         }
 
         /// <inheritdoc />
+        public override bool IsInputPortEvent(string portName) => _definition.IsEvent(portName);
+
+        /// <inheritdoc />
         public override void Setup(GraphState context)
         {
             foreach (var param in _definition.parameters)

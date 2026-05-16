@@ -65,6 +65,9 @@ namespace Rhizomode.Nodes.Input
             _valueOut.Emit(_color);
         }
 
+        /// <inheritdoc />
+        public override void PrimeInitialEmission() => _valueOut.Emit(_color);
+
         public override NodeData ToNodeData()
         {
             var data = base.ToNodeData();

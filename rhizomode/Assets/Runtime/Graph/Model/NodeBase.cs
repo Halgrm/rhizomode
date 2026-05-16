@@ -104,6 +104,25 @@ namespace Rhizomode.Graph.Model
         public abstract void Setup(GraphState context);
 
         /// <summary>
+        /// 指定入力ポートが "event 用" (true 受信時に副作用発火) か。
+        /// </summary>
+        /// <remarks>
+        /// F-Vf-d.1: NodeSpawnService の auto-spawn が event ポートを skip するための抽象 API。
+        /// ModuleNodeBase が ModuleDefinition.IsEvent を override する。それ以外のノードは常に false。
+        /// </remarks>
+        public virtual bool IsInputPortEvent(string portName) => false;
+
+        /// <summary>
+        /// edge 接続直後に source ノードから初期値を再発行する。
+        /// </summary>
+        /// <remarks>
+        /// F-Vf-d.1: R3 Subject はリプレイしないため、接続後の最初の emission が必要。
+        /// ConstFloatNode / ConstColorNode が override し、_valueOut.Emit を呼ぶ。
+        /// 旧コード (NodeSpawnService の `cf.Value = cf.Value` setter ハック) を置換する。
+        /// </remarks>
+        public virtual void PrimeInitialEmission() { }
+
+        /// <summary>
         /// ノード削除時に呼ばれる。全subscription・全ポートを解放する。
         /// </summary>
         public virtual void Dispose()

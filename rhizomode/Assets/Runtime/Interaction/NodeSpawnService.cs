@@ -4,12 +4,8 @@ using System;
 using System.Collections.Generic;
 using Rhizomode.SharedKernel;
 using Rhizomode.Graph.Model;
-using Rhizomode.Graph.Runtime;
-using Rhizomode.Modules;
-using Rhizomode.Nodes.Modules;
-using Rhizomode.Nodes.Input;
-using Rhizomode.Nodes.Time;
-using Rhizomode.Nodes.Utility;
+using Rhizomode.Graph.Mutation;
+using Rhizomode.NodeCatalog.Contracts;
 using Rhizomode.UI;
 using UnityEngine;
 
@@ -19,18 +15,19 @@ namespace Rhizomode.Interaction
     /// ScrollMenu 選択 + Const/Toggle/Trigger 自動 spawn の graph mutation ロジックを集約する service。
     /// </summary>
     /// <remarks>
-    /// Plan v5.4 §15 F-Vf-a.1 Phase D: 旧 Rhizomode.Bootstrap.NodeSpawnService を Rhizomode.Interaction
-    /// asmdef へ移送 (Interaction asmdef は Nodes.Standard / Modules.Runtime / Graph.Model/Runtime 全てを
-    /// 参照済 — ScrollMenu 入力を graph mutation へ翻訳する layer として本来の所属先)。
+    /// Plan v5.4 §13 (F-Vf-d.1 完了): 全 graph mutation は <see cref="GraphCommandDispatcher"/> 経由で実行される。
+    /// 旧実装は <c>NodeRuntime.RegisterNode</c> + <c>AddEdge</c> を直接呼び <see cref="CommandAuditLog"/> を bypass
+    /// していたが、本 service は <see cref="AddNodeCommand"/> + <see cref="ConnectPortsCommand"/> を Dispatcher
+    /// 経由で発行する。Undo/Redo + audit log と統合される。
     ///
-    /// 将来 IGraphCommand 経由 (AddNodeFromMenuCommand + AutoSpawnInputsCommand) へ refactor する候補は
-    /// CODEX_DEFERRED_FINDINGS.md に F-Vf-d.1 として記録。現状は直接 NodeRuntime.RegisterNode + AddEdge を
-    /// 呼ぶ実装を保持 (ModuleNodeBase.IsEvent + ConstFloatNode/ConstColorNode の初期値再発行など、
-    /// Graph.Mutation Applier から抽象化困難な箇所が残るため)。
+    /// 具体ノード型 (ConstFloatNode / ConstColorNode / ToggleNode / TriggerNode / ModuleNodeBase) には依存せず、
+    /// 以下の抽象 API のみ使用する:
+    ///   - <see cref="ParamTypeNodeMap.GetSourceTypeName"/> で typeName 解決
+    ///   - <see cref="NodeBase.IsInputPortEvent"/> で event ポート判定
+    ///   - <see cref="NodeBase.PrimeInitialEmission"/> で接続直後の初期値再発行
     ///
-    /// graph mutation 部 (NodeRuntime.RegisterNode + AddEdge) を担当、visual 創出 (NodeVisualManager /
-    /// EdgeVisualManager) は <see cref="Rhizomode.UI.MenuNodeSpawnCoordinator"/> (UI.GraphAdapter) が
-    /// 担当 — service は "data 層"、coordinator は "UI 反映層"。
+    /// graph mutation 部 (本 service) と visual 創出 (<c>Rhizomode.UI.MenuNodeSpawnCoordinator</c>) は
+    /// <c>InputSpawnResult</c> DTO を介して疎結合 — service は "data 層"、coordinator は "UI 反映層"。
     /// </remarks>
     public sealed class NodeSpawnService
     {
@@ -39,13 +36,16 @@ namespace Rhizomode.Interaction
         private const float InputNodeVerticalSpacing = 0.18f;
         private const float TriggerNodeHorizontalOffset = 0.3f;
 
-        private readonly GraphState _graphState;
-        private readonly NodeRuntime _nodeRuntime;
+        private const string ToggleTypeName = "Toggle";
+        private const string TriggerTypeName = "Trigger";
 
-        public NodeSpawnService(GraphState graphState, NodeRuntime nodeRuntime)
+        private readonly GraphState _graphState;
+        private readonly GraphCommandDispatcher _dispatcher;
+
+        public NodeSpawnService(GraphState graphState, GraphCommandDispatcher dispatcher)
         {
             _graphState = graphState;
-            _nodeRuntime = nodeRuntime;
+            _dispatcher = dispatcher;
         }
 
         /// <summary>
@@ -57,17 +57,13 @@ namespace Rhizomode.Interaction
         /// <returns>spawn 結果。typeName が未登録の場合 null。</returns>
         public SpawnResult? TrySpawnFromMenu(string typeName, Vector3 headPosition, Vector3 headForward)
         {
-            var node = _graphState.CreateNode(typeName);
+            var spawnPos = headPosition + headForward * DefaultMenuSpawnOffset;
+            var node = DispatchAddNode(typeName, spawnPos);
             if (node == null)
             {
                 Debug.LogWarning($"[NodeSpawnService] Failed to create node '{typeName}'");
                 return null;
             }
-
-            var spawnPos = headPosition + headForward * DefaultMenuSpawnOffset;
-            node.Position = spawnPos;
-            _nodeRuntime.RegisterNode(node, NodeInitMode.FreshSpawn);
-
             return new SpawnResult(node, spawnPos);
         }
 
@@ -86,11 +82,10 @@ namespace Rhizomode.Interaction
             var inputPorts = targetNode.InputPorts;
             if (inputPorts.Count == 0) return results;
 
-            var moduleNode = targetNode as ModuleNodeBase;
             var portCount = 0;
             foreach (var kvp in inputPorts)
             {
-                if (moduleNode != null && moduleNode.Definition.IsEvent(kvp.Key)) continue;
+                if (targetNode.IsInputPortEvent(kvp.Key)) continue;
                 portCount++;
             }
             if (portCount == 0) return results;
@@ -106,47 +101,44 @@ namespace Rhizomode.Interaction
                 var portName = kvp.Key;
                 var portType = kvp.Value.Type;
 
-                if (moduleNode != null && moduleNode.Definition.IsEvent(portName)) continue;
+                if (targetNode.IsInputPortEvent(portName)) continue;
 
-                var sourceNode = CreateSourceNode(portType);
-                if (sourceNode == null) continue;
+                var sourceTypeName = ParamTypeNodeMap.GetSourceTypeName(portType);
+                if (sourceTypeName == null) continue;
 
                 var pos = new Vector3(
                     startOffset.x,
                     topY - slotIndex * InputNodeVerticalSpacing,
                     startOffset.z);
-                sourceNode.Position = pos;
 
-                _nodeRuntime.RegisterNode(sourceNode, NodeInitMode.FreshSpawn);
+                var sourceNode = DispatchAddNode(sourceTypeName, pos);
+                if (sourceNode == null) continue;
 
-                var outputPort = sourceNode is ToggleNode ? "State" : "Value";
+                var outputPort = sourceTypeName == ToggleTypeName ? "State" : "Value";
                 var edgeId = Guid.NewGuid().ToString();
-                var connectedEdge = _nodeRuntime.AddEdge(edgeId, sourceNode.Id, outputPort, targetNode.Id, portName)
-                    ? FindEdge(sourceNode.Id, outputPort, targetNode.Id, portName)
-                    : null;
+                _dispatcher.Execute(new ConnectPortsCommand(
+                    CommandOrigin.Interaction, edgeId,
+                    sourceNode.Id, outputPort, targetNode.Id, portName));
+                var connectedEdge = FindEdgeById(edgeId);
 
                 // Const の初期値を再発行 (R3 Subject はリプレイしないため、接続後の最初の emission が必要)
-                if (connectedEdge != null)
-                {
-                    if (sourceNode is ConstFloatNode constFloat) constFloat.Value = constFloat.Value;
-                    else if (sourceNode is ConstColorNode constColor) constColor.Value = constColor.Value;
-                }
+                if (connectedEdge != null) sourceNode.PrimeInitialEmission();
 
-                // Toggle には Trigger ノードを追加 spawn
                 NodeBase? triggerNode = null;
                 Edge? triggerEdge = null;
                 Vector3 triggerPos = default;
-                if (sourceNode is ToggleNode toggleNode)
+                if (sourceTypeName == ToggleTypeName)
                 {
-                    triggerNode = new TriggerNode(Guid.NewGuid().ToString());
                     triggerPos = pos - nodeRight * TriggerNodeHorizontalOffset;
-                    triggerNode.Position = triggerPos;
-                    _nodeRuntime.RegisterNode(triggerNode, NodeInitMode.FreshSpawn);
-
-                    var triggerEdgeId = Guid.NewGuid().ToString();
-                    triggerEdge = _nodeRuntime.AddEdge(triggerEdgeId, triggerNode.Id, "Trigger", toggleNode.Id, "Trigger")
-                        ? FindEdge(triggerNode.Id, "Trigger", toggleNode.Id, "Trigger")
-                        : null;
+                    triggerNode = DispatchAddNode(TriggerTypeName, triggerPos);
+                    if (triggerNode != null)
+                    {
+                        var triggerEdgeId = Guid.NewGuid().ToString();
+                        _dispatcher.Execute(new ConnectPortsCommand(
+                            CommandOrigin.Interaction, triggerEdgeId,
+                            triggerNode.Id, "Trigger", sourceNode.Id, "Trigger"));
+                        triggerEdge = FindEdgeById(triggerEdgeId);
+                    }
                 }
 
                 results.Add(new InputSpawnResult(
@@ -159,28 +151,27 @@ namespace Rhizomode.Interaction
             return results;
         }
 
-        private static NodeBase? CreateSourceNode(ParamType portType) => portType switch
-        {
-            ParamType.Float => new ConstFloatNode(Guid.NewGuid().ToString()),
-            ParamType.Color => new ConstColorNode(Guid.NewGuid().ToString()),
-            ParamType.Bool => new ToggleNode(Guid.NewGuid().ToString()),
-            _ => null
-        };
-
         /// <summary>
-        /// 新規追加された edge を endpoint 一致で _state.Edges から逆引き。
+        /// AddNodeCommand を dispatch し、適用後の <see cref="NodeBase"/> インスタンスを GraphState から取得する。
         /// </summary>
-        private Edge? FindEdge(string fromNodeId, string fromPort, string toNodeId, string toPort)
+        private NodeBase? DispatchAddNode(string typeName, Vector3 position)
+        {
+            var nodeId = Guid.NewGuid().ToString();
+            _dispatcher.Execute(new AddNodeCommand(
+                CommandOrigin.Interaction,
+                nodeId,
+                typeName,
+                new RzVector3(position.x, position.y, position.z)));
+            return _graphState.Nodes.TryGetValue(nodeId, out var node) ? node : null;
+        }
+
+        /// <summary>新規追加された edge を id 一致で _state.Edges から取得する。</summary>
+        private Edge? FindEdgeById(string edgeId)
         {
             var edges = _graphState.Edges;
             for (var i = edges.Count - 1; i >= 0; i--)
             {
-                var e = edges[i];
-                if (e.FromNodeId == fromNodeId && e.FromPort == fromPort &&
-                    e.ToNodeId == toNodeId && e.ToPort == toPort)
-                {
-                    return e;
-                }
+                if (edges[i].Id == edgeId) return edges[i];
             }
             return null;
         }

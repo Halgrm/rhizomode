@@ -109,6 +109,9 @@ namespace Rhizomode.Nodes.Input
             _valueOut.Emit(_value);
         }
 
+        /// <inheritdoc />
+        public override void PrimeInitialEmission() => _valueOut.Emit(_value);
+
         public override NodeData ToNodeData()
         {
             var data = base.ToNodeData();

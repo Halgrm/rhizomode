@@ -226,23 +226,30 @@ Bootstrap.Services / Bootstrap.Wiring に移送。Codex review (`ad3f33ebd5fdf11
     Scene / Interaction) で再登録。XRInstaller の責務は VR 入力配線 wiring のみに純化。
 - **§15 適合**: Bootstrap asmdef は Installers / Wiring / ITickable adapter のみを保持する状態に到達。
 
-### F-Vf-d.1: NodeSpawnService の IGraphCommand 経由化 (deferred)
+### F-Vf-d.1: NodeSpawnService の IGraphCommand 経由化 **[RESOLVED 2026-05-16]**
 - **検出**: F-Vf-a.1 Phase D 移送時に identify
-- **対象**: `Interaction/NodeSpawnService.cs`
-- **指摘内容**: NodeSpawnService は依然として `NodeRuntime.RegisterNode` + `AddEdge` を直接呼び、
-  `IGraphCommand` (AddNodeCommand / ConnectPortsCommand) 経由になっていない。Plan v5.4 の
-  「全 graph mutation は IGraphCommand 経由」原則に対する transitional 違反。
-- **実害評価**: 軽微。NodeRuntime 自体が graph mutation を統合的に扱う層であり、Bootstrap 経由
-  ではなく direct invocation でも GraphEventBus の発火 + Undo/Redo の整合は保たれる
-  (ただし audit-log には記録されない)。
-- **将来 trigger**:
-  - `AddNodeFromMenuCommand` + `AutoSpawnInputsCommand` を Graph.Mutation に追加
-  - `GraphMutationApplier` 拡張: `INodeFactory.Create` 経由のノード作成、ParamType → typeName
-    mapping (`ConstFloat` / `ConstColor` / `Toggle` / `Trigger`) を NodeCatalog.Contracts に置く
-  - `ModuleNodeBase.IsEvent` を `NodeBase.GetInputPortMetadata(portName).IsEvent` 等の abstract API
-    として Graph.Model へ持ち上げる
-  - ConstFloatNode/ConstColorNode の「接続後初期値再発行」を `NodeBase.PrimeInitialEmission()`
-    virtual hook として抽象化
+- **対象 (解消前)**: `Interaction/NodeSpawnService.cs`
+- **指摘内容**: NodeSpawnService は `NodeRuntime.RegisterNode` + `AddEdge` を直接呼び、
+  `IGraphCommand` (AddNodeCommand / ConnectPortsCommand) 経由になっていなかった。Plan v5.4 の
+  「全 graph mutation は IGraphCommand 経由」原則 (§13) に対する transitional 違反。
+- **解消**: 5 step 構成で `GraphCommandDispatcher` 経由に置換:
+  - **Step 1**: `NodeBase.IsInputPortEvent(string portName)` virtual を追加 (default false)、
+    `ModuleNodeBase` で `Definition.IsEvent(portName)` を返す override を実装。
+    NodeSpawnService から `ModuleNodeBase` への具体依存を解消。
+  - **Step 2**: `NodeBase.PrimeInitialEmission()` virtual を追加 (default no-op)、
+    `ConstFloatNode` / `ConstColorNode` で `_valueOut.Emit(...)` を呼ぶ override を実装。
+    旧 `cf.Value = cf.Value` setter ハックを抽象 API に置換。
+  - **Step 3**: `Rhizomode.NodeCatalog.Contracts.ParamTypeNodeMap.GetSourceTypeName(ParamType)`
+    static helper を追加 (Float→ConstFloat / Color→ConstColor / Bool→Toggle)。
+    Interaction asmdef は Nodes.* 具体型を knowing せず typeName 文字列で AddNodeCommand を発行可能に。
+  - **Step 4**: NodeSpawnService の ctor を `(GraphState, GraphCommandDispatcher)` に変更、
+    `TrySpawnFromMenu` / `SpawnInputNodes` 内で `AddNodeCommand` + `ConnectPortsCommand` を
+    `CommandOrigin.Interaction` 付きで発行。`Interaction` asmdef refs に `Rhizomode.Graph.Mutation`
+    を追加。Toggle/Trigger 分岐は typeName 文字列ベース。FindEdge は edge id 一致で逆引き。
+  - **Step 5**: EditMode 142/142 + PlayMode 1/1 PASS、warnings 0 で commit。
+- **§13 適合**: 全 graph mutation が IGraphCommand + CommandAuditLog 経由に統合された。Plan v5.4 §13
+  「全 mutation IGraphCommand 経由」原則を完全達成。新 record (`AddNodeFromMenuCommand` /
+  `AutoSpawnInputsCommand`) は不要 (既存 `AddNodeCommand` + `ConnectPortsCommand` 連投で代替)。
 
 ### F-Vf-c.1: VerticalSliceBootstrapWiring.Dispose に edit-mode listener 解除が欠落
 - **検出**: Vf-c Codex review (3 度目の試行、commit `1a0ba0fb`、`abeacbe1eda90a1c5`)

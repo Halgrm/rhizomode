@@ -181,7 +181,7 @@ To add interface capability: create a new interface (e.g., `ISmoothableModule`),
 - NodeVisualController deferred bind リトライ上限
 - モジュールノード自動スポーン (ConstFloat/ConstColor プリコネクト)
 
-**v5.4 大規模リファクタ — Phase 0-13B/C + V-final + F-Vf-a.1** ✅
+**v5.4 大規模リファクタ — Phase 0-13B/C + V-final + F-Vf-a.1 + F-Vf-d.1** ✅
 - 48 asmdef 構成 (`SharedKernel` 最下層 + `Graph.*` 8 分割 + 各システム `Contracts/Impl/GraphAdapter` + `NodeCatalog.Contracts/Runtime` + `Nodes.Standard/Audio/OscMidi/Ableton/Scene/Defaults`)
 - `IGraphCommand` + `GraphCommandDispatcher` + `GraphMutationApplier` で全 graph 変異を統一 (Origin 付き record / Undo Snapshot)
 - VContainer 全面導入: `RootLifetimeScope` シーン直接配置、19 Installer 完備 (Plan §15 適合)
@@ -191,7 +191,12 @@ To add interface capability: create a new interface (e.g., `ISmoothableModule`),
   - `SceneObjectRegistrationService` → `Rhizomode.Scene.GraphAdapter`
   - `NodeSpawnService` → `Rhizomode.Interaction`
   - `Bootstrap` asmdef は §15 通り「Installer / Wiring / ITickable adapter のみ」へ純化
-- 残課題は `docs/CODEX_DEFERRED_FINDINGS.md` 参照 (F-Vf-c.1 / F-Vf-d.1 等)
+- **F-Vf-d.1 解消 (2026-05-16)**: `NodeSpawnService` を `GraphCommandDispatcher` 経由に refactor。
+  - `NodeBase.IsInputPortEvent` + `PrimeInitialEmission` virtual を新設 (ModuleNodeBase / ConstFloat / ConstColor 各 override)
+  - `ParamTypeNodeMap` (NodeCatalog.Contracts) で ParamType→typeName mapping を共通化
+  - `Interaction` asmdef refs に `Graph.Mutation` を追加。新 record (AddNodeFromMenuCommand 等) は不要 (既存 `AddNodeCommand` + `ConnectPortsCommand` 連投で代替)
+  - Plan v5.4 §13 「全 graph mutation は IGraphCommand 経由」原則を完全達成
+- 残課題は `docs/CODEX_DEFERRED_FINDINGS.md` 参照 (F-Vf-c.1 等)
 
 ### VR UIパイプライン（重要な設計知識）
 
@@ -217,7 +222,6 @@ UIToolkit Panel (WorldPanelHost上のRenderTexture)
 
 ### Post-launch / 継続課題
 
-- **F-Vf-d.1**: `NodeSpawnService` の IGraphCommand 経由化 (AddNodeFromMenuCommand + AutoSpawnInputsCommand を Graph.Mutation に追加、ParamType→typeName mapping を NodeCatalog.Contracts へ、`ModuleNodeBase.IsEvent` を NodeBase abstract API へ抽象化)
 - **F-Vf-c.1**: `VerticalSliceBootstrapWiring.Dispose` の edit-mode listener 解除欠落 (理論 leak、`CameraManagerPanel.RemoveEditModeListener` API 不在のため deferred)
 - v5.4 残: Phase 13A / 負荷テスト / `GraphStateBehaviour` rename / PanelBudget
 - カメラ・パス機能 Phase 4 (永続化)
