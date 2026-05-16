@@ -52,7 +52,9 @@ namespace Rhizomode.Graph.Runtime
 
             foreach (var entry in plan.Nodes)
             {
-                var node = factory.Create(entry.TypeName, entry.NodeId);
+                // Codex re-review #5 fix (2026-05-16): paramsJson を factory に渡し、constructor 依存
+                // ノード (SceneObjectNode 等) の port 構成 / objectName を正しく復元する。
+                var node = factory.Create(entry.TypeName, entry.NodeId, entry.ParamsJson ?? string.Empty);
                 if (node == null)
                 {
                     Debug.LogWarning($"[HydrationPlanExecutor] Unknown node type: {entry.TypeName} ({entry.NodeId})");

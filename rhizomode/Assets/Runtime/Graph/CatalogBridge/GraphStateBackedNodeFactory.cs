@@ -36,6 +36,13 @@ namespace Rhizomode.Graph.CatalogBridge
             _graphState.CreateNodeWithId(typeName, nodeId);
 
         /// <summary>
+        /// paramsJson 経路 — SceneObjectNode 等の constructor 依存ノードを正しく復元するために、
+        /// GraphState の paramsJson aware factory を呼ぶ (Codex re-review #5 fix)。
+        /// </summary>
+        public NodeBase? Create(string typeName, string nodeId, string paramsJson) =>
+            _graphState.CreateNodeWithId(typeName, nodeId, paramsJson);
+
+        /// <summary>
         /// <see cref="NodeCatalog.Runtime.CompositeNodeFactory.DetectDuplicateTypeNames"/> が
         /// reflection で参照する optional プロパティ。
         /// </summary>

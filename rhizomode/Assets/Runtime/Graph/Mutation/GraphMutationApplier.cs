@@ -37,9 +37,19 @@ namespace Rhizomode.Graph.Mutation
             _bus = bus;
         }
 
+        /// <summary>
+        /// 関連 <see cref="GraphState"/> が dispose 済かを公開する (Codex re-review #4 fix)。
+        /// </summary>
+        public bool IsGraphDisposed => _state.IsDisposed;
+
         /// <summary>現在の GraphState から canonical <see cref="GraphSnapshot"/> を構築する。</summary>
+        /// <remarks>
+        /// Codex re-review #4 fix (2026-05-16): disposed graph に対して呼ばれたら空 Snapshot を返す。
+        /// Dispatcher.Execute の pre-snapshot 取得経路で disposed race が起きた場合の防御。
+        /// </remarks>
         public GraphSnapshot CaptureSnapshot()
         {
+            if (_state.IsDisposed) return GraphSnapshot.Empty;
             var nodes = new List<NodeSnapshot>(_state.Nodes.Count);
             foreach (var node in _state.Nodes.Values)
             {
@@ -78,6 +88,12 @@ namespace Rhizomode.Graph.Mutation
         /// </remarks>
         public bool TryApply(IGraphCommand command)
         {
+            // Codex re-review #4 fix (2026-05-16): GraphState 破棄後の queued command を drop。
+            // MainThreadGraphCommandQueue が BG enqueue を main で dispatch する経路で、scene shutdown
+            // 中の race で disposed state に commands が流れ込み得る (旧 #4 fix の AudioDriverHost は
+            // 守れていたが mutation path は穴があった)。
+            if (_state.IsDisposed) return false;
+
             switch (command)
             {
                 case AddNodeCommand add: return TryApplyAdd(add);
@@ -182,7 +198,9 @@ namespace Rhizomode.Graph.Mutation
             foreach (var nodeSnap in snapshot.Nodes)
             {
                 if (!_factory.CanCreate(nodeSnap.TypeName)) continue;
-                var node = _factory.Create(nodeSnap.TypeName, nodeSnap.NodeId);
+                // Codex re-review #5 fix (2026-05-16): paramsJson を factory に渡し constructor 依存
+                // ノードの port 構成を復元してから ParamValues / RestoreParamsFromJson で上書きする。
+                var node = _factory.Create(nodeSnap.TypeName, nodeSnap.NodeId, nodeSnap.ParamsJson);
                 if (node == null) continue;
                 node.Position = new Vector3(nodeSnap.Position.X, nodeSnap.Position.Y, nodeSnap.Position.Z);
 

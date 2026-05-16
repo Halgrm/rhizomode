@@ -76,9 +76,15 @@ namespace Rhizomode.Graph.Mutation
         /// 毎回フル Snapshot を取ると List 2 個 + per-node 構造体の allocation が発生する。
         /// 高頻度コマンドは pre-snapshot をスキップし、逆コマンド (inverse-command) で undo するか
         /// list を pool 化して再利用する最適化を検討する。
+        ///
+        /// Codex re-review #4 fix (2026-05-16): scene shutdown 中の race で disposed graph に対して
+        /// MainThreadGraphCommandQueue 由来の commands が dispatch され得る。冒頭で early return し、
+        /// Undo / audit を汚さない。
         /// </remarks>
         public void Execute(IGraphCommand command)
         {
+            if (_applier.IsGraphDisposed) return;
+
             var pre = _applier.CaptureSnapshot();
             _applier.Apply(command);
             _auditLog.Record(command);

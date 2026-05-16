@@ -50,6 +50,19 @@ namespace Rhizomode.NodeCatalog.Runtime
         }
 
         /// <summary>
+        /// paramsJson 経路 — 各 inner factory に 3 引数版を委譲。
+        /// 既定実装を持たない factory は 2 引数版にフォールバックする (Codex re-review #5 fix)。
+        /// </summary>
+        public NodeBase? Create(string typeName, string nodeId, string paramsJson)
+        {
+            foreach (var f in _factories)
+            {
+                if (f.CanCreate(typeName)) return f.Create(typeName, nodeId, paramsJson);
+            }
+            return null;
+        }
+
+        /// <summary>
         /// 合成された factory 群に対して、同じ typeName が複数の factory に登録されている
         /// ケースを列挙する。Bootstrap / Test の起動時診断で重複を検知するために使う。
         /// </summary>

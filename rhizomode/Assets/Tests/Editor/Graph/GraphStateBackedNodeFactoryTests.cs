@@ -64,6 +64,22 @@ namespace Rhizomode.Graph.Tests
         }
 
         [Test]
+        public void Create_WithParamsJson_PassedToParamsAwareFactory()
+        {
+            // Codex re-review #5 fix: SceneObjectNode 系の constructor 依存ノードを paramsJson 経由で
+            // 復元できることを検証する (INodeFactory 3 引数 overload → paramsFactory)。
+            var state = new GraphState();
+            INodeFactory factory = new GraphStateBackedNodeFactory(state);
+
+            state.RegisterNodeFactory("FakeC", (System.Func<string, string, NodeBase>)((id, json) =>
+                new FakeNode(id, json)));
+
+            var node = factory.Create("FakeC", "id-c", "{\"objectName\":\"Saved\"}");
+            Assert.IsInstanceOf<FakeNode>(node);
+            Assert.AreEqual("{\"objectName\":\"Saved\"}", ((FakeNode)node!).CtorArg);
+        }
+
+        [Test]
         public void AllTypeNames_UnionOfBothDicts_NoDuplicates()
         {
             var state = new GraphState();
