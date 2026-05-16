@@ -181,7 +181,7 @@ To add interface capability: create a new interface (e.g., `ISmoothableModule`),
 - NodeVisualController deferred bind リトライ上限
 - モジュールノード自動スポーン (ConstFloat/ConstColor プリコネクト)
 
-**v5.4 大規模リファクタ — Phase 0-13B/C + V-final + F-Vf-a.1 + F-Vf-d.1 + F-Vf-d.2 + F-Vf-d.3** ✅
+**v5.4 大規模リファクタ — Phase 0-13B/C + V-final + F-Vf-a.1 + F-Vf-d.1 + F-Vf-d.2 + F-Vf-d.3 + Launch hardening (P1-P4)** ✅
 - 48 asmdef 構成 (`SharedKernel` 最下層 + `Graph.*` 8 分割 + 各システム `Contracts/Impl/GraphAdapter` + `NodeCatalog.Contracts/Runtime` + `Nodes.Standard/Audio/OscMidi/Ableton/Scene/Defaults`)
 - `IGraphCommand` + `GraphCommandDispatcher` + `GraphMutationApplier` で全 graph 変異を統一 (Origin 付き record / Undo Snapshot)
 - VContainer 全面導入: `RootLifetimeScope` シーン直接配置、19 Installer 完備 (Plan §15 適合)
@@ -237,3 +237,10 @@ UIToolkit Panel (WorldPanelHost上のRenderTexture)
 - カメラ・パス機能 Phase 4 (永続化)
 - GraphCommandDispatcher 高頻度コマンド (MoveNode/SetNodeParam) の Snapshot allocation 最適化 (Phase 4 backlog、`GraphCommandDispatcher.cs:73-79`)
 - BoundaryValidator 残 rule: Audio.GraphAdapter / Interaction / UI.Presentation の asmdef refs cleanup 後に有効化 (F-Vf-e.1)
+- 次に効く整理 (review item):
+  - [NodeType] スキャンと NodeRegistrationOrchestrator の二重管理を [NodeType] 起点に一本化
+  - SceneObjectNode の RestoreParamsFromJson 実装 (constructor 依存ノードの先例)
+  - Audio.GraphAdapter → UI 直依存解消
+  - XR.asmdef 参照削減 (Bootstrap/Graph/Nodes/Modules/UI を触っている)
+  - 60 nodes 時の UI コスト制御 (NodeVisualManager の UIDocument/RenderTexture/PanelSettings/Material per node を LOD/プール/可視範囲へ)
+  - Performance tests placeholder の実体化 (60 nodes / 200 edges / 1000 OSC msgs)

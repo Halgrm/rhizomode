@@ -45,7 +45,8 @@ namespace Rhizomode.Graph.Mutation
             {
                 var pos = new RzVector3(node.Position.x, node.Position.y, node.Position.z);
                 var paramValues = CaptureNodeParams(node);
-                nodes.Add(new NodeSnapshot(node.Id, node.NodeType, pos, paramValues));
+                var paramsJson = CaptureParamsJson(node);
+                nodes.Add(new NodeSnapshot(node.Id, node.NodeType, pos, paramValues, paramsJson));
             }
 
             var edges = new List<EdgeSnapshot>(_state.Edges.Count);
@@ -169,6 +170,11 @@ namespace Rhizomode.Graph.Mutation
         /// <summary>
         /// Snapshot から GraphState を完全復元する (Undo/Redo + LoadGraph で使用)。
         /// </summary>
+        /// <remarks>
+        /// P2 fix: ParamsJson (paramsJson 文字列) を先に適用してから ParamValues (typed value)
+        /// を上書きする。これにより INodeParamAccessor 非対応の internal state (LFO 波形 enum 等)
+        /// も Undo/Redo で保持される。
+        /// </remarks>
         public void RestoreFromSnapshot(GraphSnapshot snapshot)
         {
             _state.Clear();
@@ -179,6 +185,18 @@ namespace Rhizomode.Graph.Mutation
                 var node = _factory.Create(nodeSnap.TypeName, nodeSnap.NodeId);
                 if (node == null) continue;
                 node.Position = new Vector3(nodeSnap.Position.X, nodeSnap.Position.Y, nodeSnap.Position.Z);
+
+                // 1) paramsJson を全 param に適用 (LFO 波形 / Smooth mode 等の non-typed state を含む)
+                if (!string.IsNullOrEmpty(nodeSnap.ParamsJson))
+                {
+                    try { node.RestoreParamsFromJson(nodeSnap.ParamsJson); }
+                    catch (System.Exception e)
+                    {
+                        Debug.LogWarning($"[GraphMutationApplier] RestoreParamsFromJson failed: {nodeSnap.NodeId} — {e.Message}");
+                    }
+                }
+
+                // 2) typed ParamValues で上書き (SetNodeParamCommand で記録された具体値を勝たせる)
                 if (node is INodeParamAccessor accessor)
                 {
                     foreach (var kvp in nodeSnap.ParamValues)
@@ -197,12 +215,40 @@ namespace Rhizomode.Graph.Mutation
             }
         }
 
+        /// <summary>
+        /// node から paramsJson 文字列を取得する (P2 fix)。
+        /// </summary>
+        /// <remarks>
+        /// 各 NodeBase 派生が override する <see cref="NodeBase.ToNodeData"/> の paramsJson を再利用。
+        /// 既存 JSON シリアライズ path と完全に同じ表現を Snapshot に持つことで、Undo/Redo と
+        /// Save/Load 間の non-symmetry を避ける。失敗時は空文字を返し fail-open。
+        /// </remarks>
+        private static string CaptureParamsJson(NodeBase node)
+        {
+            try
+            {
+                var data = node.ToNodeData();
+                return data.paramsJson ?? string.Empty;
+            }
+            catch (System.Exception e)
+            {
+                Debug.LogWarning($"[GraphMutationApplier] CaptureParamsJson failed: {node.Id} — {e.Message}");
+                return string.Empty;
+            }
+        }
+
+        /// <summary>
+        /// node から INodeParamAccessor 経由で typed param を吸い上げる (P2 fix)。
+        /// </summary>
+        /// <remarks>
+        /// INodeParamAccessor は <c>TryGetParam(name, out)</c> しか持たず、name の列挙手段が無いため
+        /// CaptureSnapshot で生 param 値を辞書化することはできない (Phase 4 課題)。
+        /// 現状は <see cref="CaptureParamsJson"/> で paramsJson 経由の完全 round-trip を担保し、
+        /// 本辞書は空のまま (SetNodeParamCommand で明示的に書かれた値だけが意味を持つ前提の
+        /// 旧 API path)。
+        /// </remarks>
         private static IReadOnlyDictionary<string, ParamValue> CaptureNodeParams(NodeBase node)
         {
-            if (node is not INodeParamAccessor accessor) return EmptyParams;
-
-            // Phase 2 段階では各 ParamDefinition の列挙手段が無いので空辞書を返す。
-            // Phase 4 ([NodeType] + INodeTypeProvider 経由でパラメータメタデータ取得) で実装する。
             return EmptyParams;
         }
 

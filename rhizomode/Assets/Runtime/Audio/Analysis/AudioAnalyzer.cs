@@ -153,8 +153,25 @@ namespace Rhizomode.Audio.Analysis
                 return;
             }
 
-            UpdateGpuBuffers();
+            // fail-open: LASP / GraphicsBuffer の transient 例外 (device dropout, buffer not ready 等) は
+            // 1 frame skip して継続する。映像は決して止めない (memory: feedback_health_monitor)。
+            // log は rate-limit して console spam を防止。
+            try
+            {
+                UpdateGpuBuffers();
+            }
+            catch (Exception e)
+            {
+                if (Time.unscaledTime >= _nextUpdateWarningTime)
+                {
+                    Debug.LogWarning($"[AudioAnalyzer] Update failed (frame skipped): {e.Message}");
+                    _nextUpdateWarningTime = Time.unscaledTime + UpdateWarningIntervalSec;
+                }
+            }
         }
+
+        private const float UpdateWarningIntervalSec = 1.0f;
+        private float _nextUpdateWarningTime;
 
         private void OnDestroy()
         {

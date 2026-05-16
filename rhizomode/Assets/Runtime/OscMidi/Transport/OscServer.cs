@@ -26,10 +26,28 @@ namespace Rhizomode.OscMidi.Transport
     {
         private const int DefaultPort = 9000;
 
+        /// <summary>1 frame で消化する OSC message の上限 (flood 時の main thread 食い潰し防止)。</summary>
+        private const int MaxDrainPerFrame = 256;
+
+        /// <summary>キュー高水位線。これを超えると drop counter を増やし periodic warning を出す。</summary>
+        private const int OverflowWaterMark = 4096;
+
+        /// <summary>warning を出す間隔 (秒)。</summary>
+        private const float OverflowWarningIntervalSec = 1.0f;
+
         [SerializeField] private int listenPort = DefaultPort;
 
         private readonly Dictionary<string, Subject<float>> _addressSubjects = new();
         private readonly ConcurrentQueue<(string address, float value)> _pendingMessages = new();
+
+        private long _droppedMessageCount;
+        private float _nextOverflowWarningTime;
+
+        /// <summary>累計 drop / overflow message 数 (status panel 表示用)。</summary>
+        public long DroppedMessageCount => System.Threading.Interlocked.Read(ref _droppedMessageCount);
+
+        /// <summary>現在 pending な未消化 message 数 (status panel 表示用)。</summary>
+        public int PendingMessageCount => _pendingMessages.Count;
 
 #if OSC_JACK
         private OscJack.OscServer? _server;
@@ -94,10 +112,17 @@ namespace Rhizomode.OscMidi.Transport
         /// <summary>
         /// メインスレッドでキューを排出し、Subject経由でObserverに通知する。
         /// </summary>
+        /// <remarks>
+        /// flood 時の main thread 食い潰し防止に 1 frame あたり <see cref="MaxDrainPerFrame"/> 件まで処理。
+        /// 残ったメッセージは次フレームに持ち越す。キュー長が <see cref="OverflowWaterMark"/> を超えた
+        /// 場合は drop counter を増やし periodic warning を出す (映像は止めない)。
+        /// </remarks>
         private void Update()
         {
-            while (_pendingMessages.TryDequeue(out var msg))
+            int drained = 0;
+            while (drained < MaxDrainPerFrame && _pendingMessages.TryDequeue(out var msg))
             {
+                drained++;
                 try
                 {
                     if (_addressSubjects.TryGetValue(msg.address, out var subject))
@@ -106,6 +131,20 @@ namespace Rhizomode.OscMidi.Transport
                 catch (Exception ex)
                 {
                     Debug.LogWarning($"[OscServer] Subject emit failed: {msg.address} — {ex.Message}");
+                }
+            }
+
+            // overflow 監視: queue が高水位を越えていれば drop counter を増やす + periodic warning
+            int remaining = _pendingMessages.Count;
+            if (remaining > OverflowWaterMark)
+            {
+                System.Threading.Interlocked.Add(ref _droppedMessageCount, remaining - OverflowWaterMark);
+                if (Time.unscaledTime >= _nextOverflowWarningTime)
+                {
+                    Debug.LogWarning(
+                        $"[OscServer] Queue overflow: {remaining} pending (drained {drained}/frame). " +
+                        $"Total dropped: {DroppedMessageCount}");
+                    _nextOverflowWarningTime = Time.unscaledTime + OverflowWarningIntervalSec;
                 }
             }
         }

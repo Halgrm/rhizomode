@@ -131,6 +131,14 @@ namespace Rhizomode.Graph.Model
                 }
             }
 
+            // 循環防止: R3 push 型では cycle が再入 + スタック増大を起こし映像停止につながる。
+            // toNodeId から DFS して fromNodeId に到達できれば cycle。
+            if (WouldCreateCycle(fromNodeId, toNodeId))
+            {
+                Debug.LogWarning($"[GraphState] Cycle would be created: {fromNodeId} → {toNodeId} (refused)");
+                return false;
+            }
+
             try
             {
                 if (!_nodes.TryGetValue(fromNodeId, out var fromNode))
@@ -178,6 +186,40 @@ namespace Rhizomode.Graph.Model
                 Debug.LogError($"[GraphState] TryConnect failed — {e.Message}");
                 return false;
             }
+        }
+
+        /// <summary>
+        /// (fromNodeId → toNodeId) を追加すると循環が生じるかを DFS で判定する。
+        /// </summary>
+        /// <remarks>
+        /// 既存 <see cref="CycleDetector"/> は <see cref="EdgeIndex"/> に依存しているが、GraphState は
+        /// 現在 List ベースで保持しているため inline DFS で代用する (List→EdgeIndex 全面置換は
+        /// Phase 2 残課題 — メモリ allocation を増やしたくない launch 直前の最小変更)。
+        /// </remarks>
+        private bool WouldCreateCycle(string fromNodeId, string toNodeId)
+        {
+            // self-loop は呼び出し側 (TryConnect 冒頭) で既に弾いているが防御的にチェック
+            if (fromNodeId == toNodeId) return true;
+
+            var visited = new HashSet<string>();
+            var stack = new Stack<string>();
+            stack.Push(toNodeId);
+
+            while (stack.Count > 0)
+            {
+                var current = stack.Pop();
+                if (!visited.Add(current)) continue;
+                if (current == fromNodeId) return true;
+
+                for (var i = 0; i < _edges.Count; i++)
+                {
+                    var e = _edges[i];
+                    if (e.FromNodeId != current) continue;
+                    if (!visited.Contains(e.ToNodeId))
+                        stack.Push(e.ToNodeId);
+                }
+            }
+            return false;
         }
 
         /// <summary>

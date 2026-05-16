@@ -58,9 +58,11 @@ namespace Rhizomode.Input.XR
 
         private void HandleBridgeHit(WorldPanelRayBridge bridge, RaycastHit hit)
         {
-            // 前フレームと違うパネルならホバー解除
+            // 前フレームと違うパネルならホバー解除 + PointerUp 強制発火 (P3 fix: 掴まれっぱなし防止)
             if (_currentBridge != null && _currentBridge != bridge)
             {
+                if (_currentBridge.IsPointerDown())
+                    _currentBridge.ForcePointerUp();
                 _currentBridge.NotifyHoverExit();
             }
 
@@ -95,6 +97,11 @@ namespace Rhizomode.Input.XR
         {
             if (_currentBridge != null)
             {
+                // P3 fix: ray が外れたとき trigger がまだ held なら PointerUp を強制発火する。
+                // これを呼ばないと「スライダーを掴んだまま ray が panel から外れた」場合に
+                // PointerUp が来ず UI が掴まれっぱなしになる (UIToolkit 内部の capture も残る)。
+                if (_currentBridge.IsPointerDown())
+                    _currentBridge.ForcePointerUp();
                 _currentBridge.NotifyHoverExit();
                 _currentBridge = null;
             }
