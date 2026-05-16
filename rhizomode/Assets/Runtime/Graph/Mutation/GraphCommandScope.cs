@@ -29,6 +29,7 @@ namespace Rhizomode.Graph.Mutation
         private readonly GraphMutationApplier _applier;
         private readonly CommandAuditLog _auditLog;
         private readonly GraphSnapshot _entrySnapshot;
+        private readonly int _auditCheckpoint;
         private readonly List<IGraphCommand> _committed = new();
         private bool _isFinalized;
         private bool _hasFailed;
@@ -42,6 +43,7 @@ namespace Rhizomode.Graph.Mutation
             _applier = applier;
             _auditLog = auditLog;
             _entrySnapshot = applier.CaptureSnapshot();
+            _auditCheckpoint = auditLog.SaveCheckpoint();
         }
 
         /// <summary>scope 内で発生した最初の Apply 失敗以降は true。</summary>
@@ -68,8 +70,9 @@ namespace Rhizomode.Graph.Mutation
                 return true;
             }
 
-            // 失敗 — scope 全体を rollback
+            // 失敗 — scope 全体を rollback (graph state + audit log の両方)
             _applier.RestoreFromSnapshot(_entrySnapshot);
+            _auditLog.RollbackToCheckpoint(_auditCheckpoint);
             _committed.Clear();
             _hasFailed = true;
             return false;
@@ -88,6 +91,8 @@ namespace Rhizomode.Graph.Mutation
 
             var marker = new CompositeCommand(_committed[0].Origin, _committed.AsReadOnly());
             _dispatcher.RecordScopeUndoEntry(_entrySnapshot, marker);
+            // F-Vf-d.3: scope boundary を audit にも記録 (CompositeCommand 1 件として)。
+            _auditLog.Record(marker);
         }
 
         /// <summary>未 Commit で破棄された場合に entry snapshot へ rollback する。</summary>
@@ -98,8 +103,9 @@ namespace Rhizomode.Graph.Mutation
 
             if (_hasFailed || _committed.Count == 0) return;
 
-            // 暗黙 rollback (Commit 忘れの保険)
+            // 暗黙 rollback (Commit 忘れの保険) — graph state + audit log の両方
             _applier.RestoreFromSnapshot(_entrySnapshot);
+            _auditLog.RollbackToCheckpoint(_auditCheckpoint);
             _committed.Clear();
         }
     }

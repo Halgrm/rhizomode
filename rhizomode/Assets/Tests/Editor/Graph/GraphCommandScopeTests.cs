@@ -188,5 +188,70 @@ namespace Rhizomode.Graph.Tests
                 second.Commit();
             });
         }
+
+        [Test]
+        public void Scope_FailedRollback_AuditAlsoRolledBack()
+        {
+            // F-Vf-d.3: scope 失敗時の audit transactional rollback を検証。
+            var (_, dispatcher) = CreateSystem();
+            var auditCountBefore = dispatcher.AuditLog.Trace.Count;
+
+            using var scope = dispatcher.BeginScope();
+            Assert.IsTrue(scope.TryExecute(new AddNodeCommand(
+                CommandOrigin.Test, "n1", "Stub", RzVector3.Zero)));
+            Assert.AreEqual(auditCountBefore + 1, dispatcher.AuditLog.Trace.Count,
+                "成功時は audit に entry が追加される");
+
+            UnityEngine.TestTools.LogAssert.Expect(
+                UnityEngine.LogType.Warning,
+                new System.Text.RegularExpressions.Regex(".*Unknown typeName.*"));
+            scope.TryExecute(new AddNodeCommand(CommandOrigin.Test, "n2", "Bogus", RzVector3.Zero));
+
+            Assert.IsTrue(scope.HasFailed);
+            Assert.AreEqual(auditCountBefore, dispatcher.AuditLog.Trace.Count,
+                "失敗 scope は audit からも巻き戻される");
+        }
+
+        [Test]
+        public void Scope_Committed_AuditContainsCompositeCommandMarker()
+        {
+            // F-Vf-d.3: 成功 scope の Commit で CompositeCommand marker が audit に記録される。
+            var (_, dispatcher) = CreateSystem();
+            var auditCountBefore = dispatcher.AuditLog.Trace.Count;
+
+            using (var scope = dispatcher.BeginScope())
+            {
+                Assert.IsTrue(scope.TryExecute(new AddNodeCommand(
+                    CommandOrigin.Test, "n1", "Stub", RzVector3.Zero)));
+                Assert.IsTrue(scope.TryExecute(new AddNodeCommand(
+                    CommandOrigin.Test, "n2", "Stub", RzVector3.Zero)));
+                scope.Commit();
+            }
+
+            // sub-command 2 件 + CompositeCommand 1 件 = 3 件
+            Assert.AreEqual(auditCountBefore + 3, dispatcher.AuditLog.Trace.Count);
+            var lastEntry = dispatcher.AuditLog.Trace[dispatcher.AuditLog.Trace.Count - 1];
+            Assert.AreEqual("CompositeCommand", lastEntry.Kind,
+                "scope commit の最後に CompositeCommand entry が追加されている");
+            Assert.AreEqual(CommandOrigin.Test, lastEntry.Origin);
+        }
+
+        [Test]
+        public void Scope_DisposeWithoutCommit_AuditRolledBack()
+        {
+            // F-Vf-d.3: 暗黙 rollback (Dispose without Commit) も audit を巻き戻す。
+            var (_, dispatcher) = CreateSystem();
+            var auditCountBefore = dispatcher.AuditLog.Trace.Count;
+
+            using (var scope = dispatcher.BeginScope())
+            {
+                Assert.IsTrue(scope.TryExecute(new AddNodeCommand(
+                    CommandOrigin.Test, "n1", "Stub", RzVector3.Zero)));
+                // Commit せず Dispose
+            }
+
+            Assert.AreEqual(auditCountBefore, dispatcher.AuditLog.Trace.Count,
+                "Dispose without Commit でも audit が巻き戻される");
+        }
     }
 }

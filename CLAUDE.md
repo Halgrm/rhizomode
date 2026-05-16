@@ -181,7 +181,7 @@ To add interface capability: create a new interface (e.g., `ISmoothableModule`),
 - NodeVisualController deferred bind リトライ上限
 - モジュールノード自動スポーン (ConstFloat/ConstColor プリコネクト)
 
-**v5.4 大規模リファクタ — Phase 0-13B/C + V-final + F-Vf-a.1 + F-Vf-d.1 + F-Vf-d.2** ✅
+**v5.4 大規模リファクタ — Phase 0-13B/C + V-final + F-Vf-a.1 + F-Vf-d.1 + F-Vf-d.2 + F-Vf-d.3** ✅
 - 48 asmdef 構成 (`SharedKernel` 最下層 + `Graph.*` 8 分割 + 各システム `Contracts/Impl/GraphAdapter` + `NodeCatalog.Contracts/Runtime` + `Nodes.Standard/Audio/OscMidi/Ableton/Scene/Defaults`)
 - `IGraphCommand` + `GraphCommandDispatcher` + `GraphMutationApplier` で全 graph 変異を統一 (Origin 付き record / Undo Snapshot)
 - VContainer 全面導入: `RootLifetimeScope` シーン直接配置、19 Installer 完備 (Plan §15 適合)
@@ -202,6 +202,11 @@ To add interface capability: create a new interface (e.g., `ISmoothableModule`),
   - `ParamTypeNodeMap.GetSourceDescriptor` を `SourceNodeDescriptor` 化 (typeName / port name 二重定義の解消)
   - `InputSpawnResult.Edge` → `SpawnedEdgeInfo` record (id+endpoints) に置換、stale ref リスク除去
   - EditMode tests 13 件追加 (GraphCommandScopeTests 5 + NodeSpawnServiceTests 8)
+- **F-Vf-d.3 解消 (2026-05-16)**: F-Vf-d.2 Codex re-review 残 WARN (audit transactional) を解消。
+  - `CommandAuditLog.SaveCheckpoint()` + `RollbackToCheckpoint(int)` (internal) を追加
+  - `GraphCommandScope` 失敗 rollback + 暗黙 rollback で audit log も巻き戻す
+  - `Commit` 時に `CompositeCommand` marker を audit に Record (scope boundary を 1 entry として残す)
+  - tests 3 件追加 (audit rollback + CompositeCommand marker)
 - 残課題は `docs/CODEX_DEFERRED_FINDINGS.md` 参照 (F-Vf-c.1 等)
 
 ### VR UIパイプライン（重要な設計知識）
