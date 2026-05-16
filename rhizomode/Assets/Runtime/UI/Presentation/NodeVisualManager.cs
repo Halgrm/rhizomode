@@ -22,7 +22,7 @@ namespace Rhizomode.UI
     /// caller (UI.GraphAdapter / GameBootstrap) が <c>NodeViewAdapter</c> を構築して
     /// 渡す。RebuildAllVisuals も IReadOnlyList&lt;INodeView&gt; を受ける。
     /// </remarks>
-    public class NodeVisualManager : MonoBehaviour
+    public partial class NodeVisualManager : MonoBehaviour
     {
         [Header("ノードサイズ")]
         [SerializeField, Range(0.05f, 0.5f), Tooltip("ノードパネルのワールド幅（メートル）")]
@@ -56,9 +56,35 @@ namespace Rhizomode.UI
         [SerializeField] private StyleSheet? nodeStyleSheet;
         [SerializeField] private PanelSettings? panelSettingsTemplate;
 
+        [Header("LOD / Panel Budget (N5)")]
+        [SerializeField, Tooltip("距離 LOD を有効化する (60+ ノード時の負荷削減)")]
+        private bool lodEnabled = true;
+
+        [SerializeField, Range(0.5f, 5f), Tooltip("これより近いノードは full quality")]
+        private float lodNearDistance = 1.5f;
+
+        [SerializeField, Range(1f, 10f), Tooltip("これより遠いノードは UIDocument 無効化 + 最低解像度")]
+        private float lodFarDistance = 4.0f;
+
+        [SerializeField, Range(0.05f, 1f), Tooltip("LOD 再計算の最小間隔 (秒)")]
+        private float lodUpdateIntervalSec = 0.25f;
+
+        [SerializeField, Range(64, 512), Tooltip("中距離 LOD のテクスチャ幅 (デフォルト textureWidth の半分目安)")]
+        private int midLodTextureWidth = 192;
+
+        [SerializeField, Range(64, 512), Tooltip("遠距離 LOD のテクスチャ幅")]
+        private int farLodTextureWidth = 96;
+
+        [SerializeField, Range(1, 60), Tooltip("同時に UI 描画する最大パネル数 (近距離側を優先)")]
+        private int maxActivePanels = 30;
+
+        [SerializeField, Tooltip("viewer (head) Transform。null なら Camera.main を毎回 fallback 取得")]
+        private Transform? viewerOverride;
+
         private readonly Dictionary<string, NodeVisualController> _visuals = new();
         private readonly Dictionary<Collider, NodeVisualController> _colliderToVisual = new();
         private NodeTypeRegistry? _typeRegistry;
+        private float _nextLodTime;
 
         /// <summary>全ノードVisualへの読み取り専用アクセス。</summary>
         public IReadOnlyDictionary<string, NodeVisualController> Visuals => _visuals;
