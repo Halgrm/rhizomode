@@ -30,6 +30,9 @@ namespace Rhizomode.Bootstrap.Wiring
     /// <see cref="ActiveInput"/> は <see cref="Wire"/> 完了後に確定する。GameBootstrap / 他 wiring
     /// (Ableton) はこれを参照する。<see cref="Dispose"/> で ScrollMenu の購読を解除する
     /// (container 所有 Lifetime.Singleton)。
+    ///
+    /// M6 fix (post-launch tidy): 旧 <c>Wire</c> (151 行モノリス) を責務別 helper に分割。CLAUDE.md
+    /// 「Methods ≤ 30 lines」原則準拠。
     /// </remarks>
     public sealed class InteractionBootstrapWiring : IDisposable
     {
@@ -41,6 +44,7 @@ namespace Rhizomode.Bootstrap.Wiring
         private ScrollMenuVisualController? _subscribedScrollMenu;
         private Action<string>? _onNodeTypeSelected;
         private bool _wired;
+        private bool _isDesktopMode;
 
         /// <summary>VR / Desktop の選択結果。<see cref="Wire"/> 完了後に確定 (degraded scene では null)。</summary>
         public IControllerInput? ActiveInput { get; private set; }
@@ -60,20 +64,38 @@ namespace Rhizomode.Bootstrap.Wiring
         /// <summary>
         /// 入力ルーターを選択し、全 interaction handler を初期化・配線する。
         /// </summary>
-        /// <param name="graphContext">handler が要する GraphContextBehaviour (transitional 引数 — V-final で Installer 化)。</param>
-        /// <param name="onNodeTypeSelected">
-        /// ScrollMenu のノードタイプ選択コールバック。GameBootstrap 側の visual 創出ロジック
-        /// (OnScrollMenuNodeSelected) を transitional に受け取る。
-        /// </param>
         public void Wire(GraphContextBehaviour? graphContext, Action<string> onNodeTypeSelected)
         {
             if (_wired) return;
+            if (!TrySelectActiveInput()) return;
+            _wired = true;
 
+            var roles = ResolveInputRoles(ActiveInput!);
+            var raycast = _refs.SharedRaycastService;
+            if (raycast == null)
+                Debug.LogError("[InteractionBootstrapWiring] sharedRaycastService is not assigned!");
+            raycast?.Initialize(roles.RayProvider);
+
+            InitEdgeVisuals();
+            WireEdgeHandlers(graphContext, roles, raycast);
+            WireGrabHandlers(roles, raycast);
+            WireObject3DGrab(roles);
+            InitUiRaycastDriver(roles.Input, raycast);
+            WireScrollMenu(roles, raycast, onNodeTypeSelected);
+            WireIntentSinks();
+        }
+
+        /// <summary>
+        /// VR / Desktop 入力ルーターを選択して <see cref="ActiveInput"/> を確定する。
+        /// 入力が無ければ <c>_wired</c> を立てず、startup 順序変化時の retry を許す。
+        /// </summary>
+        private bool TrySelectActiveInput()
+        {
             var controllerInput = _refs.ControllerInput;
             var desktopInput = _refs.DesktopInput;
-            bool isDesktop = desktopInput != null && desktopInput.gameObject.activeInHierarchy;
+            _isDesktopMode = desktopInput != null && desktopInput.gameObject.activeInHierarchy;
 
-            if (isDesktop)
+            if (_isDesktopMode)
             {
                 ActiveInput = desktopInput;
                 if (controllerInput != null) controllerInput.enabled = false;
@@ -86,99 +108,118 @@ namespace Rhizomode.Bootstrap.Wiring
 
             if (ActiveInput == null)
             {
-                // 入力ルーター未配置 — _wired は立てず、startup 順序が変わった場合の retry を許す。
                 Debug.LogError("[InteractionBootstrapWiring] No input router available!");
-                return;
+                return false;
             }
+            return true;
+        }
 
-            // 入力ルーターが確定したら配線済みとマークする (再入は no-op)。
-            _wired = true;
+        /// <summary>
+        /// <see cref="IControllerInput"/> を各 role interface にキャストして束ねる。
+        /// 全 handler が同じ実装に対する複数 view として参照する。
+        /// </summary>
+        private static InputRoles ResolveInputRoles(IControllerInput input) =>
+            new(input,
+                (IRayProvider)input,
+                (IControllerPose)input,
+                (ILeftHandRay)input,
+                (ILeftHandInput)input);
 
-            var sharedRaycastService = _refs.SharedRaycastService;
-            if (sharedRaycastService == null)
-                Debug.LogError("[InteractionBootstrapWiring] sharedRaycastService is not assigned!");
+        private void InitEdgeVisuals()
+        {
+            var edgeVisualManager = _refs.EdgeVisualManager;
+            var visualManager = _refs.VisualManager;
+            if (edgeVisualManager != null && visualManager != null)
+                edgeVisualManager.Initialize(visualManager);
+        }
 
-            var input = ActiveInput;
-            IRayProvider rayProvider = (IRayProvider)input;
-            IControllerPose controllerPose = (IControllerPose)input;
-            ILeftHandRay leftHandRay = (ILeftHandRay)input;
-            ILeftHandInput leftHandInput = (ILeftHandInput)input;
-
+        private void WireEdgeHandlers(
+            GraphContextBehaviour? graphContext,
+            InputRoles roles,
+            SharedRaycastService? raycast)
+        {
             var visualManager = _refs.VisualManager;
             var edgeVisualManager = _refs.EdgeVisualManager;
             var edgeDragHandler = _refs.EdgeDragHandler;
             var edgeCutHandler = _refs.EdgeCutHandler;
             var nodeDeleteHandler = _refs.NodeDeleteHandler;
             var nodeGrabHandler = _refs.NodeGrabHandler;
-            var pathControlPointGrabHandler = _refs.PathControlPointGrabHandler;
-            var pathEditorManager = _refs.PathEditorManager;
-            var object3DGrabHandler = _refs.Object3DGrabHandler;
-            var uiRaycastDriver = _refs.UIRaycastDriver;
-            var scrollMenuVisual = _refs.ScrollMenuVisual;
-            var scrollMenuInteraction = _refs.ScrollMenuInteraction;
-
-            // 共有レイキャストサービスの初期化（全ハンドラの前に）
-            if (sharedRaycastService != null)
-                sharedRaycastService.Initialize(rayProvider);
-
-            if (edgeVisualManager != null && visualManager != null)
-                edgeVisualManager.Initialize(visualManager);
 
             if (edgeDragHandler != null && visualManager != null &&
-                graphContext != null && edgeVisualManager != null &&
-                sharedRaycastService != null)
+                graphContext != null && edgeVisualManager != null && raycast != null)
             {
                 edgeDragHandler.Initialize(
-                    rayProvider, input, visualManager,
-                    graphContext, edgeVisualManager, sharedRaycastService);
-
+                    roles.RayProvider, roles.Input, visualManager,
+                    graphContext, edgeVisualManager, raycast);
                 if (nodeGrabHandler != null)
                     edgeDragHandler.SetGrabbingCheck(() => nodeGrabHandler.IsGrabbing);
             }
 
             if (edgeCutHandler != null && edgeVisualManager != null && graphContext != null)
-            {
-                edgeCutHandler.Initialize(input, rayProvider, edgeVisualManager, graphContext);
-            }
+                edgeCutHandler.Initialize(roles.Input, roles.RayProvider, edgeVisualManager, graphContext);
 
             if (nodeDeleteHandler != null && visualManager != null &&
-                graphContext != null && edgeVisualManager != null &&
-                sharedRaycastService != null)
+                graphContext != null && edgeVisualManager != null && raycast != null)
             {
                 nodeDeleteHandler.Initialize(
-                    input, sharedRaycastService, visualManager,
-                    graphContext, edgeVisualManager);
+                    roles.Input, raycast, visualManager, graphContext, edgeVisualManager);
                 nodeDeleteHandler.SetDeleteDependencies(edgeDragHandler, _moduleProcessor.DestroyInstance);
             }
+        }
+
+        private void WireGrabHandlers(InputRoles roles, SharedRaycastService? raycast)
+        {
+            var visualManager = _refs.VisualManager;
+            var edgeVisualManager = _refs.EdgeVisualManager;
+            var nodeGrabHandler = _refs.NodeGrabHandler;
+            var pathControlPointGrabHandler = _refs.PathControlPointGrabHandler;
+            var pathEditorManager = _refs.PathEditorManager;
 
             if (nodeGrabHandler != null && visualManager != null &&
-                sharedRaycastService != null && edgeVisualManager != null)
+                raycast != null && edgeVisualManager != null)
             {
                 nodeGrabHandler.Initialize(
-                    input, controllerPose, leftHandRay, leftHandInput,
-                    sharedRaycastService, visualManager, edgeVisualManager);
+                    roles.Input, roles.ControllerPose, roles.LeftHandRay, roles.LeftHandInput,
+                    raycast, visualManager, edgeVisualManager);
             }
 
-            if (pathControlPointGrabHandler != null && pathEditorManager != null &&
-                sharedRaycastService != null)
+            if (pathControlPointGrabHandler != null && pathEditorManager != null && raycast != null)
             {
                 pathControlPointGrabHandler.Initialize(
-                    input, controllerPose, sharedRaycastService, pathEditorManager);
+                    roles.Input, roles.ControllerPose, raycast, pathEditorManager);
             }
+        }
 
-            if (object3DGrabHandler != null)
-            {
-                Observable<Vector2> turnInput = isDesktop
-                    ? desktopInput!.OnTurnInput
-                    : controllerInput!.OnTurnInput;
-                object3DGrabHandler.Initialize(
-                    input, controllerPose, leftHandRay, leftHandInput, turnInput);
-            }
+        private void WireObject3DGrab(InputRoles roles)
+        {
+            var object3DGrabHandler = _refs.Object3DGrabHandler;
+            if (object3DGrabHandler == null) return;
 
-            if (uiRaycastDriver != null && sharedRaycastService != null)
-                uiRaycastDriver.Initialize(input, sharedRaycastService);
+            Observable<Vector2> turnInput = _isDesktopMode
+                ? _refs.DesktopInput!.OnTurnInput
+                : _refs.ControllerInput!.OnTurnInput;
+            object3DGrabHandler.Initialize(
+                roles.Input, roles.ControllerPose, roles.LeftHandRay, roles.LeftHandInput, turnInput);
+        }
 
-            // 巻物メニューの初期化
+        private void InitUiRaycastDriver(IControllerInput input, SharedRaycastService? raycast)
+        {
+            var uiRaycastDriver = _refs.UIRaycastDriver;
+            if (uiRaycastDriver != null && raycast != null)
+                uiRaycastDriver.Initialize(input, raycast);
+        }
+
+        private void WireScrollMenu(
+            InputRoles roles,
+            SharedRaycastService? raycast,
+            Action<string> onNodeTypeSelected)
+        {
+            var scrollMenuVisual = _refs.ScrollMenuVisual;
+            var scrollMenuInteraction = _refs.ScrollMenuInteraction;
+            var edgeDragHandler = _refs.EdgeDragHandler;
+            var edgeCutHandler = _refs.EdgeCutHandler;
+            var nodeDeleteHandler = _refs.NodeDeleteHandler;
+
             if (scrollMenuVisual != null)
             {
                 scrollMenuVisual.Initialize(_typeRegistry);
@@ -187,33 +228,32 @@ namespace Rhizomode.Bootstrap.Wiring
                 _onNodeTypeSelected = onNodeTypeSelected;
             }
 
-            if (scrollMenuInteraction != null && scrollMenuVisual != null &&
-                sharedRaycastService != null)
+            if (scrollMenuInteraction == null || scrollMenuVisual == null || raycast == null) return;
+
+            scrollMenuInteraction.Initialize(
+                roles.Input, roles.RayProvider, roles.LeftHandRay, roles.LeftHandInput,
+                raycast, scrollMenuVisual);
+
+            if (_isDesktopMode) scrollMenuInteraction.SetDesktopMode(true);
+            if (edgeDragHandler != null) scrollMenuInteraction.SetEdgeDragHandler(edgeDragHandler);
+
+            // メニュー状態変更時にエッジ切断・ノード削除・クリップ発火も無効化
+            scrollMenuInteraction.SetMenuStateCallback(isIdle =>
             {
-                scrollMenuInteraction.Initialize(
-                    input, leftHandRay, leftHandInput,
-                    sharedRaycastService, scrollMenuVisual);
+                edgeCutHandler?.SetEnabled(isIdle);
+                nodeDeleteHandler?.SetEnabled(isIdle);
+                _refs.ClipFireHandler?.SetEnabled(isIdle);
+            });
+        }
 
-                if (isDesktop)
-                    scrollMenuInteraction.SetDesktopMode(true);
-
-                if (edgeDragHandler != null)
-                    scrollMenuInteraction.SetEdgeDragHandler(edgeDragHandler);
-
-                // メニュー状態変更時にエッジ切断・ノード削除・クリップ発火も無効化
-                scrollMenuInteraction.SetMenuStateCallback(isIdle =>
-                {
-                    edgeCutHandler?.SetEnabled(isIdle);
-                    nodeDeleteHandler?.SetEnabled(isIdle);
-                    _refs.ClipFireHandler?.SetEnabled(isIdle);
-                });
-            }
-
-            // Plan v5.3 Phase 5 Round E: IntentSink wiring。
-            // 3 handler (EdgeDrag / EdgeCut / NodeDelete) を intent emit に切替。
-            edgeDragHandler?.SetIntentSink(_intentSink);
-            edgeCutHandler?.SetIntentSink(_intentSink);
-            nodeDeleteHandler?.SetIntentSink(_intentSink);
+        /// <summary>
+        /// Plan v5.3 Phase 5 Round E: 3 handler (EdgeDrag / EdgeCut / NodeDelete) を intent emit に切替。
+        /// </summary>
+        private void WireIntentSinks()
+        {
+            _refs.EdgeDragHandler?.SetIntentSink(_intentSink);
+            _refs.EdgeCutHandler?.SetIntentSink(_intentSink);
+            _refs.NodeDeleteHandler?.SetIntentSink(_intentSink);
             Debug.Log("[InteractionBootstrapWiring] IntentSink wired up for 3 handlers.");
         }
 
@@ -223,6 +263,32 @@ namespace Rhizomode.Bootstrap.Wiring
                 _subscribedScrollMenu.OnNodeTypeSelected -= _onNodeTypeSelected;
             _subscribedScrollMenu = null;
             _onNodeTypeSelected = null;
+        }
+
+        /// <summary>
+        /// <see cref="IControllerInput"/> を複数 role interface にキャストして束ねた immutable な束。
+        /// </summary>
+        private readonly struct InputRoles
+        {
+            public readonly IControllerInput Input;
+            public readonly IRayProvider RayProvider;
+            public readonly IControllerPose ControllerPose;
+            public readonly ILeftHandRay LeftHandRay;
+            public readonly ILeftHandInput LeftHandInput;
+
+            public InputRoles(
+                IControllerInput input,
+                IRayProvider rayProvider,
+                IControllerPose controllerPose,
+                ILeftHandRay leftHandRay,
+                ILeftHandInput leftHandInput)
+            {
+                Input = input;
+                RayProvider = rayProvider;
+                ControllerPose = controllerPose;
+                LeftHandRay = leftHandRay;
+                LeftHandInput = leftHandInput;
+            }
         }
     }
 }

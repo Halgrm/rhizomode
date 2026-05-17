@@ -2,6 +2,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Reflection;
 using Rhizomode.Graph.Model;
 using Rhizomode.Modules;
 using Rhizomode.Nodes.Scene;
@@ -25,6 +26,16 @@ namespace Rhizomode.Bootstrap
     /// 配置: Rhizomode.Bootstrap asmdef (Plan v5.4 §15)。V2a で XR asmdef から移送 (internal 化)。
     /// <c>CatalogInstaller</c> が VContainer Configure 時に構築し、Build 後に
     /// <c>EntryPointBootstrapper</c> が <see cref="RegisterAll"/> を明示的に駆動する。
+    ///
+    /// <para>
+    /// M4 (data-driven): module 種別の category / legacy alias / 専用 ModuleNode 派生型は
+    /// <see cref="PerformanceModuleAttribute"/> から reflection で読み取る。本クラスは concrete
+    /// type に依存せず、新 module 追加で本ファイルを触る必要はない。
+    /// </para>
+    /// <para>
+    /// M3 (canonical typeName): legacy alias で load されても、ノードの <c>NodeType</c> は新 typeName
+    /// (<c>Module_X</c>) で生成される。再保存しても旧 alias は永続化されない。
+    /// </para>
     /// </remarks>
     internal sealed class NodeRegistrationOrchestrator
     {
@@ -74,18 +85,11 @@ namespace Rhizomode.Bootstrap
             RegisterDynamicCtorTypes();
             RegisterModuleTypes();
             RegisterObject3DTypes();
-            // CinemachineModule 用 factory は未実装のため type 登録も skip (Phase 4F 注記参照)
         }
 
         /// <summary>
         /// [NodeType] 属性付きクラスを Scanner で発見し、type / factory の両方を一括登録する。
         /// </summary>
-        /// <remarks>
-        /// N2 fix (2026-05-16): 旧 RegisterStaticTypesFromScanner + RegisterStaticFactories の二段登録を統合。
-        /// Scanner が <c>NodeTypeRegistration.Factory</c> (reflection ctor invoke) を構築済のため、
-        /// それをそのまま <see cref="GraphState.RegisterNodeFactory(string, Func{string, NodeBase})"/> に流す。
-        /// 新ノード追加は [NodeType] 属性付与のみで完結し、本 orchestrator は触らずに済む。
-        /// </remarks>
         private void RegisterStaticTypesAndFactoriesFromScanner()
         {
             var scanner = new NodeTypeAttributeScanner();
@@ -113,9 +117,20 @@ namespace Rhizomode.Bootstrap
         }
 
         /// <summary>
-        /// ModuleDefinition 配列から VFX_/Shader_ の動的 typeName とファクトリを登録。
-        /// Prefab 注入は ModuleLifecycleProcessor が AfterSetup で実施するため、ここは factory のみ。
+        /// ModuleDefinition 配列から module 用の動的 typeName とファクトリを登録。
+        /// Prefab 注入は <see cref="ModuleLifecycleProcessor"/> が AfterSetup で実施するため、ここは factory のみ。
         /// </summary>
+        /// <remarks>
+        /// 完全 data-driven: <see cref="PerformanceModuleAttribute"/> から category / legacy alias prefix /
+        /// 専用 ModuleNode 派生型を読む。属性未付与の実装は category=VFX + alias なし + 汎用 ModuleNode で
+        /// degraded 登録される。
+        ///
+        /// Legacy alias: 旧 saved graph (<c>VFX_X</c> / <c>Shader_X</c> / <c>InstancedCubes_X</c>) の
+        /// load 互換のため、prefix が指定されていれば旧 typeName でも同一ファクトリを二重登録する。
+        /// ファクトリは canonical typeName (<c>Module_X</c>) を渡すため、ノードの <c>NodeType</c> は新典に統一される。
+        /// 旧 alias は <see cref="NodeTypeRegistry"/> には登録しないため、ScrollMenu の新規 spawn 候補としては出ない
+        /// (load-only)。
+        /// </remarks>
         private void RegisterModuleTypes()
         {
             if (_moduleDefinitions == null) return;
@@ -123,25 +138,104 @@ namespace Rhizomode.Bootstrap
             foreach (var def in _moduleDefinitions)
             {
                 if (def == null) continue;
-                var capturedDef = def;
+                if (def.prefab == null) continue;
 
-                var hasVfx = def.prefab != null && def.prefab.GetComponent<VFXModule>() != null;
-                var hasShader = def.prefab != null && def.prefab.GetComponent<ShaderModule>() != null;
-                if (!hasVfx && !hasShader) { hasVfx = true; hasShader = true; }
+                var module = FindPerformanceModule(def.prefab);
+                if (module == null)
+                {
+                    Debug.LogWarning(
+                        $"[NodeRegistrationOrchestrator] ModuleDefinition '{def.moduleName}' の prefab " +
+                        $"'{def.prefab.name}' に IPerformanceModule 実装が見つからない。skip");
+                    continue;
+                }
 
-                if (hasVfx)
-                {
-                    var typeName = $"VFX_{def.moduleName}";
-                    _typeRegistry.Register(new NodeTypeInfo(typeName, $"VFX: {def.moduleName}", NodeCategory.VFX));
-                    _graphState.RegisterNodeFactory(typeName, id => new VFXModuleNode(id, capturedDef));
-                }
-                if (hasShader)
-                {
-                    var typeName = $"Shader_{def.moduleName}";
-                    _typeRegistry.Register(new NodeTypeInfo(typeName, $"Shader: {def.moduleName}", NodeCategory.Shader));
-                    _graphState.RegisterNodeFactory(typeName, id => new ShaderModuleNode(id, capturedDef));
-                }
+                RegisterSingleModule(def, module);
             }
+        }
+
+        /// <summary>
+        /// prefab GameObject 上の MonoBehaviour を走査し、最初に見つかった <see cref="IPerformanceModule"/>
+        /// 実装を返す。
+        /// </summary>
+        /// <remarks>
+        /// <c>GetComponent&lt;IPerformanceModule&gt;()</c> を直接呼ばないのは、Unity の interface 型 GetComponent が
+        /// prefab asset (未 instantiate) に対して 一部バージョンで null を返すケースがあるため。
+        /// <c>GetComponents&lt;MonoBehaviour&gt;()</c> + <c>is</c> filter は全 Unity 版で安定動作する。
+        /// </remarks>
+        private static IPerformanceModule? FindPerformanceModule(GameObject prefab)
+        {
+            var components = prefab.GetComponents<MonoBehaviour>();
+            foreach (var c in components)
+            {
+                if (c is IPerformanceModule module) return module;
+            }
+            return null;
+        }
+
+        /// <summary>
+        /// 1 つの ModuleDefinition に対し、prefab の <see cref="IPerformanceModule"/> 実装型から得た
+        /// <see cref="PerformanceModuleAttribute"/> を読んで、新 typeName (<c>Module_X</c>) +
+        /// 旧 alias を登録する。
+        /// </summary>
+        private void RegisterSingleModule(ModuleDefinition def, IPerformanceModule module)
+        {
+            var concreteType = module.GetType();
+            var attr = concreteType.GetCustomAttribute<PerformanceModuleAttribute>(inherit: false);
+
+            var category = attr?.Category ?? NodeCategory.VFX;
+            var legacyPrefix = attr?.LegacyTypeNamePrefix;
+            var customNodeType = attr?.CustomNodeType;
+
+            var moduleName = def.moduleName;
+            var primaryTypeName = $"Module_{moduleName}";
+            var capturedDef = def;
+            var nodeFactory = ResolveNodeFactory(customNodeType);
+
+            // Primary: 新 typeName "Module_X" (menu に表示)
+            _typeRegistry.Register(new NodeTypeInfo(primaryTypeName, moduleName, category));
+            _graphState.RegisterNodeFactory(
+                primaryTypeName,
+                id => nodeFactory(id, primaryTypeName, capturedDef));
+
+            // Legacy alias: load 専用。生成ノードの NodeType は canonical (M3) → 再保存しても旧 alias は永続化されない。
+            if (string.IsNullOrEmpty(legacyPrefix)) return;
+
+            var legacyTypeName = $"{legacyPrefix}{moduleName}";
+            if (legacyTypeName == primaryTypeName) return;
+
+            _graphState.RegisterNodeFactory(
+                legacyTypeName,
+                id => nodeFactory(id, primaryTypeName, capturedDef));
+        }
+
+        /// <summary>
+        /// 属性から指定された <see cref="ModuleNodeBase"/> 派生型のファクトリを構築する。
+        /// 派生型が無効な場合は汎用 <see cref="ModuleNode"/> にフォールバックして映像を止めない。
+        /// </summary>
+        private static Func<string, string, ModuleDefinition, ModuleNodeBase> ResolveNodeFactory(Type? customNodeType)
+        {
+            if (customNodeType == null)
+                return (id, typeName, def) => new ModuleNode(id, typeName, def);
+
+            if (!typeof(ModuleNodeBase).IsAssignableFrom(customNodeType))
+            {
+                Debug.LogError(
+                    $"[NodeRegistrationOrchestrator] Custom node type '{customNodeType.FullName}' must derive " +
+                    "from ModuleNodeBase. Falling back to generic ModuleNode.");
+                return (id, typeName, def) => new ModuleNode(id, typeName, def);
+            }
+
+            var ctor = customNodeType.GetConstructor(
+                new[] { typeof(string), typeof(string), typeof(ModuleDefinition) });
+            if (ctor == null)
+            {
+                Debug.LogError(
+                    $"[NodeRegistrationOrchestrator] Custom node type '{customNodeType.FullName}' must define " +
+                    "ctor (string id, string typeName, ModuleDefinition def). Falling back to generic ModuleNode.");
+                return (id, typeName, def) => new ModuleNode(id, typeName, def);
+            }
+
+            return (id, typeName, def) => (ModuleNodeBase)ctor.Invoke(new object[] { id, typeName, def });
         }
 
         /// <summary>

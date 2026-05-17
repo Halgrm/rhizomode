@@ -2,6 +2,8 @@
 using System.Collections.Generic;
 using Rhizomode.SharedKernel;
 using Rhizomode.Graph.Model;
+using Rhizomode.NodeCatalog.Contracts;
+using Rhizomode.Nodes.Modules;
 using UnityEngine;
 using UnityEngine.VFX;
 
@@ -11,6 +13,7 @@ namespace Rhizomode.Modules
     /// VFX Graph制御用モジュール。ModuleDefinitionで定義されたパラメータをVisualEffectに反映する。
     /// </summary>
     [RequireComponent(typeof(VisualEffect))]
+    [PerformanceModule(NodeCategory.VFX, legacyTypeNamePrefix: "VFX_", customNodeType: typeof(VFXModuleNode))]
     public class VFXModule : MonoBehaviour, IPerformanceModule
     {
         private static readonly List<ParamDefinition> EmptyParams = new();

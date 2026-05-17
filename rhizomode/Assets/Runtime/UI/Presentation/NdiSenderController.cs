@@ -2,10 +2,6 @@
 
 using UnityEngine;
 
-using Rhizomode.NodeCatalog.Contracts;
-using Rhizomode.NodeCatalog.Runtime;
-using Rhizomode.Input.Contracts;
-
 namespace Rhizomode.UI
 {
     /// <summary>
@@ -15,6 +11,13 @@ namespace Rhizomode.UI
     public class NdiSenderController : MonoBehaviour
     {
         [SerializeField] private string senderName = "rhizomode";
+
+#if KLAK_NDI
+        // 明示割り当て用 (任意)。null の場合は実行時に自動解決する。
+        // Klak.NDI は NdiSender の `_resources` を MonoScript の defaultReferences で配線するため、
+        // 実行時 AddComponent 経由では null のまま残り FormatConverter.Encode が NRE する。
+        [SerializeField] private Klak.Ndi.NdiResources? ndiResources;
+#endif
 
         private bool _isActive;
 
@@ -33,7 +36,16 @@ namespace Rhizomode.UI
 #if KLAK_NDI
             try
             {
+                var resources = ResolveResources();
+                if (resources == null)
+                {
+                    Debug.LogWarning("[NdiSender] NdiResources asset not found. NDI output disabled.");
+                    return;
+                }
+
                 _sender = gameObject.AddComponent<Klak.Ndi.NdiSender>();
+                // CaptureCoroutine 初回ティック前に必ず _resources を埋める。
+                _sender.SetResources(resources);
                 _sender.captureMethod = Klak.Ndi.CaptureMethod.Texture;
                 _sender.sourceTexture = source;
                 _sender.ndiName = senderName;
@@ -48,6 +60,32 @@ namespace Rhizomode.UI
             Debug.LogWarning("[NdiSender] KlakNDI package not installed. NDI output disabled.");
 #endif
         }
+
+#if KLAK_NDI
+        private Klak.Ndi.NdiResources? ResolveResources()
+        {
+            if (ndiResources != null) return ndiResources;
+
+            var loaded = Resources.FindObjectsOfTypeAll<Klak.Ndi.NdiResources>();
+            if (loaded.Length > 0)
+            {
+                ndiResources = loaded[0];
+                return ndiResources;
+            }
+
+#if UNITY_EDITOR
+            // パッケージ同梱の NdiResources.asset を GUID 経由で復元する。
+            const string ndiResourcesGuid = "69304b86950074db7ba8caba75214004";
+            var path = UnityEditor.AssetDatabase.GUIDToAssetPath(ndiResourcesGuid);
+            if (!string.IsNullOrEmpty(path))
+            {
+                ndiResources = UnityEditor.AssetDatabase.LoadAssetAtPath<Klak.Ndi.NdiResources>(path);
+                return ndiResources;
+            }
+#endif
+            return null;
+        }
+#endif
 
         /// <summary>
         /// 送信を停止する。

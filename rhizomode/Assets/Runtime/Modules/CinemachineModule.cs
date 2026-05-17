@@ -3,6 +3,7 @@
 using System.Collections.Generic;
 using Rhizomode.SharedKernel;
 using Rhizomode.Graph.Model;
+using Rhizomode.NodeCatalog.Contracts;
 using UnityEngine;
 
 #if UNITY_6000_0_OR_NEWER
@@ -18,6 +19,7 @@ namespace Rhizomode.Modules
     /// CinemachineCamera（Unity 6 / Cinemachine 3.x）に反映する。
     /// </summary>
     [RequireComponent(typeof(CinemachineCamera))]
+    [PerformanceModule(NodeCategory.Scene, legacyTypeNamePrefix: "Cinemachine_")]
     public class CinemachineModule : MonoBehaviour, IPerformanceModule
     {
         [SerializeField] private ModuleDefinition? definition;

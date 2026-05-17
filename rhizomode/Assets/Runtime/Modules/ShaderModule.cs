@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using Rhizomode.SharedKernel;
 using Rhizomode.Graph.Model;
+using Rhizomode.NodeCatalog.Contracts;
 using UnityEngine;
 
 namespace Rhizomode.Modules
@@ -9,6 +10,7 @@ namespace Rhizomode.Modules
     /// <summary>
     /// シェーダーパラメータ制御用モジュール。MaterialPropertyBlockを使い、マテリアルインスタンスを生成しない。
     /// </summary>
+    [PerformanceModule(NodeCategory.Shader, legacyTypeNamePrefix: "Shader_")]
     public class ShaderModule : MonoBehaviour, IPerformanceModule
     {
         private static readonly List<ParamDefinition> EmptyParams = new();
@@ -27,12 +29,13 @@ namespace Rhizomode.Modules
             definition != null ? definition.parameters : EmptyParams;
 
         /// <summary>
-        /// ランタイムからModuleDefinitionとRendererを設定する。Awake前に呼ぶ想定。
+        /// ランタイムから ModuleDefinition を設定する。Awake 前に呼ぶ想定。
+        /// Renderer は同 GameObject から自動取得する。
         /// </summary>
-        public void Initialize(ModuleDefinition def, Renderer renderer)
+        public void Initialize(ModuleDefinition def)
         {
             definition = def;
-            targetRenderer = renderer;
+            if (targetRenderer == null) targetRenderer = GetComponent<Renderer>();
         }
 
         private void Awake()

@@ -4,7 +4,6 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Text.RegularExpressions;
 using UnityEditor;
 using UnityEditor.Build;
 using UnityEditor.Build.Reporting;
@@ -31,21 +30,10 @@ namespace Rhizomode.Editor
     /// </summary>
     internal sealed class BoundaryViolationValidator : IPreprocessBuildWithReport
     {
-        /// <summary>
-        /// Round D で true に切り替え (限定ルールのみ)。Phase 5/7 で違反解消後に追加 rule。
-        /// </summary>
-        private const bool EnableRealChecks = true;
-
         public int callbackOrder => 0;
 
         public void OnPreprocessBuild(BuildReport report)
         {
-            if (!EnableRealChecks)
-            {
-                Debug.Log("[BoundaryValidator] Skeleton mode. Real checks disabled.");
-                return;
-            }
-
             var violations = ValidateAll();
             if (violations.Length > 0)
             {
@@ -235,19 +223,36 @@ namespace Rhizomode.Editor
         /// <summary>
         /// asmdef ファイルから references 配列を抽出する。
         /// </summary>
+        /// <remarks>
+        /// L4 fix: regex 抽出は <c>"references": ["A]"]</c> のような edge case で誤動作するため、
+        /// JsonUtility で <see cref="AsmdefDescription"/> に deserialize して取り出す。
+        /// JsonUtility は未知 field を無視するため小さな DTO で十分。
+        /// </remarks>
         private static string[] GetReferences(string asmdefPath)
         {
             if (!File.Exists(asmdefPath)) return Array.Empty<string>();
-            var json = File.ReadAllText(asmdefPath);
+            try
+            {
+                var json = File.ReadAllText(asmdefPath);
+                var desc = JsonUtility.FromJson<AsmdefDescription>(json);
+                return desc.references ?? Array.Empty<string>();
+            }
+            catch (Exception e)
+            {
+                // build gate として静かに通すと意味がないので、parse 失敗は LogError してから空を返す。
+                // 呼び出し側は references=[] で扱い、boundary rule は false negative (見落とし) になる。
+                Debug.LogError($"[BoundaryValidator] Failed to parse asmdef '{asmdefPath}': {e.Message}");
+                return Array.Empty<string>();
+            }
+        }
 
-            var match = Regex.Match(json, @"""references""\s*:\s*\[([^\]]*)\]", RegexOptions.Singleline);
-            if (!match.Success) return Array.Empty<string>();
-
-            var inner = match.Groups[1].Value;
-            return Regex.Matches(inner, @"""([^""]+)""")
-                .Cast<Match>()
-                .Select(m => m.Groups[1].Value)
-                .ToArray();
+        [Serializable]
+        private struct AsmdefDescription
+        {
+#pragma warning disable CS0649 // assigned by JsonUtility via reflection
+            public string name;
+            public string[] references;
+#pragma warning restore CS0649
         }
     }
 }

@@ -163,7 +163,26 @@ namespace Rhizomode.Nodes.Modules
         {
             // ModuleNodeBaseのparamsJsonにはmoduleNameが保存されるが、
             // ノード生成時にファクトリ経由でModuleDefinitionが既に注入されているため、
-            // ここでの復元は不要。将来的にモジュール固有パラメータが追加された場合に拡張する。
+            // パラメータ値の復元は不要 (R3 経由で ConstFloat ノードから再注入される)。
+            // ただし L5 fix: saved graph の moduleName と注入された ModuleDefinition.moduleName が不一致だと、
+            // 旧 SO を消した状態で別 module が無言で復活する事故が起き得るため、warning を残す。
+            if (string.IsNullOrEmpty(paramsJson)) return;
+
+            try
+            {
+                var saved = JsonUtility.FromJson<ModuleNodeParams>(paramsJson);
+                if (!string.IsNullOrEmpty(saved.moduleName) && saved.moduleName != _definition.moduleName)
+                {
+                    Debug.LogWarning(
+                        $"[ModuleNodeBase] moduleName mismatch on node {Id}: saved='{saved.moduleName}' " +
+                        $"resolved='{_definition.moduleName}'. Saved graph may have referenced a deleted/renamed ModuleDefinition.");
+                }
+            }
+            catch (Exception e)
+            {
+                Debug.LogWarning(
+                    $"[ModuleNodeBase] paramsJson parse failed on node {Id}: {e.Message}");
+            }
         }
 
         /// <inheritdoc />

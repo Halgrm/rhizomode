@@ -10,8 +10,11 @@ using UnityEngine;
 namespace Rhizomode.Modules
 {
     /// <summary>
-    /// VFX / Shader / Object3D モジュールノードの Prefab instantiation + IPerformanceModule 注入を
-    /// 統括する <see cref="INodeLifecycleProcessor"/>。
+    /// すべての <see cref="Nodes.Modules.ModuleNodeBase"/> 派生 (VFX / Shader / InstancedCubes / future GPU instancing 等)
+    /// および Object3D ノードの Prefab instantiation + <see cref="IPerformanceModule"/> 注入を統括する
+    /// <see cref="INodeLifecycleProcessor"/>。
+    ///
+    /// 新 module 種別の追加は data-driven: prefab に IPerformanceModule 実装を貼るだけで本クラスは触らずに済む。
     /// </summary>
     /// <remarks>
     /// Plan v5.3 Phase 6: GameBootstrap の InstantiateVFXModule / InstantiateShaderModule /
@@ -56,11 +59,8 @@ namespace Rhizomode.Modules
         {
             switch (node)
             {
-                case VFXModuleNode vfx:
-                    InstantiateVfx(vfx, mode);
-                    break;
-                case ShaderModuleNode shader:
-                    InstantiateShader(shader);
+                case ModuleNodeBase moduleNode:
+                    InstantiateModule(moduleNode, mode);
                     break;
                 case Object3DNode obj3d:
                     InstantiateObject3D(obj3d, mode);
@@ -103,73 +103,51 @@ namespace Rhizomode.Modules
             CleanupAll();
         }
 
-        private void InstantiateVfx(VFXModuleNode node, NodeInitMode mode)
+        /// <summary>
+        /// <see cref="ModuleNodeBase"/> 全種 (VFX / Shader / InstancedCubes / future GPU instancing 等) 共通の
+        /// prefab instantiation + <see cref="IPerformanceModule"/> 注入を行う。
+        /// </summary>
+        /// <remarks>
+        /// 新 module 種別が追加されても本メソッドを触る必要はない:
+        /// prefab に <c>IPerformanceModule</c> 実装が貼ってあれば <c>GetComponent</c> 経由で自動的に拾われる。
+        /// H2 fix: 取得失敗時は <c>_instances</c> 登録前に rollback して zombie GameObject を残さない。
+        /// </remarks>
+        private void InstantiateModule(ModuleNodeBase node, NodeInitMode mode)
         {
             var def = node.Definition;
             if (def == null || def.prefab == null)
             {
-                Debug.LogWarning($"[ModuleLifecycleProcessor] VFX module has no prefab assigned: {node.Id}");
+                Debug.LogWarning($"[ModuleLifecycleProcessor] Module has no prefab assigned: {node.Id}");
                 return;
             }
 
+            GameObject? instance = null;
             try
             {
-                var instance = UnityEngine.Object.Instantiate(def.prefab);
-                instance.name = $"VFXModule_{def.moduleName}_{node.Id[..Math.Min(8, node.Id.Length)]}";
+                instance = UnityEngine.Object.Instantiate(def.prefab);
+                instance.name = $"Module_{def.moduleName}_{node.Id[..Math.Min(8, node.Id.Length)]}";
                 instance.transform.position = _placement.GetSpawnPosition(node, mode);
-                _instances[node.Id] = instance;
 
-                var module = instance.GetComponent<VFXModule>();
-                if (module != null)
+                var module = instance.GetComponent<IPerformanceModule>();
+                if (module == null)
                 {
-                    module.Initialize(def);
-                    node.Module = module;
-                }
-                else
-                {
+                    // H2: instance を _instances に書く前に rollback、scene から確実に消す
                     Debug.LogError(
-                        $"[ModuleLifecycleProcessor] VFX prefab '{def.prefab.name}' lacks VFXModule component");
+                        $"[ModuleLifecycleProcessor] Module prefab '{def.prefab.name}' lacks IPerformanceModule implementation");
+                    UnityEngine.Object.Destroy(instance);
+                    return;
                 }
+
+                module.Initialize(def);
+                _instances[node.Id] = instance;
+                node.Module = module; // setter 内で Activate() が呼ばれる
             }
             catch (Exception e)
             {
                 Debug.LogError(
-                    $"[ModuleLifecycleProcessor] VFX instantiation failed for '{def.moduleName}': {e.Message}");
-            }
-        }
-
-        private void InstantiateShader(ShaderModuleNode node)
-        {
-            var def = node.Definition;
-            if (def == null || def.prefab == null)
-            {
-                Debug.LogWarning($"[ModuleLifecycleProcessor] Shader module has no prefab assigned: {node.Id}");
-                return;
-            }
-
-            try
-            {
-                var instance = UnityEngine.Object.Instantiate(def.prefab);
-                instance.name = $"ShaderModule_{def.moduleName}_{node.Id[..Math.Min(8, node.Id.Length)]}";
-                _instances[node.Id] = instance;
-
-                var module = instance.GetComponent<ShaderModule>();
-                var renderer = instance.GetComponent<Renderer>();
-                if (module != null && renderer != null)
-                {
-                    module.Initialize(def, renderer);
-                    node.Module = module;
-                }
-                else
-                {
-                    Debug.LogError(
-                        $"[ModuleLifecycleProcessor] Shader prefab '{def.prefab.name}' lacks ShaderModule or Renderer");
-                }
-            }
-            catch (Exception e)
-            {
-                Debug.LogError(
-                    $"[ModuleLifecycleProcessor] Shader instantiation failed for '{def.moduleName}': {e.Message}");
+                    $"[ModuleLifecycleProcessor] Module instantiation failed for '{def.moduleName}': {e.Message}");
+                // 途中で例外 → scene に孤立 GameObject を残さない
+                if (instance != null) UnityEngine.Object.Destroy(instance);
             }
         }
 
@@ -181,36 +159,39 @@ namespace Rhizomode.Modules
                 return;
             }
 
+            GameObject? instance = null;
             try
             {
-                var instance = UnityEngine.Object.Instantiate(prefab);
+                instance = UnityEngine.Object.Instantiate(prefab);
                 instance.name = $"Object3D_{node.PrefabName}_{node.Id[..Math.Min(8, node.Id.Length)]}";
                 instance.transform.position = _placement.GetSpawnPosition(node, mode);
-                _instances[node.Id] = instance;
+
+                // L6: VR グラブ操作前提なので prefab 側で必ず Collider を貼ること。
+                // ランタイムに非 convex MeshCollider を AddComponent する暗黙挙動は廃止 (UX / 物理コスト両面で危険)。
+                if (instance.GetComponent<Collider>() == null)
+                {
+                    Debug.LogError(
+                        $"[ModuleLifecycleProcessor] Object3D prefab '{prefab.name}' has no Collider. Add one in the prefab to enable VR grab.");
+                    UnityEngine.Object.Destroy(instance);
+                    return;
+                }
 
                 var proxy = instance.GetComponent<Object3DProxy>();
                 if (proxy == null) proxy = instance.AddComponent<Object3DProxy>();
 
-                if (instance.GetComponent<Collider>() == null)
-                {
-                    if (instance.GetComponent<MeshFilter>() != null)
-                        instance.AddComponent<MeshCollider>();
-                    else
-                        instance.AddComponent<BoxCollider>();
-                }
-
                 proxy.NodeId = node.Id;
+                _instances[node.Id] = instance;
                 _object3DRegistry?.Register(proxy);
 
-                // R3 Observable 購読は呼び出し側 (GraphState を持つ層) が
-                // node.BindProxyObservables(state, proxy.Position, proxy.Scale) で行う。
-                // 本 processor は GraphState への依存を持たない設計のため、
-                // BindProxyObservables 呼び出しは GameBootstrap または Phase 8 の Installer で実施。
+                // R3 Observable 購読は GraphState を持つ層 (Object3DProxyBindService) が
+                // node.BindProxyObservables(state, proxy.Position, proxy.Scale) で別途行う。
+                // 本 processor は GraphState 非依存。
             }
             catch (Exception e)
             {
                 Debug.LogError(
                     $"[ModuleLifecycleProcessor] Object3D instantiation failed for '{node.PrefabName}': {e.Message}");
+                if (instance != null) UnityEngine.Object.Destroy(instance);
             }
         }
     }

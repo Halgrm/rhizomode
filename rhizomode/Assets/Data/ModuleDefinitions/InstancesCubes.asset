@@ -1,0 +1,58 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3390c342213d5dd4585d6d2aab36e607, type: 3}
+  m_Name: InstancesCubes
+  m_EditorClassIdentifier: Rhizomode.Modules.Runtime::Rhizomode.Modules.ModuleDefinition
+  moduleName: InstanceCube
+  prefab: {fileID: 4164768490155835780, guid: c05f4ce7719e6444881b37d5bbf0ae35, type: 3}
+  parameters:
+  - name: count
+    type: 0
+    defaultFloat: 1000
+    minFloat: 1
+    maxFloat: 5000
+    defaultColor: {r: 0, g: 0, b: 0, a: 0}
+    defaultBool: 0
+    isEvent: 0
+  - name: boundsRadius
+    type: 0
+    defaultFloat: 25
+    minFloat: 1
+    maxFloat: 100
+    defaultColor: {r: 0, g: 0, b: 0, a: 0}
+    defaultBool: 0
+    isEvent: 0
+  - name: cubeScale
+    type: 0
+    defaultFloat: 0.4
+    minFloat: 0.01
+    maxFloat: 2
+    defaultColor: {r: 0, g: 0, b: 0, a: 0}
+    defaultBool: 0
+    isEvent: 0
+  - name: baseColor
+    type: 1
+    defaultFloat: 0
+    minFloat: 0
+    maxFloat: 0
+    defaultColor: {r: 0.9, g: 0.9, b: 1, a: 0}
+    defaultBool: 0
+    isEvent: 0
+  - name: emissionColor
+    type: 1
+    defaultFloat: 0
+    minFloat: 0
+    maxFloat: 0
+    defaultColor: {r: 0.049, g: 0.149, b: 0.418, a: 0}
+    defaultBool: 0
+    isEvent: 0
+  events: []
