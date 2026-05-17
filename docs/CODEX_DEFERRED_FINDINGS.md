@@ -363,7 +363,23 @@ Bootstrap.Services / Bootstrap.Wiring に移送。Codex review (`ad3f33ebd5fdf11
 
 ---
 
-## 運用
+## modules-review (2026-05-17, commit a10d8662 → 後続 fix)
+
+### F-mr.1: InstancedCubesModule の compute / shader asset 未追跡 (deferred)
+- **検出**: Codex re-review (a10d8662) PARTIAL 2
+- **対象**: `Assets/Prefabs/Modules/InstanceCubesModule.prefab:47-48` — compute (guid `4bab4dac7921b354793d04caa5b82c12`) と shader (guid `562c3efa5af1fc148ac204504aa3a5b1`) の参照先 (`Assets/Sandbox/...` / `Assets/Shaders/Content/Glass/disp/dispshad_instanced.shader`) が untracked
+- **指摘内容**: クリーン checkout では参照欠落、`InstancedCubesModule.Activate()` が "compute or shader not assigned" で停止
+- **実害評価**: 軽微 — module 単体が停止するだけで Video 全体は止まらない (映像継続原則準拠の degrade)。ローカル開発者は assets を持っているため動作。
+- **将来 trigger**: InstancedCubes を production module として配布する判断時に Sandbox/ + Shaders/Content/Glass/disp/ を tracked に移送 + .meta 含めてコミット。それまでは個人の Sandbox として残置可。
+
+### F-mr.2: ModuleDefinition.prefab 未設定時の factory 未登録 (deferred)
+- **検出**: Codex review (d2316a46) PARTIAL 4 / re-review (a10d8662) WARN 3
+- **対象**: `Assets/Runtime/Bootstrap/NodeRegistrationOrchestrator.cs:140-150`
+- **指摘内容**: prefab 未設定 SO は `Module_X` / legacy alias の factory が登録されないため、saved graph に該当 typeName があると load 失敗
+- **実害評価**: 現状 `Assets/Data/SavedGraphs/` は空。production deployment 前に SO 全部に prefab を割当する運用前提なら問題なし。
+- **将来 trigger**: saved graph 機能が再有効化されるタイミングで migration pass を実装するか、prefab missing factory も canonical typeName だけ登録する fallback を追加。
+
+
 
 - 新規エントリは `### F-<phase>.<番号>: <タイトル>` 形式で追加
 - Phase 13 (final cleanup) で本ファイルを総点検し、各エントリの最終判断 (修正 / 永続 deferral / 削除) を決める

@@ -22,17 +22,23 @@ namespace Rhizomode.Nodes.Modules
 
         /// <summary>
         /// 実行時に外部から注入される演出モジュールインスタンス。
-        /// Activate()はセッター内で自動呼出しされる。
+        /// Activate() はセッター内で自動呼出しされる。
         /// </summary>
+        /// <remarks>
+        /// Codex re-review fix (PARTIAL 1): Activate() が throw した場合に <see cref="_module"/> へ
+        /// destroyed instance の参照が残らないよう、Deactivate→clear→Activate→assign の順に変更。
+        /// 例外伝播後に observable から SetParam が飛んでも null check で safely skip される。
+        /// </remarks>
         public IPerformanceModule? Module
         {
             get => _module;
             set
             {
-                // 旧モジュールがあれば停止してから差し替え
                 _module?.Deactivate();
+                _module = null;
+                if (value == null) return;
+                value.Activate(); // throw 時は呼び出し側で rollback / destroy を行う
                 _module = value;
-                _module?.Activate();
             }
         }
 
