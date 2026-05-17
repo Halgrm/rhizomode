@@ -169,10 +169,18 @@ namespace Rhizomode.Modules
 
                 _liveCount = Mathf.Max(1, Mathf.RoundToInt(count));
                 _kernel = compute.FindKernel("CSBoids");
+                if (_kernel < 0)
+                {
+                    Debug.LogError("[InstancedCubesModule] compute kernel 'CSBoids' not found", this);
+                    return;
+                }
                 InitBoidBuffer();
                 InitArgsBuffer();
                 InitMaterial();
                 _initialized = true;
+                Debug.Log(
+                    $"[InstancedCubesModule] Activated: count={_liveCount}, boundsRadius={boundsRadius}, " +
+                    $"cubeScale={cubeScale}, transform.pos={transform.position}, layer={gameObject.layer}");
             }
             catch (Exception e)
             {
