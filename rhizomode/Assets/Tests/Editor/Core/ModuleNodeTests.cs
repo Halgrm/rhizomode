@@ -43,6 +43,28 @@ namespace Rhizomode.Core.Tests
         }
 
         [Test]
+        public void VFXModuleNode_AddsActivePort_WhenActiveOnlyInEvents()
+        {
+            // Codex re-review fix: events に "Active" があっても (false 通知が来ないため) VFXModuleNode の
+            // 独自 bool subscribe を残す。skip 条件は parameters.Active のみが正しい。
+            var def = ScriptableObject.CreateInstance<ModuleDefinition>();
+            def.moduleName = "TestVFXEvent";
+            def.parameters = new()
+            {
+                new ParamDefinition { name = "Intensity", type = ParamType.Float },
+            };
+            def.events = new() { "Active" }; // event 経由の Active
+
+            var node = new VFXModuleNode("vfx-evt", def);
+            var ports = node.GetPortDefinitions();
+
+            // event Active (base 経由) + bool Active (VFXModuleNode 経由) は重複 → NodeBase guard で 1 個になる
+            // ただし subscribe は base 経由 (true 時のみ) + VFXModuleNode 経由 (bool full) の両方が動く
+            Assert.IsTrue(ports.Any(p => p.name == "Active" && p.type == ParamType.Bool));
+            Assert.AreEqual(1, ports.Count(p => p.name == "Active"));
+        }
+
+        [Test]
         public void VFXModuleNode_AddsActivePort_WhenNotInDefinition()
         {
             var def = ScriptableObject.CreateInstance<ModuleDefinition>();
@@ -92,6 +114,21 @@ namespace Rhizomode.Core.Tests
             Assert.AreEqual(-5f, node.Definition.parameters[0].minFloat);
             Assert.AreEqual(5f, node.Definition.parameters[0].maxFloat);
             Assert.AreEqual(1f, node.Definition.parameters[0].defaultFloat);
+        }
+
+        [Test]
+        public void InstancedCubesModule_BoidStride_MatchesShaderLayout()
+        {
+            // Codex re-review fix (WARN 7): BoidData struct を変えると compute shader と layout が乖離する。
+            // 静的 ctor の LogError と合わせて test でも固定する。
+            const int expected = sizeof(float) * 13; // float3 + float3 + float4 + float3 = 52
+            // BoidData は private 型のため reflection 経由で取得
+            var t = typeof(InstancedCubesModule).GetNestedType("BoidData",
+                System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+            Assert.IsNotNull(t, "BoidData nested type must exist");
+            var actual = System.Runtime.InteropServices.Marshal.SizeOf(t!);
+            Assert.AreEqual(expected, actual,
+                $"BoidData stride must be {expected} bytes (3+3+4+3 floats) to match compute shader layout");
         }
 
         [Test]

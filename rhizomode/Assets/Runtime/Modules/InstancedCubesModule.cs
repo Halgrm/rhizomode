@@ -49,7 +49,20 @@ namespace Rhizomode.Modules
         private bool _initialized;
 
         // M2: struct field 増減で silent break しないよう Marshal.SizeOf<T>() で算出。
+        // HLSL 側 (Assets/Sandbox/.../*.compute) の BoidData は float3+float3+float4+float3=52 bytes 想定。
+        // Codex re-review (WARN 7): 想定 stride を const で残し、static ctor で実測値と照合する。
+        private const int ExpectedBoidStride = sizeof(float) * 13;
         private static readonly int BoidStride = Marshal.SizeOf<BoidData>();
+
+        static InstancedCubesModule()
+        {
+            if (BoidStride != ExpectedBoidStride)
+            {
+                Debug.LogError(
+                    $"[InstancedCubesModule] BoidData stride mismatch: expected {ExpectedBoidStride} bytes " +
+                    $"(float3+float3+float4+float3), got {BoidStride}. Compute shader と layout が乖離しています。");
+            }
+        }
 
         private static readonly int IdBoids = Shader.PropertyToID("_Boids");
         private static readonly int IdCount = Shader.PropertyToID("_Count");

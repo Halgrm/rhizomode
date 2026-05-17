@@ -176,7 +176,14 @@ namespace Rhizomode.Editor
             var path = FindAsmdef(asmdefName);
             if (path == null) yield break; // asmdef がまだ存在しない (Phase 進行中) は OK
 
+            // Codex re-review fix (WARN 6): parse failure は build gate の false negative になるため
+            // violation として明示報告する (GetReferences は失敗時 null を返すように変更済)。
             var refs = GetReferences(path);
+            if (refs == null)
+            {
+                yield return $"{asmdefName} asmdef parse failed (BoundaryValidator cannot enforce rules safely)";
+                yield break;
+            }
             foreach (var forbiddenRef in forbidden)
             {
                 if (refs.Contains(forbiddenRef))
@@ -198,6 +205,11 @@ namespace Rhizomode.Editor
                 if (name == "Rhizomode.Bootstrap") continue; // Bootstrap のみ許可
 
                 var refs = GetReferences(path);
+                if (refs == null)
+                {
+                    yield return $"{name} asmdef parse failed (BoundaryValidator cannot enforce rules safely)";
+                    continue;
+                }
                 if (refs.Contains("VContainer") || refs.Contains("VContainer.Unity"))
                 {
                     yield return $"{name} references VContainer (only Bootstrap is allowed)";
@@ -227,10 +239,13 @@ namespace Rhizomode.Editor
         /// L4 fix: regex 抽出は <c>"references": ["A]"]</c> のような edge case で誤動作するため、
         /// JsonUtility で <see cref="AsmdefDescription"/> に deserialize して取り出す。
         /// JsonUtility は未知 field を無視するため小さな DTO で十分。
+        ///
+        /// Codex re-review fix (WARN 6): parse failure 時は <c>null</c> を返すことで呼び出し側に
+        /// 「rule を強制できない」事を明示させる (旧版は空配列を返して false negative になっていた)。
         /// </remarks>
-        private static string[] GetReferences(string asmdefPath)
+        private static string[]? GetReferences(string asmdefPath)
         {
-            if (!File.Exists(asmdefPath)) return Array.Empty<string>();
+            if (!File.Exists(asmdefPath)) return null;
             try
             {
                 var json = File.ReadAllText(asmdefPath);
@@ -239,10 +254,8 @@ namespace Rhizomode.Editor
             }
             catch (Exception e)
             {
-                // build gate として静かに通すと意味がないので、parse 失敗は LogError してから空を返す。
-                // 呼び出し側は references=[] で扱い、boundary rule は false negative (見落とし) になる。
                 Debug.LogError($"[BoundaryValidator] Failed to parse asmdef '{asmdefPath}': {e.Message}");
-                return Array.Empty<string>();
+                return null;
             }
         }
 

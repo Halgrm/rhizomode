@@ -32,10 +32,13 @@ namespace Rhizomode.Nodes.Modules
         public VFXModuleNode(string id, string typeName, ModuleDefinition definition)
             : base(id, typeName, definition)
         {
-            // L1: ModuleDefinition 側で "Active" を param/event として定義しているケースでは
-            // base.RegisterPortsFromDefinition が既に port を作っているため、ここでの追加 register を skip する。
-            _activeFromDefinition =
-                definition.GetParam(ActivePort) != null || definition.IsEvent(ActivePort);
+            // L1: ModuleDefinition.parameters 側で "Active" を Bool として定義しているケースでは
+            // base.RegisterPortsFromDefinition が既に port + subscribe を済ませているため、ここで skip する。
+            //
+            // Codex re-review fix (FAIL 5): events に "Active" がある場合は base の subscribe が
+            // 「true で SetParam("Active", true)」しか飛ばないため、false で VFX を Deactivate できない。
+            // events 経由の Active は VFX セマンティクスに合わないため、parameters 側のみを skip 条件にする。
+            _activeFromDefinition = definition.GetParam(ActivePort) != null;
             if (!_activeFromDefinition)
                 RegisterInput<bool>(ActivePort, ParamType.Bool);
         }

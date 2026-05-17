@@ -139,8 +139,21 @@ namespace Rhizomode.Modules
                 }
 
                 module.Initialize(def);
+                // Codex re-review fix (FAIL 3): Module setter は内部で Activate を呼ぶ。
+                // ビルトイン実装は Activate 内 try-catch を持つが interface 契約としては保証されないため、
+                // ここで catch して _instances 登録前に rollback する。
+                try
+                {
+                    node.Module = module;
+                }
+                catch (Exception e)
+                {
+                    Debug.LogError(
+                        $"[ModuleLifecycleProcessor] Module.Activate threw for '{def.moduleName}': {e.Message}");
+                    UnityEngine.Object.Destroy(instance);
+                    return;
+                }
                 _instances[node.Id] = instance;
-                node.Module = module; // setter 内で Activate() が呼ばれる
             }
             catch (Exception e)
             {

@@ -44,7 +44,7 @@ MonoBehaviour:
     defaultFloat: 0
     minFloat: 0
     maxFloat: 0
-    defaultColor: {r: 0.9, g: 0.9, b: 1, a: 0}
+    defaultColor: {r: 0.9, g: 0.9, b: 1, a: 1}
     defaultBool: 0
     isEvent: 0
   - name: emissionColor
@@ -52,7 +52,7 @@ MonoBehaviour:
     defaultFloat: 0
     minFloat: 0
     maxFloat: 0
-    defaultColor: {r: 0.049, g: 0.149, b: 0.418, a: 0}
+    defaultColor: {r: 0.049, g: 0.149, b: 0.418, a: 1}
     defaultBool: 0
     isEvent: 0
   events: []

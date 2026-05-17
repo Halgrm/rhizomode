@@ -46,6 +46,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Rhizomode.Modules.Runtime::Rhizomode.Modules.InstancedCubesModule
   compute: {fileID: 7200000, guid: 4bab4dac7921b354793d04caa5b82c12, type: 3}
   shader: {fileID: 4800000, guid: 562c3efa5af1fc148ac204504aa3a5b1, type: 3}
+  cubeMesh: {fileID: 10202, guid: 0000000000000000e000000000000000, type: 0}
   count: 5000
   boundsRadius: 25
   cubeScale: 5.29
