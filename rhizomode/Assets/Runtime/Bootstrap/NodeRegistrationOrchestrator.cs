@@ -140,12 +140,9 @@ namespace Rhizomode.Bootstrap
                 if (def == null) continue;
                 if (def.prefab == null)
                 {
-                    // Codex re-review (PARTIAL 4): prefab 未設定の SO は factory 登録できないため、
-                    // saved graph に該当 typeName が含まれていると load 失敗する。
-                    // 既存挙動踏襲だが、deferred migration 課題として明示 warning。
-                    Debug.LogWarning(
-                        $"[NodeRegistrationOrchestrator] ModuleDefinition '{def.moduleName}' has no prefab. " +
-                        "Module_{moduleName} と legacy alias は登録されないため、saved graph に該当ノードがあると load 失敗する。");
+                    // WIP / sandbox SO は console を埋めないよう Debug.Log で静かに通知 (deferred F-mr.2)。
+                    Debug.Log(
+                        $"[NodeRegistrationOrchestrator] Skipping ModuleDefinition '{def.moduleName}' (no prefab assigned).");
                     continue;
                 }
 

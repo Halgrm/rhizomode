@@ -57,6 +57,9 @@ namespace Rhizomode.Modules
 
         public void AfterSetup(NodeBase node, NodeInitMode mode)
         {
+            // 一時的な診断ログ: AfterSetup が ModuleNode に対して呼ばれているか / どの switch 分岐に入るか確認
+            Debug.Log(
+                $"[ModuleLifecycleProcessor] AfterSetup: node.Id={node.Id} type={node.GetType().Name} nodeType={node.NodeType} mode={mode}");
             switch (node)
             {
                 case ModuleNodeBase moduleNode:
@@ -154,6 +157,8 @@ namespace Rhizomode.Modules
                     return;
                 }
                 _instances[node.Id] = instance;
+                Debug.Log(
+                    $"[ModuleLifecycleProcessor] Module attached: nodeId={node.Id} typeName={node.NodeType} moduleType={module.GetType().Name} instance.name={instance.name} pos={instance.transform.position}");
             }
             catch (Exception e)
             {
