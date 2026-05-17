@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using Rhizomode.Graph.CatalogBridge;
 using Rhizomode.Graph.Events;
 using Rhizomode.Graph.Model;
+using Rhizomode.Graph.Runtime;
 using Rhizomode.Graph.Snapshot;
 using Rhizomode.SharedKernel;
 using UnityEngine;
@@ -29,12 +30,30 @@ namespace Rhizomode.Graph.Mutation
         private readonly GraphState _state;
         private readonly INodeFactory _factory;
         private readonly GraphEventBus _bus;
+        private readonly NodeRuntime? _runtime;
 
+        /// <summary>
+        /// production 用 ctor。<see cref="NodeRuntime"/> 経由でノードを登録するため、
+        /// <see cref="INodeLifecycleProcessor.AfterSetup"/> (ModuleLifecycleProcessor 等) が起動時に走る。
+        /// </summary>
+        public GraphMutationApplier(GraphState state, INodeFactory factory, GraphEventBus bus, NodeRuntime runtime)
+        {
+            _state = state;
+            _factory = factory;
+            _bus = bus;
+            _runtime = runtime;
+        }
+
+        /// <summary>
+        /// test 用 legacy ctor (NodeRuntime なし — lifecycle processor は走らない)。
+        /// 本 ctor は EditMode test の simple GraphState fixture でのみ使う。production は 4-arg ctor を必ず使う。
+        /// </summary>
         public GraphMutationApplier(GraphState state, INodeFactory factory, GraphEventBus bus)
         {
             _state = state;
             _factory = factory;
             _bus = bus;
+            _runtime = null;
         }
 
         /// <summary>
@@ -122,8 +141,18 @@ namespace Rhizomode.Graph.Mutation
             var node = _factory.Create(cmd.TypeName, cmd.NodeId);
             if (node == null) return false;
             node.Position = new Vector3(cmd.Position.X, cmd.Position.Y, cmd.Position.Z);
-            _state.RegisterNode(node);
-            _bus.EmitNodeAdded(cmd.NodeId);
+
+            // production パス: NodeRuntime 経由で AfterSetup (ModuleLifecycleProcessor 等の prefab 注入) を起動する。
+            // legacy test ctor では runtime=null のため state 直叩きにフォールバック (lifecycle 走らず)。
+            if (_runtime != null)
+            {
+                _runtime.RegisterNode(node, NodeInitMode.FreshSpawn);
+            }
+            else
+            {
+                _state.RegisterNode(node);
+                _bus.EmitNodeAdded(cmd.NodeId);
+            }
             return true;
         }
 
