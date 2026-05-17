@@ -25,20 +25,26 @@ namespace Rhizomode.Nodes.Modules
         /// Activate() はセッター内で自動呼出しされる。
         /// </summary>
         /// <remarks>
-        /// Codex re-review fix (PARTIAL 1): Activate() が throw した場合に <see cref="_module"/> へ
-        /// destroyed instance の参照が残らないよう、Deactivate→clear→Activate→assign の順に変更。
-        /// 例外伝播後に observable から SetParam が飛んでも null check で safely skip される。
+        /// 注: 旧 (Codex re-review fix 試行版) の「Deactivate→null clear→Activate→assign」順は、
+        /// VFX/Shader/InstancedCubes 全般で param subscription が起動直後に届かない regression を
+        /// 招いたため revert。並行する Setup() の R3 lambda が `_module?.SetParam` で読む field が
+        /// Activate 完了まで null のままだと、PrimeInitialEmission / 直後の ConnectPortsCommand emission を
+        /// 取りこぼす (映像が真っ黒 / 反応しない)。
+        ///
+        /// Codex PARTIAL 1 (Activate throw 時の broken instance 参照) は、built-in 3 種が
+        /// Activate 内 try-catch を持ち throw しないため実害無し。propagation の必要性が出たら
+        /// ModuleLifecycleProcessor 側で setter の前に <c>module.Activate()</c> を明示呼ぶ形に
+        /// 切り替える方が安全 (setter は assign のみに留める)。
         /// </remarks>
         public IPerformanceModule? Module
         {
             get => _module;
             set
             {
+                // 旧モジュールがあれば停止してから差し替え
                 _module?.Deactivate();
-                _module = null;
-                if (value == null) return;
-                value.Activate(); // throw 時は呼び出し側で rollback / destroy を行う
                 _module = value;
+                _module?.Activate();
             }
         }
 
