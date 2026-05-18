@@ -52,7 +52,18 @@ namespace Rhizomode.Editor
         {
             // モーダル dialog は MCP 経由実行で session を切るため Console 出力のみにする
             // (BoundaryViolationValidator と同じ理由)。手動 Editor 実行でも Console を読めば十分。
-            var violations = ValidateAll();
+            Debug.Log("[MirrorHiddenValidator] Starting validation...");
+            string[] violations;
+            try
+            {
+                violations = ValidateAll();
+            }
+            catch (Exception e)
+            {
+                Debug.LogError($"[MirrorHiddenValidator] Validation threw: {e}");
+                return;
+            }
+
             if (violations.Length == 0)
             {
                 Debug.Log("[MirrorHiddenValidator] All MirrorHidden coverage rules pass.");
