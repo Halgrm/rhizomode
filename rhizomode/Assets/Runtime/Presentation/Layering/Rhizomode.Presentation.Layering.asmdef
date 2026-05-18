@@ -1,12 +1,7 @@
 {
-    "name": "Rhizomode.Cameras",
-    "rootNamespace": "Rhizomode.Cameras",
-    "references": [
-        "Rhizomode.Presentation.Layering",
-        "Unity.Cinemachine",
-        "Unity.Splines",
-        "Unity.Mathematics"
-    ],
+    "name": "Rhizomode.Presentation.Layering",
+    "rootNamespace": "Rhizomode.Presentation.Layering",
+    "references": [],
     "includePlatforms": [],
     "excludePlatforms": [],
     "allowUnsafeCode": false,

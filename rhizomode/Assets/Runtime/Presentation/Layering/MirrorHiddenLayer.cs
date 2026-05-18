@@ -2,7 +2,7 @@
 
 using UnityEngine;
 
-namespace Rhizomode.Cameras
+namespace Rhizomode.Presentation.Layering
 {
     /// <summary>
     /// VR HMD には見せるが Mirror カメラ (Spout/NDI/Desktop 配信先) には隠したい
@@ -13,7 +13,8 @@ namespace Rhizomode.Cameras
     /// <remarks>
     /// Phase 1 (2026-05-19): "PerformerUI" → "MirrorHidden" rename。layer index 8 は不変なので
     /// シーン上の GameObject の保存値 (m_Layer: 8) は影響を受けない。
-    /// Phase 2 で本クラスは <c>Rhizomode.Presentation.Layering</c> asmdef に移送予定。
+    /// Phase 2 (2026-05-19): <c>Rhizomode.Cameras</c> asmdef から本 <c>Rhizomode.Presentation.Layering</c>
+    /// asmdef に移送。Cameras / UI.Presentation / XR の共通 leaf utility として独立。
     /// </remarks>
     public static class MirrorHiddenLayer
     {

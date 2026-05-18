@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 
-using Rhizomode.Cameras;
+using Rhizomode.Presentation.Layering;
 using Rhizomode.NodeCatalog.Contracts;
 
 namespace Rhizomode.UI

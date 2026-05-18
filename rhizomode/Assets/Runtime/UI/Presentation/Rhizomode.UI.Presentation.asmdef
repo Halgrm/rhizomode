@@ -9,6 +9,7 @@
         "Rhizomode.NodeCatalog.Runtime",
         "Rhizomode.Input.Contracts",
         "Rhizomode.Cameras",
+        "Rhizomode.Presentation.Layering",
         "Rhizomode.Ableton.Transport",
         "Rhizomode.Ableton.Session",
         "Rhizomode.Ableton.GraphAdapter",

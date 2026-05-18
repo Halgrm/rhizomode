@@ -3,6 +3,8 @@
 using UnityEngine;
 using UnityEngine.Splines;
 
+using Rhizomode.Presentation.Layering;
+
 namespace Rhizomode.Cameras
 {
     /// <summary>

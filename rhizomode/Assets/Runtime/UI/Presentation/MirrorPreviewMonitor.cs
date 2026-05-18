@@ -2,7 +2,7 @@
 
 using UnityEngine;
 
-using Rhizomode.Cameras;
+using Rhizomode.Presentation.Layering;
 
 namespace Rhizomode.UI
 {

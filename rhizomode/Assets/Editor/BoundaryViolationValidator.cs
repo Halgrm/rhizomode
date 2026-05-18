@@ -75,7 +75,7 @@ namespace Rhizomode.Editor
         // Rule implementations (限定有効化、現状違反なし)
         // ---------------------------------------------------------------
 
-        private const int EnabledRuleCount = 11;
+        private const int EnabledRuleCount = 12;
 
         private static string[] ValidateAll()
         {
@@ -163,6 +163,32 @@ namespace Rhizomode.Editor
             violations.AddRange(CheckNoReferences(
                 "Rhizomode.UI.Presentation",
                 forbidden: new[] { "Rhizomode.Graph.Model", "Rhizomode.Graph.Serialization", "Rhizomode.Graph.Runtime", "Rhizomode.Graph.Events", "Rhizomode.Graph.Mutation", "Rhizomode.Graph.Query", "Rhizomode.Graph.Snapshot", "Rhizomode.Graph.CatalogBridge" }));
+
+            // Rule 12 (Plan 5-phase Phase 2, 2026-05-19): Presentation.Layering は leaf utility。
+            // Mirror カメラ可視性切替の cross-cutting helper であり、他の Rhizomode.* に依存させない
+            // (= Cameras / UI.Presentation / XR から共有される最下層に固定)。
+            violations.AddRange(CheckNoReferences(
+                "Rhizomode.Presentation.Layering",
+                forbidden: new[]
+                {
+                    "Rhizomode.SharedKernel",
+                    "Rhizomode.Cameras",
+                    "Rhizomode.UI", "Rhizomode.UI.Contracts", "Rhizomode.UI.Presentation", "Rhizomode.UI.GraphAdapter",
+                    "Rhizomode.Graph.Model", "Rhizomode.Graph.Serialization", "Rhizomode.Graph.Runtime",
+                    "Rhizomode.Graph.Events", "Rhizomode.Graph.Mutation", "Rhizomode.Graph.Query",
+                    "Rhizomode.Graph.Snapshot", "Rhizomode.Graph.CatalogBridge",
+                    "Rhizomode.NodeCatalog.Contracts", "Rhizomode.NodeCatalog.Runtime",
+                    "Rhizomode.Input.Contracts", "Rhizomode.Input.XR", "Rhizomode.Input.Desktop",
+                    "Rhizomode.Interaction", "Rhizomode.Interaction.Contracts", "Rhizomode.Interaction.GraphAdapter",
+                    "Rhizomode.Audio.Contracts", "Rhizomode.Audio.Analysis", "Rhizomode.Audio.GraphAdapter",
+                    "Rhizomode.Ableton.Contracts", "Rhizomode.Ableton.Transport", "Rhizomode.Ableton.Session", "Rhizomode.Ableton.GraphAdapter",
+                    "Rhizomode.OscMidi.Contracts", "Rhizomode.OscMidi.Transport", "Rhizomode.OscMidi.GraphAdapter",
+                    "Rhizomode.Scene.Contracts", "Rhizomode.Scene.Runtime", "Rhizomode.Scene.GraphAdapter",
+                    "Rhizomode.Persistence.Contracts", "Rhizomode.Persistence.Json",
+                    "Rhizomode.Observability.Contracts", "Rhizomode.Observability.Runtime",
+                    "Rhizomode.Modules.Runtime", "Rhizomode.XR", "Rhizomode.Bootstrap",
+                    "VContainer", "VContainer.Unity", "R3.Unity"
+                }));
 
             return violations.ToArray();
         }

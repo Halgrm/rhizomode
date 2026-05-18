@@ -3,6 +3,8 @@
 using System.Collections.Generic;
 using UnityEngine;
 
+using Rhizomode.Presentation.Layering;
+
 namespace Rhizomode.Cameras
 {
     /// <summary>
