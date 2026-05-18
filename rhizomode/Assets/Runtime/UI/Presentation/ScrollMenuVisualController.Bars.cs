@@ -4,7 +4,6 @@ using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 
-using Rhizomode.Presentation.Layering;
 using Rhizomode.NodeCatalog.Contracts;
 
 namespace Rhizomode.UI
@@ -84,8 +83,8 @@ namespace Rhizomode.UI
                 Mathf.Lerp(baseColor.b, accent.b, 0.6f),
                 0.9f);
 
-            // Accent / Label の子 GameObject も含めて MirrorHidden layer に揃える。
-            MirrorHiddenLayer.ApplyRecursive(go);
+            // layer は親 (manager) の MirrorHiddenScope.OnTransformChildrenChanged で自動適用される
+            // (Accent / Label は go の子なので scope の再帰適用で揃う)。
 
             return new CategoryBarEntry(category, go, col, mat, baseColor, highlightColor, angleDeg);
         }

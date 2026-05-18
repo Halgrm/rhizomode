@@ -18,6 +18,7 @@ namespace Rhizomode.Cameras
     /// - <see cref="IsEditing"/>: 既存 marker を Right-Grip で掴んで移動
     /// 永続化は Path Phase 4 と同タイミングで導入予定 (現状はランタイムのみ)。
     /// </remarks>
+    [RequireMirrorHidden]
     public class LookAtMarkerVisualManager : MonoBehaviour
     {
         private const float DefaultHandleRadius = 0.06f;
@@ -57,7 +58,9 @@ namespace Rhizomode.Cameras
             go.name = name;
             go.transform.position = worldPosition;
             go.transform.localScale = Vector3.one * (handleRadius * 2f);
-            MirrorHiddenLayer.ApplyRecursive(go);
+            // self の子に SetParent して MirrorHiddenScope の OnTransformChildrenChanged で
+            // layer を自動適用させる (world 配置維持)。
+            go.transform.SetParent(transform, worldPositionStays: true);
 
             if (handleMaterial != null)
             {

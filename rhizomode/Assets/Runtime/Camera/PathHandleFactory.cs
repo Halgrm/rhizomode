@@ -4,8 +4,6 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Splines;
 
-using Rhizomode.Presentation.Layering;
-
 namespace Rhizomode.Cameras
 {
     /// <summary>
@@ -27,10 +25,13 @@ namespace Rhizomode.Cameras
         /// <param name="container">対象 Spline。</param>
         /// <param name="mapper">Miniature モード時の座標変換 (null なら Direct モード = 恒等)。</param>
         /// <param name="handleRadius">球の半径 (m)。</param>
+        /// <param name="parent">生成した球を parent 配下に SetParent する (worldPositionStays=true で world 位置維持)。
+        /// MirrorHiddenScope を持つ管理 GameObject を渡すと layer 自動適用が効く。null なら world root。</param>
         public List<PathControlPointVisual> Create(
             SplineContainer container,
             MiniaturePathMapper? mapper,
-            float handleRadius)
+            float handleRadius,
+            Transform? parent = null)
         {
             var visuals = new List<PathControlPointVisual>();
             var spline = container.Spline;
@@ -48,7 +49,7 @@ namespace Rhizomode.Cameras
                 go.name = $"{namePrefix}_{i}";
                 go.transform.position = visualPos;
                 go.transform.localScale = Vector3.one * (handleRadius * 2f);
-                MirrorHiddenLayer.ApplyRecursive(go);
+                if (parent != null) go.transform.SetParent(parent, worldPositionStays: true);
 
                 if (_handleMaterial != null)
                 {

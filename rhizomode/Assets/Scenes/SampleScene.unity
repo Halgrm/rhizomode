@@ -577,6 +577,7 @@ GameObject:
   - component: {fileID: 239156532}
   - component: {fileID: 239156533}
   - component: {fileID: 239156534}
+  - component: {fileID: 239156535}
   m_Layer: 0
   m_Name: Game Manager
   m_TagString: Untagged
@@ -721,6 +722,18 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: afd959069cac3ad4bb0bce134e77b067, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Rhizomode.UI.GraphAdapter::Rhizomode.UI.GraphSaveLoadManager
+--- !u!114 &239156535
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 239156525}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 464488b6a56fff3469ca6a583bb768be, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Rhizomode.Presentation.Layering::Rhizomode.Presentation.Layering.MirrorHiddenScope
 --- !u!1 &274145555
 GameObject:
   m_ObjectHideFlags: 0
@@ -766,6 +779,11 @@ Transform:
   - {fileID: 334771644}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &292552697 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 1670256624, guid: f6336ac4ac8b4d34bc5072418cdc62a0, type: 3}
+  m_PrefabInstance: {fileID: 1213701919}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1 &314959823
 GameObject:
   m_ObjectHideFlags: 0
@@ -781,6 +799,7 @@ GameObject:
   - component: {fileID: 314959826}
   - component: {fileID: 314959825}
   - component: {fileID: 314959824}
+  - component: {fileID: 314959831}
   m_Layer: 0
   m_Name: CameraManagerPanel
   m_TagString: Untagged
@@ -803,6 +822,7 @@ MonoBehaviour:
   panelUxml: {fileID: 9197481963319205126, guid: 1ac8e735fb3a2004397d3d7c9473a615, type: 3}
   panelStyleSheet: {fileID: 7433441132597879392, guid: 3354cd00bfde72b4d9a939f24f5df54b, type: 3}
   pathEditorManager: {fileID: 712178745}
+  lookAtMarkerManager: {fileID: 794379158}
 --- !u!114 &314959825
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -924,6 +944,18 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &314959831
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 314959823}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 464488b6a56fff3469ca6a583bb768be, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Rhizomode.Presentation.Layering::Rhizomode.Presentation.Layering.MirrorHiddenScope
 --- !u!1 &324904023
 GameObject:
   m_ObjectHideFlags: 0
@@ -1238,6 +1270,7 @@ GameObject:
   m_Component:
   - component: {fileID: 463111289}
   - component: {fileID: 463111290}
+  - component: {fileID: 463111291}
   m_Layer: 0
   m_Name: PreviewMonitor
   m_TagString: Untagged
@@ -1276,6 +1309,31 @@ MonoBehaviour:
   monitorSize: {x: 0.8, y: 0.45}
   textureWidth: 1280
   textureHeight: 720
+--- !u!114 &463111291
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 463111288}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 464488b6a56fff3469ca6a583bb768be, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Rhizomode.Presentation.Layering::Rhizomode.Presentation.Layering.MirrorHiddenScope
+--- !u!134 &579845179
+PhysicsMaterial:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: ' (Instance) (Instance) (Instance) (Instance) (Instance) (Instance)'
+  serializedVersion: 2
+  m_DynamicFriction: 0.6
+  m_StaticFriction: 0.6
+  m_Bounciness: 0
+  m_FrictionCombine: 0
+  m_BounceCombine: 0
 --- !u!1 &654588758
 GameObject:
   m_ObjectHideFlags: 0
@@ -1334,19 +1392,6 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!134 &655417964
-PhysicsMaterial:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_Name: ' (Instance) (Instance) (Instance) (Instance) (Instance)'
-  serializedVersion: 2
-  m_DynamicFriction: 0.6
-  m_StaticFriction: 0.6
-  m_Bounciness: 0
-  m_FrictionCombine: 0
-  m_BounceCombine: 0
 --- !u!1 &712178743
 GameObject:
   m_ObjectHideFlags: 0
@@ -1358,6 +1403,7 @@ GameObject:
   - component: {fileID: 712178746}
   - component: {fileID: 712178745}
   - component: {fileID: 712178744}
+  - component: {fileID: 712178747}
   m_Layer: 0
   m_Name: PathEditor
   m_TagString: Untagged
@@ -1413,6 +1459,23 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &712178747
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 712178743}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 464488b6a56fff3469ca6a583bb768be, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Rhizomode.Presentation.Layering::Rhizomode.Presentation.Layering.MirrorHiddenScope
+--- !u!1 &781549860 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 202364687, guid: f6336ac4ac8b4d34bc5072418cdc62a0, type: 3}
+  m_PrefabInstance: {fileID: 1213701919}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1 &786076575
 GameObject:
   m_ObjectHideFlags: 0
@@ -1503,6 +1566,7 @@ GameObject:
   - component: {fileID: 788606951}
   - component: {fileID: 788606950}
   - component: {fileID: 788606949}
+  - component: {fileID: 788606956}
   m_Layer: 0
   m_Name: AbletonSetupPanel
   m_TagString: Untagged
@@ -1645,6 +1709,103 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &788606956
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 788606948}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 464488b6a56fff3469ca6a583bb768be, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Rhizomode.Presentation.Layering::Rhizomode.Presentation.Layering.MirrorHiddenScope
+--- !u!1 &794379155
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 794379159}
+  - component: {fileID: 794379158}
+  - component: {fileID: 794379157}
+  - component: {fileID: 794379156}
+  - component: {fileID: 794379160}
+  m_Layer: 0
+  m_Name: ' LookAtEditor'
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &794379156
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 794379155}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1d964f38f2e5e2044a916b56ea263728, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Rhizomode.Interaction::Rhizomode.XR.LookAtMarkerPlaceHandler
+--- !u!114 &794379157
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 794379155}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b3423f33cb38f3147805f7e6ad1cbd5c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Rhizomode.Interaction::Rhizomode.XR.LookAtMarkerGrabHandler
+--- !u!114 &794379158
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 794379155}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 57f7d783150e1994692f46c0a638e5cd, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Rhizomode.Cameras::Rhizomode.Cameras.LookAtMarkerVisualManager
+  handleRadius: 0.06
+  handleMaterial: {fileID: 0}
+--- !u!4 &794379159
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 794379155}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &794379160
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 794379155}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 464488b6a56fff3469ca6a583bb768be, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Rhizomode.Presentation.Layering::Rhizomode.Presentation.Layering.MirrorHiddenScope
 --- !u!1 &832575517
 GameObject:
   m_ObjectHideFlags: 0
@@ -1751,6 +1912,7 @@ GameObject:
   - component: {fileID: 864408691}
   - component: {fileID: 864408690}
   - component: {fileID: 864408689}
+  - component: {fileID: 864408692}
   m_Layer: 0
   m_Name: Scroll Menu
   m_TagString: Untagged
@@ -1833,6 +1995,18 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &864408692
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 864408688}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 464488b6a56fff3469ca6a583bb768be, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Rhizomode.Presentation.Layering::Rhizomode.Presentation.Layering.MirrorHiddenScope
 --- !u!1 &889059661
 GameObject:
   m_ObjectHideFlags: 0
@@ -1941,7 +2115,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: 0.7071068, y: 0, z: 0, w: 0.7071068}
   m_LocalPosition: {x: -0.95426, y: 0.05, z: 1.39}
-  m_LocalScale: {x: 11.43, y: 11.43, z: 11.43}
+  m_LocalScale: {x: 79.8, y: 79.8, z: 79.8}
   m_ConstrainProportionsScale: 1
   m_Children: []
   m_Father: {fileID: 0}
@@ -1974,6 +2148,7 @@ GameObject:
   - component: {fileID: 907711490}
   - component: {fileID: 907711489}
   - component: {fileID: 907711496}
+  - component: {fileID: 907711497}
   m_Layer: 0
   m_Name: Node Creation Menu
   m_TagString: Untagged
@@ -2116,6 +2291,18 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 1, y: 1, z: 1}
   m_Center: {x: 0, y: 0, z: 0}
+--- !u!114 &907711497
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 907711488}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 464488b6a56fff3469ca6a583bb768be, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Rhizomode.Presentation.Layering::Rhizomode.Presentation.Layering.MirrorHiddenScope
 --- !u!1 &936649434
 GameObject:
   m_ObjectHideFlags: 0
@@ -2504,7 +2691,7 @@ PrefabInstance:
     - target: {fileID: 6232745470614056090, guid: f6336ac4ac8b4d34bc5072418cdc62a0, type: 3}
       propertyPath: m_Material
       value: 
-      objectReference: {fileID: 655417964}
+      objectReference: {fileID: 579845179}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -2551,6 +2738,12 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 1767192433, guid: f6336ac4ac8b4d34bc5072418cdc62a0, type: 3}
       insertIndex: -1
       addedObject: {fileID: 1432822257}
+    - targetCorrespondingSourceObject: {fileID: 202364687, guid: f6336ac4ac8b4d34bc5072418cdc62a0, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1213701925}
+    - targetCorrespondingSourceObject: {fileID: 1670256624, guid: f6336ac4ac8b4d34bc5072418cdc62a0, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1213701933}
   m_SourcePrefab: {fileID: 100100000, guid: f6336ac4ac8b4d34bc5072418cdc62a0, type: 3}
 --- !u!1 &1213701920 stripped
 GameObject:
@@ -2577,6 +2770,18 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 202364688, guid: f6336ac4ac8b4d34bc5072418cdc62a0, type: 3}
   m_PrefabInstance: {fileID: 1213701919}
   m_PrefabAsset: {fileID: 0}
+--- !u!114 &1213701925
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 781549860}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 464488b6a56fff3469ca6a583bb768be, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Rhizomode.Presentation.Layering::Rhizomode.Presentation.Layering.MirrorHiddenScope
 --- !u!114 &1213701926
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2632,6 +2837,18 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 01f8e9543c4523a46948e7b8eb5d5c22, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Rhizomode.XR::Rhizomode.XR.EdgeCutHandler
+--- !u!114 &1213701933
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 292552697}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 464488b6a56fff3469ca6a583bb768be, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Rhizomode.Presentation.Layering::Rhizomode.Presentation.Layering.MirrorHiddenScope
 --- !u!114 &1213701938
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2787,6 +3004,9 @@ MonoBehaviour:
   nodeGrabHandler: {fileID: 1213701945}
   pathControlPointGrabHandler: {fileID: 712178744}
   pathEditorManager: {fileID: 712178745}
+  lookAtMarkerGrabHandler: {fileID: 794379157}
+  lookAtMarkerPlaceHandler: {fileID: 794379156}
+  lookAtMarkerManager: {fileID: 794379158}
   object3DGrabHandler: {fileID: 1213701954}
   uiRaycastDriver: {fileID: 1213701938}
   scrollMenuVisual: {fileID: 864408690}
@@ -2829,6 +3049,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1264671748}
   - component: {fileID: 1264671747}
+  - component: {fileID: 1264671749}
   m_Layer: 0
   m_Name: MirrorPreview
   m_TagString: Untagged
@@ -2864,6 +3085,18 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1264671749
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1264671746}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 464488b6a56fff3469ca6a583bb768be, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Rhizomode.Presentation.Layering::Rhizomode.Presentation.Layering.MirrorHiddenScope
 --- !u!1 &1297971205
 GameObject:
   m_ObjectHideFlags: 0
@@ -3181,6 +3414,7 @@ GameObject:
   - component: {fileID: 1780425790}
   - component: {fileID: 1780425792}
   - component: {fileID: 1780425787}
+  - component: {fileID: 1780425793}
   m_Layer: 0
   m_Name: CM_PathDolly
   m_TagString: Untagged
@@ -3295,6 +3529,19 @@ MonoBehaviour:
     RefIds:
     - rid: -2
       type: {class: , ns: , asm: }
+--- !u!114 &1780425793
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1780425786}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1e8b78ac948f05a46a6d8339a503172b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.Cinemachine::Unity.Cinemachine.CinemachineHardLookAt
+  LookAtOffset: {x: 0, y: 0, z: 0}
 --- !u!1 &1925905841
 GameObject:
   m_ObjectHideFlags: 0
@@ -3310,6 +3557,7 @@ GameObject:
   - component: {fileID: 1925905844}
   - component: {fileID: 1925905843}
   - component: {fileID: 1925905842}
+  - component: {fileID: 1925905849}
   m_Layer: 0
   m_Name: AbletonControlPanel
   m_TagString: Untagged
@@ -3455,6 +3703,18 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 40.372, y: -175.535, z: 5.068}
+--- !u!114 &1925905849
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1925905841}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 464488b6a56fff3469ca6a583bb768be, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Rhizomode.Presentation.Layering::Rhizomode.Presentation.Layering.MirrorHiddenScope
 --- !u!1 &2027747379
 GameObject:
   m_ObjectHideFlags: 0
@@ -3470,6 +3730,7 @@ GameObject:
   - component: {fileID: 2027747382}
   - component: {fileID: 2027747381}
   - component: {fileID: 2027747380}
+  - component: {fileID: 2027747387}
   m_Layer: 0
   m_Name: CueListPanel
   m_TagString: Untagged
@@ -3613,6 +3874,18 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &2027747387
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2027747379}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 464488b6a56fff3469ca6a583bb768be, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Rhizomode.Presentation.Layering::Rhizomode.Presentation.Layering.MirrorHiddenScope
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
@@ -3646,3 +3919,4 @@ SceneRoots:
   - {fileID: 155870975}
   - {fileID: 1264671748}
   - {fileID: 2027747386}
+  - {fileID: 794379159}

@@ -6,6 +6,7 @@
         "Rhizomode.Graph.Model",
         "Rhizomode.Graph.Serialization",
         "Rhizomode.Modules.Runtime",
+        "Rhizomode.Presentation.Layering",
         "Unity.VisualEffectGraph.Runtime",
         "Unity.RenderPipelines.Core.Runtime"
     ],

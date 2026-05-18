@@ -15,6 +15,7 @@ namespace Rhizomode.UI
     /// WorldSpace UIToolkitパネルをホストする。RenderTexture経由で
     /// 3D空間上のQuadにUIを表示し、XRレイキャストとの橋渡しを行う。
     /// </summary>
+    [RequireMirrorHidden]
     [RequireComponent(typeof(MeshFilter), typeof(MeshRenderer), typeof(BoxCollider))]
     public class WorldPanelHost : MonoBehaviour
     {
@@ -76,10 +77,8 @@ namespace Rhizomode.UI
             CreateUIDocument(uxml, styleSheet);
             SetupQuad();
 
-            // VR HMD には見せるが Mirror カメラ (Spout/NDI/Desktop 配信) には隠せる
-            // 専用 Layer に揃える。Scene-placed パネル (CameraManager/Status/CueList/Ableton*)
-            // と runtime spawn (NodeVisual / Scroll) を一括カバー。
-            MirrorHiddenLayer.ApplyRecursive(gameObject);
+            // [RequireMirrorHidden] + 同 GameObject 上の MirrorHiddenScope (Scene 配置 or
+            // runtime spawn 元の reparent) によって layer は自動適用されるため明示呼出は不要。
         }
 
         /// <summary>

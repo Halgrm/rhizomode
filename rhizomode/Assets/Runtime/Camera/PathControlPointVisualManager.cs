@@ -16,6 +16,7 @@ namespace Rhizomode.Cameras
     /// <see cref="CoordinateReferenceRenderer"/> に委譲し、編集中の state は
     /// <see cref="PathEditSession"/> に集約する。
     /// </summary>
+    [RequireMirrorHidden]
     public class PathControlPointVisualManager : MonoBehaviour
     {
         public enum HandleMode
@@ -74,7 +75,7 @@ namespace Rhizomode.Cameras
 
             var radius = isMini ? miniatureHandleRadius : directHandleRadius;
             var handleFactory = new PathHandleFactory(handleMaterial);
-            var visuals = handleFactory.Create(target.Spline, mapper, radius);
+            var visuals = handleFactory.Create(target.Spline, mapper, radius, transform);
 
             var visualizerInstance = CreateVisualizer(target.Spline);
             var (miniLineGo, miniLineRenderer) = isMini ? CreateMiniatureLine() : (null, null);
@@ -82,11 +83,13 @@ namespace Rhizomode.Cameras
                 ? new CoordinateReferenceRenderer().Render(mapper!, miniatureHandleRadius)
                 : null;
 
-            // Mirror カメラから path edit 系を隠せるよう MirrorHidden layer に揃える。
-            // visuals (球ハンドル) は PathHandleFactory 側で個別に Apply 済 (子無し)。
-            MirrorHiddenLayer.ApplyRecursive(visualizerInstance);
-            MirrorHiddenLayer.ApplyRecursive(miniLineGo);
-            MirrorHiddenLayer.ApplyRecursive(coordRoot);
+            // Mirror カメラから隠す layer 適用は親 (self) の MirrorHiddenScope に委譲する。
+            // factory / CreateVisualizer / CreateMiniatureLine / CoordinateReferenceRenderer は
+            // world 配置で生成するので、ここで self の子に SetParent して
+            // OnTransformChildrenChanged を発火させる。
+            if (visualizerInstance != null) visualizerInstance.transform.SetParent(transform, worldPositionStays: true);
+            if (miniLineGo != null) miniLineGo.transform.SetParent(transform, worldPositionStays: true);
+            if (coordRoot != null) coordRoot.transform.SetParent(transform, worldPositionStays: true);
 
             _session = new PathEditSession(
                 target, visuals, visualizerInstance, miniLineGo, miniLineRenderer, coordRoot);

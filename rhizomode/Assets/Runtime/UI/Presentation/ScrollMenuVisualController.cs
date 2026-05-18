@@ -8,6 +8,7 @@ using UnityEngine.UIElements;
 
 using Rhizomode.NodeCatalog.Contracts;
 using Rhizomode.NodeCatalog.Runtime;
+using Rhizomode.Presentation.Layering;
 
 namespace Rhizomode.UI
 {
@@ -22,6 +23,7 @@ namespace Rhizomode.UI
     /// - <c>ScrollMenuVisualController.Bars.cs</c>: カテゴリバー (Quad + TextMesh) の構築
     /// - <c>ScrollMenuVisualController.Scroll.cs</c>: スクロールパネル (WorldPanelHost) の構築 + 遅延 populate
     /// </remarks>
+    [RequireMirrorHidden]
     public partial class ScrollMenuVisualController : MonoBehaviour
     {
         [Header("Bar Size")]

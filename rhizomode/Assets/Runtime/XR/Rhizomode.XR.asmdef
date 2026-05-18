@@ -1,9 +1,7 @@
 {
     "name": "Rhizomode.XR",
     "rootNamespace": "Rhizomode.XR",
-    "references": [
-        "Rhizomode.Presentation.Layering"
-    ],
+    "references": [],
     "includePlatforms": [],
     "excludePlatforms": [],
     "allowUnsafeCode": false,

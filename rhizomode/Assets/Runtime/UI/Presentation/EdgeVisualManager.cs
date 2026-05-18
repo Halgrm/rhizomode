@@ -12,6 +12,7 @@ namespace Rhizomode.UI
     /// 全エッジの視覚表現（LineRenderer）を管理する。
     /// エッジの生成・破棄・毎フレーム更新・ハイライト・レイ判定を担う。
     /// </summary>
+    [RequireMirrorHidden]
     [DefaultExecutionOrder(100)]
     public class EdgeVisualManager : MonoBehaviour
     {
@@ -92,7 +93,7 @@ namespace Rhizomode.UI
 
             var go = new GameObject($"Edge_{edge.EdgeId}");
             go.transform.SetParent(transform);
-            MirrorHiddenLayer.ApplyRecursive(go);
+            // layer は親 (manager) の MirrorHiddenScope.OnTransformChildrenChanged で自動適用される。
 
             var line = go.AddComponent<LineRenderer>();
 

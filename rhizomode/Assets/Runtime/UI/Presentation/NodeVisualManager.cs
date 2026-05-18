@@ -9,6 +9,7 @@ using UnityEngine.UIElements;
 
 using Rhizomode.NodeCatalog.Contracts;
 using Rhizomode.NodeCatalog.Runtime;
+using Rhizomode.Presentation.Layering;
 
 namespace Rhizomode.UI
 {
@@ -22,6 +23,7 @@ namespace Rhizomode.UI
     /// caller (UI.GraphAdapter / GameBootstrap) が <c>NodeViewAdapter</c> を構築して
     /// 渡す。RebuildAllVisuals も IReadOnlyList&lt;INodeView&gt; を受ける。
     /// </remarks>
+    [RequireMirrorHidden]
     public partial class NodeVisualManager : MonoBehaviour
     {
         [Header("ノードサイズ")]
@@ -236,6 +238,9 @@ namespace Rhizomode.UI
         private GameObject CreateNodeGameObject(string nodeId, Vector3 position)
         {
             var go = new GameObject($"Node_{nodeId}");
+            // self の子に SetParent して MirrorHiddenScope の OnTransformChildrenChanged で
+            // layer を自動適用させる (world 位置は後段で設定)。
+            go.transform.SetParent(transform, worldPositionStays: false);
             go.transform.position = position;
 
             // 必要なコンポーネントを追加

@@ -15,6 +15,7 @@ namespace Rhizomode.UI
     /// で受け取った source をマテリアルに設定するのみ。CinemachinePreviewMonitor とは
     /// 「RT を作るか、受け取るか」の違いで責務分離している。
     /// </remarks>
+    [RequireMirrorHidden]
     public class MirrorPreviewMonitor : MonoBehaviour
     {
         [Header("Monitor")]
@@ -46,9 +47,8 @@ namespace Rhizomode.UI
 
             _source = source;
             CreateQuad();
-            // Mirror カメラに自身が再帰的に映り込まないよう MirrorHidden layer に揃える
-            // (preview Quad は VR HMD だけに見せる)。
-            MirrorHiddenLayer.ApplyRecursive(gameObject);
+            // [RequireMirrorHidden] + 同 GameObject 上の MirrorHiddenScope (Scene 配置) で
+            // layer は自動適用されるため明示呼出は不要。
             IsInitialized = true;
         }
 

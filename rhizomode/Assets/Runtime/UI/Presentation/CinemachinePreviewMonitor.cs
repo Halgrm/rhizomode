@@ -14,6 +14,7 @@ namespace Rhizomode.UI
     /// Cinemachineカメラの出力をシーン内のQuad（浮遊モニター）に表示する。
     /// デスクトップデバッグモードでパフォーマンスカメラのプレビューに使用。
     /// </summary>
+    [RequireMirrorHidden]
     public class CinemachinePreviewMonitor : MonoBehaviour
     {
         [Header("Camera")]
@@ -62,8 +63,8 @@ namespace Rhizomode.UI
             // Quad生成
             CreateQuad();
 
-            // Mirror カメラに preview Quad が映り込まないよう MirrorHidden layer に揃える。
-            MirrorHiddenLayer.ApplyRecursive(gameObject);
+            // [RequireMirrorHidden] + 同 GameObject 上の MirrorHiddenScope (Scene 配置) で
+            // layer は自動適用されるため明示呼出は不要。
 
             Debug.Log("[CinemachinePreviewMonitor] Initialized");
         }
