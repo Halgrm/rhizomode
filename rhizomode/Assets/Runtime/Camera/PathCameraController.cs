@@ -60,5 +60,33 @@ namespace Rhizomode.Cameras
             if (_camera == null) return;
             _camera.Priority = priority;
         }
+
+        /// <summary>
+        /// ランタイム編集 (PathControlPointVisual 経由の <c>Spline.SetKnot</c>) の直後に呼び、
+        /// <see cref="CinemachineSplineDolly"/> 内部の Spline cache を invalidate する。
+        /// </summary>
+        /// <remarks>
+        /// 症状: Spline.SetKnot で knot 位置を書き戻しても CM_PathDolly が古い経路で評価し続ける
+        /// (PathVisualizer の LineRenderer は毎フレ EvaluatePosition で追従するが、Cinemachine 側だけ
+        /// 動かない)。原因は CinemachineSplineDolly が Spline.Changed event を立ち上げ時しか hook
+        /// していない or 内部キャッシュをランタイム refresh していないこと。SplineContainer 参照を
+        /// 一度切り戻すことで Cinemachine 側の cache invalidate を強制する。
+        /// </remarks>
+        public void NotifySplineMutated()
+        {
+            if (splineDolly == null || splineContainer == null) return;
+
+            // F-camera-path-2 (2026-05-18): SplineSettings = default → saved 戻しでは
+            // CinemachineSplineDolly 内部 cache が refresh されない (実機ログで confirm 済)。
+            // SplineContainer の Spline プロパティ自身を一旦 null → 戻すと、
+            // SplineContainer 内部 onSplineChanged event が発火し、CinemachineSplineDolly が
+            // listen している場合は cache が invalidate される。
+            // 加えて splineDolly.enabled を toggle して OnEnable hook 再張りも保険として行う。
+            var spline = splineContainer.Spline;
+            var pos = splineDolly.CameraPosition;
+            splineDolly.enabled = false;
+            splineDolly.enabled = true;
+            splineDolly.CameraPosition = pos; // toggle で 0 にリセットされても直近値に戻す
+        }
     }
 }

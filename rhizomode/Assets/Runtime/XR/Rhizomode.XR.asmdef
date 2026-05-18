@@ -1,7 +1,9 @@
 {
     "name": "Rhizomode.XR",
     "rootNamespace": "Rhizomode.XR",
-    "references": [],
+    "references": [
+        "Rhizomode.Cameras"
+    ],
     "includePlatforms": [],
     "excludePlatforms": [],
     "allowUnsafeCode": false,

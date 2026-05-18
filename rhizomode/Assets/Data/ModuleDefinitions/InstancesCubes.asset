@@ -27,15 +27,15 @@ MonoBehaviour:
     type: 0
     defaultFloat: 25
     minFloat: 1
-    maxFloat: 100
+    maxFloat: 5000
     defaultColor: {r: 0, g: 0, b: 0, a: 0}
     defaultBool: 0
     isEvent: 0
   - name: cubeScale
     type: 0
-    defaultFloat: 0.4
+    defaultFloat: 4
     minFloat: 0.01
-    maxFloat: 2
+    maxFloat: 100
     defaultColor: {r: 0, g: 0, b: 0, a: 0}
     defaultBool: 0
     isEvent: 0

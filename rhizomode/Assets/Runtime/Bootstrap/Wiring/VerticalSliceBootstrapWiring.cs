@@ -2,6 +2,7 @@
 
 using System;
 using R3;
+using Rhizomode.Graph.Mutation;
 using Rhizomode.Observability.Runtime;
 using Rhizomode.UI;
 using UnityEngine;
@@ -38,16 +39,21 @@ namespace Rhizomode.Bootstrap.Wiring
     {
         private readonly XrSceneReferences _refs;
         private readonly HealthAggregator _healthAggregator;
+        private readonly GraphCommandDispatcher _dispatcher;
 
         private IDisposable? _healthSubscription;
         private CameraManagerPanelController? _editModePanel;
         private Action<bool>? _editModeListener;
         private bool _wired;
 
-        public VerticalSliceBootstrapWiring(XrSceneReferences refs, HealthAggregator healthAggregator)
+        public VerticalSliceBootstrapWiring(
+            XrSceneReferences refs,
+            HealthAggregator healthAggregator,
+            GraphCommandDispatcher dispatcher)
         {
             _refs = refs;
             _healthAggregator = healthAggregator;
+            _dispatcher = dispatcher;
         }
 
         public void Wire(GraphContextBehaviour? graphContext)
@@ -73,6 +79,9 @@ namespace Rhizomode.Bootstrap.Wiring
                     _refs.EdgeDragHandler?.SetEnabled(!isEditing);
                     _refs.EdgeCutHandler?.SetEnabled(!isEditing);
                     _refs.NodeDeleteHandler?.SetEnabled(!isEditing);
+                    // F2 fix (Codex review, 2026-05-18): LookAt/Path edit 中は Node/Object3D grab も無効化。
+                    _refs.NodeGrabHandler?.SetEnabled(!isEditing);
+                    _refs.Object3DGrabHandler?.SetEnabled(!isEditing);
                 };
                 cameraManagerPanel.AddEditModeListener(_editModeListener);
             }
@@ -94,7 +103,12 @@ namespace Rhizomode.Bootstrap.Wiring
                     _refs.SpoutSender?.StartSending(mirrorOutput.OutputTexture);
                     _refs.NdiSender?.StartSending(mirrorOutput.OutputTexture);
                     _refs.DesktopBlitter?.SetSource(mirrorOutput.OutputTexture);
+                    _refs.MirrorPreview?.Initialize(mirrorOutput.OutputTexture);
                 }
+
+                // CameraManagerPanel の "Show UI in Mirror" toggle と双方向同期。
+                // Activate 時点で default は IsUIVisible=false (clean show output)。
+                cameraManagerPanel?.BindMirrorOutput(mirrorOutput);
             }
 
             // CinemachinePreviewMonitor (デスクトップデバッグ時のみ)
@@ -107,6 +121,15 @@ namespace Rhizomode.Bootstrap.Wiring
                     rig.SetActive(true);
 
                 cinemachinePreview.Initialize();
+            }
+
+            // Cue (graph snapshot) WorldPanel — GraphSaveLoad は前段の Wiring で Configure 済。
+            var cueListPanel = _refs.CueListPanel;
+            var graphSaveLoad = _refs.GraphSaveLoad;
+            if (cueListPanel != null && graphSaveLoad != null)
+            {
+                var cueService = new CueLibraryService(graphSaveLoad, _dispatcher, mirrorOutput);
+                cueListPanel.Initialize(cueService);
             }
 
             // Phase 13C: health → StatusPanel 購読 (旧 GameBootstrap.InitializeHealthMonitoring)。

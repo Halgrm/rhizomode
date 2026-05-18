@@ -1,6 +1,7 @@
 #nullable enable
 
 using System.Collections.Generic;
+using Rhizomode.Cameras;
 using Rhizomode.SharedKernel;
 using Rhizomode.UI.Contracts;
 using UnityEngine;
@@ -91,6 +92,7 @@ namespace Rhizomode.UI
 
             var go = new GameObject($"Edge_{edge.EdgeId}");
             go.transform.SetParent(transform);
+            PerformerUILayer.ApplyRecursive(go);
 
             var line = go.AddComponent<LineRenderer>();
 

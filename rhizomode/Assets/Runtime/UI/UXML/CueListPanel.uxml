@@ -1,0 +1,19 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements">
+    <ui:VisualElement name="root" class="cue-panel">
+        <ui:Label text="Cues" class="cue-panel__title" />
+
+        <ui:VisualElement class="cue-panel__history-row">
+            <ui:Button name="undo-btn" text="Undo" class="cue-panel__history-btn" />
+            <ui:Button name="redo-btn" text="Redo" class="cue-panel__history-btn" />
+        </ui:VisualElement>
+
+        <ui:ScrollView name="cue-list-root" class="cue-panel__list" />
+
+        <ui:VisualElement class="cue-panel__save-row">
+            <ui:TextField name="save-name-field" value="cue_01" class="cue-panel__save-field" />
+            <ui:Button name="save-btn" text="Save current" class="cue-panel__save-btn" />
+        </ui:VisualElement>
+
+        <ui:Label name="status-label" text="" class="cue-panel__status" />
+    </ui:VisualElement>
+</ui:UXML>

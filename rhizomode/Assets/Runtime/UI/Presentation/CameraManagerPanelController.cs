@@ -32,13 +32,16 @@ namespace Rhizomode.UI
         private const string NoSourceLabel = "(none)";
         private const string NoLookAtLabel = "(none)";
         private const int PanelTextureWidth = 360;
-        private const int PanelTextureHeight = 480;
+        // LookAt Phase 2-A で Place/Edit Toggle 2 行追加されたため縦を 480 → 680 に拡大 (約 40% 増)。
+        // 同時に WorldHeight も 0.36 → 0.51 に拡大しアスペクトを維持。
+        private const int PanelTextureHeight = 680;
         private const float PanelWorldWidth = 0.28f;
-        private const float PanelWorldHeight = 0.36f;
+        private const float PanelWorldHeight = 0.51f;
 
         [SerializeField] private VisualTreeAsset? panelUxml;
         [SerializeField] private StyleSheet? panelStyleSheet;
         [SerializeField] private PathControlPointVisualManager? pathEditorManager;
+        [SerializeField] private LookAtMarkerVisualManager? lookAtMarkerManager;
 
         private WorldPanelHost? _panelHost;
         private IFloatOutputCatalog? _floatOutputCatalog;
@@ -48,6 +51,7 @@ namespace Rhizomode.UI
         private readonly List<Button> _cameraButtons = new();
         private readonly List<FloatOutputRef> _floatOutputs = new();
         private readonly List<Action<bool>> _editModeListeners = new();
+        private int _editModeRefCount;
 
         private VisualElement? _root;
         private VisualElement? _list;
@@ -65,6 +69,10 @@ namespace Rhizomode.UI
         private Label? _progressValue;
         private DropdownField? _lookAtDropdown;
         private Toggle? _editPathToggle;
+        private Toggle? _lookAtPlaceToggle;
+        private Toggle? _lookAtEditToggle;
+        private Toggle? _mirrorShowUiToggle;
+        private MirrorOutputController? _mirrorOutput;
         private bool _initialized;
 
         /// <summary>
@@ -77,6 +85,27 @@ namespace Rhizomode.UI
             EnsureHostInitialized();
         }
 
+        /// <summary>
+        /// Mirror カメラへの UI 表示切替を Toggle にバインドする。VerticalSliceBootstrapWiring から呼ぶ。
+        /// UI cache 前に呼ばれた場合は参照だけ保持し、TryCacheUI で初期同期する。
+        /// </summary>
+        public void BindMirrorOutput(MirrorOutputController mirror)
+        {
+            _mirrorOutput = mirror;
+            SyncMirrorToggleFromOutput();
+        }
+
+        private void SyncMirrorToggleFromOutput()
+        {
+            if (_mirrorShowUiToggle == null || _mirrorOutput == null) return;
+            _mirrorShowUiToggle.SetValueWithoutNotify(_mirrorOutput.IsUIVisible);
+        }
+
+        private void OnMirrorShowUiToggleChanged(ChangeEvent<bool> e)
+        {
+            _mirrorOutput?.SetUIVisible(e.newValue);
+        }
+
         private void Awake()
         {
             _panelHost = GetComponent<WorldPanelHost>();
@@ -84,9 +113,33 @@ namespace Rhizomode.UI
 
         private void Update()
         {
-            if (_initialized) return;
-            EnsureHostInitialized();
-            TryCacheUI();
+            if (!_initialized)
+            {
+                EnsureHostInitialized();
+                TryCacheUI();
+                return;
+            }
+
+            SyncLookAtToggles();
+        }
+
+        /// <summary>
+        /// <see cref="LookAtMarkerVisualManager"/> の <c>IsPlacing</c>/<c>IsEditing</c> と UI Toggle 値を
+        /// 同期する。Place は配置完了で自動 OFF、Edit は外部 (例: 別カメラ選択時の強制 EndEditing) でも UI 反映する。
+        /// </summary>
+        /// <remarks>
+        /// Update polling は 60-90fps × 2 fields の bool 比較なので negligible。event 駆動より破綻が少ない。
+        /// SetValueWithoutNotify を使うので OnLookAt*ToggleChanged は再発火しない。
+        /// </remarks>
+        private void SyncLookAtToggles()
+        {
+            if (lookAtMarkerManager == null) return;
+
+            if (_lookAtPlaceToggle != null && _lookAtPlaceToggle.value != lookAtMarkerManager.IsPlacing)
+                _lookAtPlaceToggle.SetValueWithoutNotify(lookAtMarkerManager.IsPlacing);
+
+            if (_lookAtEditToggle != null && _lookAtEditToggle.value != lookAtMarkerManager.IsEditing)
+                _lookAtEditToggle.SetValueWithoutNotify(lookAtMarkerManager.IsEditing);
         }
 
         private void EnsureHostInitialized()
@@ -120,6 +173,9 @@ namespace Rhizomode.UI
             _progressValue = _root.Q<Label>("progress-value");
             _lookAtDropdown = _root.Q<DropdownField>("lookat-target");
             _editPathToggle = _root.Q<Toggle>("edit-path-toggle");
+            _lookAtPlaceToggle = _root.Q<Toggle>("lookat-place-toggle");
+            _lookAtEditToggle = _root.Q<Toggle>("lookat-edit-toggle");
+            _mirrorShowUiToggle = _root.Q<Toggle>("mirror-show-ui-toggle");
 
             if (_list == null || _fovSlider == null || _dutchSlider == null) return;
 
@@ -129,7 +185,14 @@ namespace Rhizomode.UI
             _progressSlider?.RegisterValueChangedCallback(OnProgressSliderChanged);
             _lookAtDropdown?.RegisterValueChangedCallback(OnLookAtChanged);
             _editPathToggle?.RegisterValueChangedCallback(OnEditPathToggleChanged);
+            _lookAtPlaceToggle?.RegisterValueChangedCallback(OnLookAtPlaceToggleChanged);
+            _lookAtEditToggle?.RegisterValueChangedCallback(OnLookAtEditToggleChanged);
+            _mirrorShowUiToggle?.RegisterValueChangedCallback(OnMirrorShowUiToggleChanged);
+            SyncMirrorToggleFromOutput();
             if (_progressRefreshButton != null) _progressRefreshButton.clicked += OnProgressRefreshClicked;
+
+            // LookAt registry の追加/削除/命名変化で dropdown を自動更新する。
+            LookAtTargetMarker.OnRegistryChanged += OnLookAtRegistryChanged;
 
             DiscoverCameras();
             RefreshCameraList();
@@ -140,6 +203,26 @@ namespace Rhizomode.UI
         private void OnDestroy()
         {
             _progressSubscription?.Dispose();
+            LookAtTargetMarker.OnRegistryChanged -= OnLookAtRegistryChanged;
+
+            // F1 fix re-review (Codex, 2026-05-18): edit mode 中に panel が破棄されると
+            // listener (NodeGrab/Object3DGrab/EdgeDrag/EdgeCut/NodeDelete の SetEnabled(false))
+            // が無効化されたまま残る。refcount > 0 ならまとめて 0 まで巻き戻して active=false を
+            // 1 度発火し、handler を re-enable する。
+            if (_editModeRefCount > 0)
+            {
+                _editModeRefCount = 0;
+                foreach (var listener in _editModeListeners) listener?.Invoke(false);
+            }
+        }
+
+        /// <summary>
+        /// <see cref="LookAtTargetMarker.OnRegistryChanged"/> subscriber。選択中カメラがあれば dropdown を再構築。
+        /// </summary>
+        private void OnLookAtRegistryChanged()
+        {
+            if (_selected == null) return;
+            RefreshLookAtDropdown(_selected);
         }
     }
 }

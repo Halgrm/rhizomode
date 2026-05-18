@@ -85,6 +85,13 @@ namespace Rhizomode.Cameras
             var knot = spline[index];
             knot.Position = localPos;
             spline.SetKnot(index, knot);
+
+            // F-camera-path-1 (2026-05-18): 診断ログ + Cinemachine cache invalidate。
+            // Spline.SetKnot 自体は内部で Changed event を発火するはずだが、CinemachineSplineDolly が
+            // ランタイム変更を pickup していない症状があり、SplineSettings を一度 default にして戻すことで
+            // Spline 参照の hook を張り直す (cache の強制 refresh)。
+            Debug.Log($"[PathEdit] SetKnot index={index} local={localPos} count={spline.Count}");
+            Target.NotifySplineMutated();
         }
 
         public void Dispose()

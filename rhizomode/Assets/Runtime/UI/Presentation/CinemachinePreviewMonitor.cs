@@ -3,6 +3,7 @@
 using UnityEngine;
 using UnityEngine.Rendering.Universal;
 
+using Rhizomode.Cameras;
 using Rhizomode.NodeCatalog.Contracts;
 using Rhizomode.NodeCatalog.Runtime;
 using Rhizomode.Input.Contracts;
@@ -60,6 +61,9 @@ namespace Rhizomode.UI
 
             // Quad生成
             CreateQuad();
+
+            // Mirror カメラに preview Quad が映り込まないよう PerformerUI layer に揃える。
+            PerformerUILayer.ApplyRecursive(gameObject);
 
             Debug.Log("[CinemachinePreviewMonitor] Initialized");
         }

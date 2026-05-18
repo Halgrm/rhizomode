@@ -38,9 +38,20 @@ namespace Rhizomode.XR
         private GrabPoseSolver.GrabPose _grabPose;
         private bool _isLeftHandGrab;
         private float _stickY;
+        private bool _isEnabled = true;
 
         /// <summary>現在グラブ中かどうか。</summary>
         public bool IsGrabbing => _isGrabbing;
+
+        /// <summary>
+        /// 外部から Object3D グラブ操作を有効/無効にする (LookAt/Path edit mode 中に無効化する)。
+        /// F2 fix (Codex review, 2026-05-18).
+        /// </summary>
+        public void SetEnabled(bool enabled)
+        {
+            _isEnabled = enabled;
+            if (!enabled && _isGrabbing) ReleaseGrab();
+        }
 
         /// <summary>
         /// 依存関係を設定し、入力を購読する。
@@ -151,6 +162,7 @@ namespace Rhizomode.XR
 
         private void TryStartGrab(bool isLeftHand)
         {
+            if (!_isEnabled) return;
             if (_isGrabbing) return;
 
             Vector3 rayOrigin;

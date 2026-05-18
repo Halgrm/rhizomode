@@ -46,6 +46,12 @@ namespace Rhizomode.UI
         private Action<bool>? _onMenuStateChanged;
 
         private MenuState _state = MenuState.Idle;
+
+        /// <summary>
+        /// メニューが Idle 以外 (Dragging / Open) かどうか。F4 fix (Codex review, 2026-05-18) で
+        /// LookAtMarkerPlaceHandler が Place トリガーを抑止するために参照する。
+        /// </summary>
+        public bool IsMenuActive => _state != MenuState.Idle;
         private Hand _dragHand;
         private float _dragStartY;
         private float _currentScrollHeight;

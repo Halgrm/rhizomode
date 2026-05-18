@@ -87,6 +87,34 @@ namespace Rhizomode.Graph.Runtime
         }
 
         /// <summary>
+        /// F5 (2026-05-18): GraphState 全 node を取り除く直前に <see cref="INodeRemovalAware"/> を実装した
+        /// processor に対し、各 node ごとに <see cref="INodeRemovalAware.BeforeRemove"/> を発火する。
+        /// <see cref="GraphMutationApplier.RestoreFromSnapshot"/> の安全網用 (詳細は INodeRemovalAware の remarks)。
+        /// </summary>
+        public void BeforeClear()
+        {
+            // 1 つも removal-aware が無ければ空ループを回す価値もないので早期 return。
+            var hasAware = false;
+            foreach (var p in _processors)
+            {
+                if (p is INodeRemovalAware) { hasAware = true; break; }
+            }
+            if (!hasAware) return;
+
+            foreach (var node in _state.Nodes.Values)
+            {
+                foreach (var p in _processors)
+                {
+                    if (p is INodeRemovalAware aware)
+                    {
+                        var captured = node;
+                        SafeInvoke(() => aware.BeforeRemove(captured), $"BeforeRemove {captured.Id}");
+                    }
+                }
+            }
+        }
+
+        /// <summary>
         /// <see cref="GraphEventBus.OnGraphChanged"/> に <see cref="GraphChangeSet"/> を発火する。
         /// </summary>
         public void EmitGraphChanged(GraphChangeSet changeSet) => _eventBus.EmitGraphChanged(changeSet);

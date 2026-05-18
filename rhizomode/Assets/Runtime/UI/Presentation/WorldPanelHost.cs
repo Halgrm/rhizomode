@@ -7,6 +7,7 @@ using UnityEngine.UIElements;
 using Rhizomode.NodeCatalog.Contracts;
 using Rhizomode.NodeCatalog.Runtime;
 using Rhizomode.Input.Contracts;
+using Rhizomode.Cameras;
 
 namespace Rhizomode.UI
 {
@@ -74,6 +75,11 @@ namespace Rhizomode.UI
             CreatePanelSettings();
             CreateUIDocument(uxml, styleSheet);
             SetupQuad();
+
+            // VR HMD には見せるが Mirror カメラ (Spout/NDI/Desktop 配信) には隠せる
+            // 専用 Layer に揃える。Scene-placed パネル (CameraManager/Status/CueList/Ableton*)
+            // と runtime spawn (NodeVisual / Scroll) を一括カバー。
+            PerformerUILayer.ApplyRecursive(gameObject);
         }
 
         /// <summary>

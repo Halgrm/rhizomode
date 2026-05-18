@@ -384,3 +384,14 @@ Bootstrap.Services / Bootstrap.Wiring に移送。Codex review (`ad3f33ebd5fdf11
 - 新規エントリは `### F-<phase>.<番号>: <タイトル>` 形式で追加
 - Phase 13 (final cleanup) で本ファイルを総点検し、各エントリの最終判断 (修正 / 永続 deferral / 削除) を決める
 - "将来 trigger" が現実化したら速やかに当該エントリを修正対応に格上げする
+
+---
+
+## LookAt Phase 2-A (2026-05-18, Codex review loop)
+
+### F-LookAt.1: Place fallback distance の実効性不足
+- **検出**: LookAt Phase 2-A Codex re-review (1 loop 後)
+- **対象**: `rhizomode/Assets/Runtime/Interaction/LookAtMarkerPlaceHandler.cs:73-75` (TryPlace の fallback 経路)
+- **指摘内容**: raycast hit が無いときの fallback 位置を `Mathf.Max(FallbackPlaceDistance=1.5f, FallbackMinDistance=0.5f)` で計算するが、定数のままだと `Max` は実質 no-op で、コントローラ前方ベクトルが体内方向 (HMD 後方) を向いた場合の対策になっていない
+- **実害評価**: 通常 VR 利用では右手コントローラが体を向くケースは少なく、起きても marker を再 grab で動かせる。映像配信に直接影響しない。fix には HMD forward / コントローラ direction の dot 判定など追加ロジックが必要で複雑化
+- **将来 trigger**: live 中に「自分の頭に marker が刺さる」体験が報告されたら fix に格上げ。HMD forward は `IControllerInput.HeadForward` / `HeadPosition` で取れるので、内積 ≤ 0 なら直近の有効方向 (memo: 前回 fallback direction) または HMD forward に置換する形が候補

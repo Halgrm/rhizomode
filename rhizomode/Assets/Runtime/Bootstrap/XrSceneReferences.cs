@@ -102,6 +102,9 @@ namespace Rhizomode.Bootstrap
         [SerializeField] private NodeGrabHandler? nodeGrabHandler;
         [SerializeField] private PathControlPointGrabHandler? pathControlPointGrabHandler;
         [SerializeField] private PathControlPointVisualManager? pathEditorManager;
+        [SerializeField] private LookAtMarkerGrabHandler? lookAtMarkerGrabHandler;
+        [SerializeField] private LookAtMarkerPlaceHandler? lookAtMarkerPlaceHandler;
+        [SerializeField] private LookAtMarkerVisualManager? lookAtMarkerManager;
         [SerializeField] private Object3DGrabHandler? object3DGrabHandler;
         [SerializeField] private UIRaycastDriver? uiRaycastDriver;
         [SerializeField] private ScrollMenuVisualController? scrollMenuVisual;
@@ -116,6 +119,10 @@ namespace Rhizomode.Bootstrap
         [SerializeField] private CameraManagerPanelController? cameraManagerPanel;
         [Tooltip("デスクトップデバッグ専用 cinemachine プレビュー。VR モードでは非アクティブ化。")]
         [SerializeField] private CinemachinePreviewMonitor? cinemachinePreview;
+        [Tooltip("VR シーン内に観客出力 (MirrorOutput RT) を表示するプレビュー Quad。未設定なら無効。")]
+        [SerializeField] private MirrorPreviewMonitor? mirrorPreview;
+        [Tooltip("Cue (graph snapshot) 一覧 WorldPanel。未設定なら Cue 機能は無効。")]
+        [SerializeField] private CueListPanelController? cueListPanel;
 
         [Header("Graph / Save-Load (V-final Vf-a)")]
         [Tooltip("GraphState の MonoBehaviour ラッパー。EntryPointBootstrapper + 各 wiring が参照する。")]
@@ -159,6 +166,9 @@ namespace Rhizomode.Bootstrap
         public NodeGrabHandler? NodeGrabHandler => nodeGrabHandler;
         public PathControlPointGrabHandler? PathControlPointGrabHandler => pathControlPointGrabHandler;
         public PathControlPointVisualManager? PathEditorManager => pathEditorManager;
+        public LookAtMarkerGrabHandler? LookAtMarkerGrabHandler => lookAtMarkerGrabHandler;
+        public LookAtMarkerPlaceHandler? LookAtMarkerPlaceHandler => lookAtMarkerPlaceHandler;
+        public LookAtMarkerVisualManager? LookAtMarkerManager => lookAtMarkerManager;
         public Object3DGrabHandler? Object3DGrabHandler => object3DGrabHandler;
         public UIRaycastDriver? UIRaycastDriver => uiRaycastDriver;
         public ScrollMenuVisualController? ScrollMenuVisual => scrollMenuVisual;
@@ -169,6 +179,8 @@ namespace Rhizomode.Bootstrap
         public DesktopMirrorBlitter? DesktopBlitter => desktopBlitter;
         public CameraManagerPanelController? CameraManagerPanel => cameraManagerPanel;
         public CinemachinePreviewMonitor? CinemachinePreview => cinemachinePreview;
+        public MirrorPreviewMonitor? MirrorPreview => mirrorPreview;
+        public CueListPanelController? CueListPanel => cueListPanel;
         public GraphContextBehaviour? GraphContext => graphContext;
         public GraphSaveLoadManager? GraphSaveLoad => graphSaveLoad;
         public RhizomodeSettings? RhizomodeSettings => rhizomodeSettings;

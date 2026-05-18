@@ -1,6 +1,9 @@
 <ui:UXML xmlns:ui="UnityEngine.UIElements">
     <ui:VisualElement class="camera-manager-panel">
         <ui:Label text="Cameras" class="camera-title" />
+        <ui:VisualElement name="mirror-row" class="dropdown-row">
+            <ui:Toggle name="mirror-show-ui-toggle" label="Show UI in Mirror" class="camera-toggle" />
+        </ui:VisualElement>
         <ui:VisualElement name="camera-list" class="camera-list" />
         <ui:VisualElement name="details" class="camera-details">
             <ui:Label name="details-title" text="—" class="camera-details-title" />
@@ -32,6 +35,10 @@
             </ui:VisualElement>
             <ui:VisualElement name="edit-row" class="dropdown-row">
                 <ui:Toggle name="edit-path-toggle" label="Edit Path" class="camera-toggle" />
+            </ui:VisualElement>
+            <ui:VisualElement name="lookat-place-row" class="dropdown-row">
+                <ui:Toggle name="lookat-place-toggle" label="Place LookAt" class="camera-toggle" />
+                <ui:Toggle name="lookat-edit-toggle" label="Edit LookAt" class="camera-toggle" />
             </ui:VisualElement>
         </ui:VisualElement>
     </ui:VisualElement>

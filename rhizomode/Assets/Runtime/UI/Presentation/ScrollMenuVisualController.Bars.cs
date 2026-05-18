@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 
+using Rhizomode.Cameras;
 using Rhizomode.NodeCatalog.Contracts;
 
 namespace Rhizomode.UI
@@ -82,6 +83,9 @@ namespace Rhizomode.UI
                 Mathf.Lerp(baseColor.g, accent.g, 0.6f),
                 Mathf.Lerp(baseColor.b, accent.b, 0.6f),
                 0.9f);
+
+            // Accent / Label の子 GameObject も含めて PerformerUI layer に揃える。
+            PerformerUILayer.ApplyRecursive(go);
 
             return new CategoryBarEntry(category, go, col, mat, baseColor, highlightColor, angleDeg);
         }

@@ -121,7 +121,17 @@ namespace Rhizomode.Graph.Mutation
                 case DisconnectEdgeCommand disconnect: return TryApplyDisconnect(disconnect);
                 case MoveNodeCommand move: return TryApplyMove(move);
                 case SetNodeParamCommand setParam: return TryApplySetParam(setParam);
-                case LoadGraphCommand load: RestoreFromSnapshot(load.Snapshot); return true;
+                case LoadGraphCommand:
+                    // F4 fix (Codex review B-C, 2026-05-18): LoadGraphCommand を Apply 経路から除外。
+                    // 旧実装は <c>RestoreFromSnapshot(load.Snapshot); return true;</c> していたが、
+                    // GraphCommandScope 内に LoadGraphCommand が混入すると Restore 内の _state.Clear() で
+                    // 前段 sub-command の効果が破棄され、未知 node/edge が部分復元のまま commit され得た。
+                    // graph 差し替えは Undo/Redo (CueLibraryService 経由) と Save/Load (HydrationPlanExecutor 経由)
+                    // が atomic に駆動する責務であり、IGraphCommand pipeline は単一 mutation のみを担う。
+                    Debug.LogWarning(
+                        "[GraphMutationApplier] LoadGraphCommand dispatch via Apply is no longer supported. " +
+                        "Use CueLibraryService.LoadCue or GraphSaveLoadManager.LoadGraph instead.");
+                    return false;
                 case CompositeCommand: return true;
                 default:
                     Debug.LogWarning(
@@ -219,9 +229,23 @@ namespace Rhizomode.Graph.Mutation
         /// P2 fix: ParamsJson (paramsJson 文字列) を先に適用してから ParamValues (typed value)
         /// を上書きする。これにより INodeParamAccessor 非対応の internal state (LFO 波形 enum 等)
         /// も Undo/Redo で保持される。
+        ///
+        /// P3 fix (2026-05-18): NodeRuntime 経由で node 登録 + edge 構築を行うように変更。
+        /// 旧版は <see cref="GraphState.RegisterNode"/> / <see cref="GraphState.TryConnect"/> を
+        /// 直叩きしていたため、<see cref="INodeLifecycleProcessor.AfterSetup"/> が走らず
+        /// (= Module の prefab 注入が起きず)、EventBus への emit も無く (= NodeVisual/EdgeVisual も
+        /// 更新されず) Undo/Redo 後に視覚と内部状態の乖離が発生していた。本 fix で Save/Load 経路
+        /// (HydrationPlanExecutor) と同等の lifecycle が走る。
+        ///
+        /// legacy test ctor (NodeRuntime なし) は依然として直叩きにフォールバック。
         /// </remarks>
         public void RestoreFromSnapshot(GraphSnapshot snapshot)
         {
+            // F5 fix (Codex review B-D, 2026-05-18): _state.Clear() 直前に INodeRemovalAware processor へ
+            // 個別 BeforeRemove を発火し、module prefab 等の orphan を防ぐ。Cue 経由 (OnGraphLoading subscriber
+            // 経由の CleanupAll) では _instances 既空のため no-op になる安全 path。dispatcher 直呼びでは
+            // ここが唯一の destroy 経路。
+            _runtime?.BeforeClear();
             _state.Clear();
 
             foreach (var nodeSnap in snapshot.Nodes)
@@ -251,14 +275,33 @@ namespace Rhizomode.Graph.Mutation
                         accessor.TrySetParam(kvp.Key, kvp.Value);
                     }
                 }
-                _state.RegisterNode(node);
+
+                // P3 fix: NodeRuntime 経由で AfterSetup (Module prefab 注入) + EventBus.EmitNodeAdded を駆動。
+                if (_runtime != null)
+                {
+                    _runtime.RegisterNode(node, NodeInitMode.UndoRedo);
+                }
+                else
+                {
+                    _state.RegisterNode(node);
+                }
             }
 
             foreach (var edgeSnap in snapshot.Edges)
             {
                 // Phase 8 Codex Axis A fix (re-review): Undo/Redo の Snapshot 復元時も edge id を保持。
-                _state.TryConnect(edgeSnap.FromNodeId, edgeSnap.FromPortName,
-                                  edgeSnap.ToNodeId, edgeSnap.ToPortName, edgeSnap.EdgeId);
+                // P3 fix: EdgeVisualManager への EventBus.EmitEdgeAdded を NodeRuntime.AddEdge 経由で発火。
+                if (_runtime != null)
+                {
+                    _runtime.AddEdge(edgeSnap.EdgeId,
+                        edgeSnap.FromNodeId, edgeSnap.FromPortName,
+                        edgeSnap.ToNodeId, edgeSnap.ToPortName);
+                }
+                else
+                {
+                    _state.TryConnect(edgeSnap.FromNodeId, edgeSnap.FromPortName,
+                                      edgeSnap.ToNodeId, edgeSnap.ToPortName, edgeSnap.EdgeId);
+                }
             }
         }
 

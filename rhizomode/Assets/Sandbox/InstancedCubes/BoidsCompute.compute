@@ -1,0 +1,108 @@
+#pragma kernel CSBoids
+
+struct BoidData
+{
+    float3 position;
+    float3 velocity;
+    float4 rotation;
+    float3 angularVelocity;
+};
+
+RWStructuredBuffer<BoidData> _Boids;
+
+uint  _Count;
+float _DeltaTime;
+
+float _NeighborRadius;
+float _SeparationDistance;
+float _MaxSpeed;
+float _SeparationWeight;
+float _AlignmentWeight;
+float _CohesionWeight;
+float _BoundsRadius;
+float _BoundsWeight;
+float3 _Center;
+
+float4 qmul(float4 a, float4 b)
+{
+    return float4(
+        a.w * b.xyz + b.w * a.xyz + cross(a.xyz, b.xyz),
+        a.w * b.w - dot(a.xyz, b.xyz)
+    );
+}
+
+[numthreads(64,1,1)]
+void CSBoids(uint3 id : SV_DispatchThreadID)
+{
+    if (id.x >= _Count) return;
+
+    BoidData self = _Boids[id.x];
+
+    float3 sep = float3(0,0,0);
+    float3 ali = float3(0,0,0);
+    float3 coh = float3(0,0,0);
+    int neighbors = 0;
+    int sepCount  = 0;
+
+    for (uint i = 0; i < _Count; i++)
+    {
+        if (i == id.x) continue;
+        BoidData o = _Boids[i];
+        float3 diff = self.position - o.position;
+        float  dist = length(diff);
+        if (dist < _NeighborRadius && dist > 1e-4)
+        {
+            ali += o.velocity;
+            coh += o.position;
+            neighbors++;
+            if (dist < _SeparationDistance)
+            {
+                sep += diff / max(dist * dist, 1e-4);
+                sepCount++;
+            }
+        }
+    }
+
+    float3 accel = float3(0,0,0);
+    if (neighbors > 0)
+    {
+        ali /= (float)neighbors;
+        coh = (coh / (float)neighbors) - self.position;
+        if (length(ali) > 1e-4) accel += normalize(ali) * _AlignmentWeight;
+        if (length(coh) > 1e-4) accel += normalize(coh) * _CohesionWeight;
+    }
+    if (sepCount > 0)
+    {
+        accel += normalize(sep) * _SeparationWeight;
+    }
+
+    // soft bounds: pull back toward _Center if outside _BoundsRadius
+    float3 fromCenter = self.position - _Center;
+    float  r = length(fromCenter);
+    if (r > _BoundsRadius)
+    {
+        accel += -normalize(fromCenter) * _BoundsWeight * (r - _BoundsRadius);
+    }
+
+    self.velocity += accel * _DeltaTime;
+    float spd = length(self.velocity);
+    if (spd > _MaxSpeed)
+    {
+        self.velocity = (self.velocity / spd) * _MaxSpeed;
+    }
+
+    self.position += self.velocity * _DeltaTime;
+
+    // self-rotation via angularVelocity (axis-angle -> quaternion increment)
+    float ang = length(self.angularVelocity) * _DeltaTime;
+    if (ang > 1e-4)
+    {
+        float3 axis = normalize(self.angularVelocity);
+        float  ha = ang * 0.5;
+        float  s = sin(ha);
+        float4 dq = float4(axis * s, cos(ha));
+        self.rotation = normalize(qmul(dq, self.rotation));
+    }
+
+    _Boids[id.x] = self;
+}

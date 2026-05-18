@@ -158,6 +158,18 @@ namespace Rhizomode.UI
             }
         }
 
+        /// <summary>
+        /// Undo/Redo path から graph rebuild event を再利用するための raise API。
+        /// </summary>
+        /// <remarks>
+        /// Save/Load の <see cref="OnGraphLoading"/> / <see cref="OnGraphLoaded"/> subscriber は
+        /// 「旧 module CleanupAll → visual rebuild」を担う (GraphSaveLoadBootstrapWiring 参照)。
+        /// Undo/Redo も graph state が完全差し替えになるため、同じ visual rebuild 経路を再利用する。
+        /// 直接呼ばず CueLibraryService 経由で発火する。
+        /// </remarks>
+        internal void RaiseGraphLoading() => OnGraphLoading?.Invoke();
+        internal void RaiseGraphLoaded() => OnGraphLoaded?.Invoke();
+
         public string[] GetSaveFiles() => _repository?.GetSaveFiles() ?? Array.Empty<string>();
 
         public bool DeleteSave(string fileName)

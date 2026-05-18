@@ -187,6 +187,29 @@ namespace Rhizomode.Bootstrap.Wiring
             {
                 pathControlPointGrabHandler.Initialize(
                     roles.Input, roles.ControllerPose, raycast, pathEditorManager);
+                Debug.Log("[PathGrab] Initialize WIRED");
+            }
+            else
+            {
+                Debug.LogWarning($"[PathGrab] Initialize SKIPPED — handler={pathControlPointGrabHandler!=null} editor={pathEditorManager!=null} raycast={raycast!=null}");
+            }
+
+            // Phase 2-A (2026-05-18): LookAt marker grab/place handler 配線。
+            var lookAtGrab = _refs.LookAtMarkerGrabHandler;
+            var lookAtPlace = _refs.LookAtMarkerPlaceHandler;
+            var lookAtManager = _refs.LookAtMarkerManager;
+
+            if (lookAtGrab != null && lookAtManager != null && raycast != null)
+            {
+                lookAtGrab.Initialize(roles.Input, roles.ControllerPose, raycast, lookAtManager);
+            }
+            if (lookAtPlace != null && lookAtManager != null)
+            {
+                // F4 fix: ScrollMenu が drag/open 中なら Place trigger を抑止するため
+                // ScrollMenuInteractionHandler.IsMenuActive を closure で渡す。
+                var scrollMenu = _refs.ScrollMenuInteraction;
+                Func<bool>? isMenuActive = scrollMenu != null ? () => scrollMenu.IsMenuActive : (Func<bool>?)null;
+                lookAtPlace.Initialize(roles.Input, roles.ControllerPose, raycast!, lookAtManager, isMenuActive);
             }
         }
 

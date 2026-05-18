@@ -57,9 +57,59 @@ namespace Rhizomode.UI
             NotifyEditMode(false);
         }
 
+        /// <summary>
+        /// F1 fix (Codex review FAIL): edit mode の参照カウントを取り、複数 source (Edit Path /
+        /// Edit LookAt) が同時 ON のとき、片方 OFF だけでは listener に false を流さない。
+        /// </summary>
+        /// <remarks>
+        /// 既存 listener signature <c>Action&lt;bool&gt;</c> はそのまま (Breaking Change 回避)。
+        /// 内部で refcount を保持し、boundary (0 ↔ 1) 通過時のみ listener を呼ぶ。
+        /// </remarks>
         private void NotifyEditMode(bool isEditing)
         {
-            foreach (var listener in _editModeListeners) listener?.Invoke(isEditing);
+            int previous = _editModeRefCount;
+            if (isEditing) _editModeRefCount++;
+            else _editModeRefCount = System.Math.Max(0, _editModeRefCount - 1);
+
+            bool wasActive = previous > 0;
+            bool nowActive = _editModeRefCount > 0;
+            if (wasActive == nowActive) return; // 状態変化が無ければ listener を起こさない。
+
+            foreach (var listener in _editModeListeners) listener?.Invoke(nowActive);
+        }
+
+        /// <summary>
+        /// Phase 2-A (2026-05-18): "Place LookAt" toggle で marker 配置モードを開始/終了する。
+        /// </summary>
+        /// <remarks>
+        /// 配置は <see cref="LookAtMarkerPlaceHandler"/> 側で 1 回押すと自動的に終了する仕様のため、
+        /// ON にした瞬間 Manager に BeginPlacing を伝えるだけで足りる。OFF にされた場合は明示的に
+        /// <see cref="LookAtMarkerVisualManager.EndPlacing"/> を呼んで配置モードを抜く。
+        /// </remarks>
+        private void OnLookAtPlaceToggleChanged(ChangeEvent<bool> e)
+        {
+            if (lookAtMarkerManager == null) return;
+            if (e.newValue) lookAtMarkerManager.BeginPlacing();
+            else lookAtMarkerManager.EndPlacing();
+        }
+
+        /// <summary>
+        /// "Edit LookAt" toggle で配置済 marker の grab 編集モードを開始/終了する。
+        /// edit 中は EdgeDrag/EdgeCut/NodeDelete を一時無効化する (Path edit と同じ <see cref="NotifyEditMode"/> 経由)。
+        /// </summary>
+        private void OnLookAtEditToggleChanged(ChangeEvent<bool> e)
+        {
+            if (lookAtMarkerManager == null) return;
+            if (e.newValue)
+            {
+                lookAtMarkerManager.BeginEditing();
+                NotifyEditMode(true);
+            }
+            else
+            {
+                lookAtMarkerManager.EndEditing();
+                NotifyEditMode(false);
+            }
         }
 
         private void RefreshFloatOutputs()

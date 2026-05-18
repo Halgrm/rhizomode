@@ -12,7 +12,8 @@
         "Rhizomode.Graph.CatalogBridge",
         "R3.Unity",
         "Unity.VisualEffectGraph.Runtime",
-        "Unity.Cinemachine"
+        "Unity.Cinemachine",
+        "Rhizomode.Cameras"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

@@ -2,6 +2,7 @@
 
 using System;
 using System.Collections.Generic;
+using Rhizomode.Cameras;
 using Rhizomode.Graph.Model;
 using Rhizomode.Graph.Runtime;
 using Rhizomode.Nodes.Modules;
@@ -30,7 +31,7 @@ namespace Rhizomode.Modules
     /// - Object3DProxy のグラブ登録は <see cref="IObject3DProxyRegistry"/> に委譲。
     /// - エラー時は Debug.LogError で報告し、Video は止めない (映像継続原則)。
     /// </remarks>
-    public sealed class ModuleLifecycleProcessor : INodeLifecycleProcessor, IDisposable
+    public sealed class ModuleLifecycleProcessor : INodeLifecycleProcessor, INodeRemovalAware, IDisposable
     {
         private readonly IReadOnlyDictionary<string, GameObject> _object3DPrefabs;
         private readonly IModulePlacementService _placement;
@@ -72,6 +73,13 @@ namespace Rhizomode.Modules
         }
 
         public void AfterDeserialize(GraphState state) { }
+
+        /// <summary>
+        /// F5 (2026-05-18): <see cref="INodeRemovalAware"/> 実装。GraphState.Clear / RestoreFromSnapshot の
+        /// 直前に呼ばれ、個別 module instance を破棄する。Cue 経由 (OnGraphLoading subscriber 経由の
+        /// <see cref="CleanupAll"/>) では _instances が既に空のため no-op になる安全 path。
+        /// </summary>
+        public void BeforeRemove(NodeBase node) => DestroyInstance(node.Id);
 
         /// <summary>
         /// 指定ノードのモジュール Prefab インスタンスを破棄する。
@@ -157,6 +165,7 @@ namespace Rhizomode.Modules
                     return;
                 }
                 _instances[node.Id] = instance;
+                AttachLookAtMarker(instance, $"{def.moduleName} #{ShortId(node.Id)}");
                 Debug.Log(
                     $"[ModuleLifecycleProcessor] Module attached: nodeId={node.Id} typeName={node.NodeType} moduleType={module.GetType().Name} instance.name={instance.name} pos={instance.transform.position}");
             }
@@ -200,6 +209,7 @@ namespace Rhizomode.Modules
                 proxy.NodeId = node.Id;
                 _instances[node.Id] = instance;
                 _object3DRegistry?.Register(proxy);
+                AttachLookAtMarker(instance, $"{node.PrefabName} #{ShortId(node.Id)}");
 
                 // R3 Observable 購読は GraphState を持つ層 (Object3DProxyBindService) が
                 // node.BindProxyObservables(state, proxy.Position, proxy.Scale) で別途行う。
@@ -212,5 +222,24 @@ namespace Rhizomode.Modules
                 if (instance != null) UnityEngine.Object.Destroy(instance);
             }
         }
+
+        /// <summary>
+        /// Phase 1-B (2026-05-18): Module/Object3D instance に <see cref="LookAtTargetMarker"/> を attach し、
+        /// <c>CameraManagerPanel</c> の LookAt dropdown に自動で列挙させる。
+        /// </summary>
+        /// <remarks>
+        /// 既に attach 済 (prefab 側で貼ってあった) なら upsert 的に displayName だけ更新する。
+        /// Destroy は Unity が GameObject 破棄時に Component も同時破棄するため明示処理不要。
+        /// </remarks>
+        private static void AttachLookAtMarker(GameObject instance, string displayName)
+        {
+            var marker = instance.GetComponent<LookAtTargetMarker>();
+            if (marker == null) marker = instance.AddComponent<LookAtTargetMarker>();
+            // F3 fix (Codex review): prefab で displayName を明示設定済なら上書きせず保持する。
+            marker.SetDisplayNameIfEmpty(displayName);
+        }
+
+        private static string ShortId(string id) =>
+            string.IsNullOrEmpty(id) ? "?" : id.Substring(0, Math.Min(8, id.Length));
     }
 }

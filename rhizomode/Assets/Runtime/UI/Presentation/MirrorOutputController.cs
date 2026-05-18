@@ -3,6 +3,7 @@
 using UnityEngine;
 using UnityEngine.Rendering.Universal;
 
+using Rhizomode.Cameras;
 using Rhizomode.NodeCatalog.Contracts;
 using Rhizomode.NodeCatalog.Runtime;
 using Rhizomode.Input.Contracts;
@@ -28,11 +29,20 @@ namespace Rhizomode.UI
 
         private RenderTexture? _outputTexture;
 
+        // 起動時 (Activate) に最初に観測した cullingMask。
+        // SetUIVisible(true) で復元するための baseline。Inspector で UI layer を含めて
+        // 設定してあっても、起動直後に自動で UI を除外できるよう Activate 時に
+        // PerformerUI bit を落とす。
+        private int _baseCullingMask;
+
         /// <summary>ミラー出力用のRenderTexture。Activate後に有効。</summary>
         public RenderTexture? OutputTexture => _outputTexture;
 
         /// <summary>ミラー出力が有効かどうか。</summary>
         public bool IsActive { get; private set; }
+
+        /// <summary>Mirror 出力に UI (PerformerUI layer) を含めるか。default は false (= 配信に UI を出さない)。</summary>
+        public bool IsUIVisible { get; private set; }
 
         /// <summary>
         /// 初期化（後方互換のため引数は温存）。
@@ -66,7 +76,31 @@ namespace Rhizomode.UI
             mirrorCamera.enabled = true;
             ConfigureUrpCamera(mirrorCamera);
 
+            _baseCullingMask = mirrorCamera.cullingMask;
+            // 立ち上げ時は UI 非表示モード (配信に UI を見せない) でスタート。
+            ApplyUIVisibility(false);
+
             IsActive = true;
+        }
+
+        /// <summary>
+        /// 出力 RT への描画を一時停止する。Camera を disable するだけなので RT には直前の
+        /// 最終フレームが残り、Spout/NDI/DesktopBlitter の下流もそのまま静止画を流せる。
+        /// Cue 切替時の graph 再構築 1〜2 frame の glitch を観客に見せないために使う。
+        /// </summary>
+        public void Freeze()
+        {
+            if (!IsActive || mirrorCamera == null) return;
+            mirrorCamera.enabled = false;
+        }
+
+        /// <summary>
+        /// <see cref="Freeze"/> を解除し RT への描画を再開する。Active でないときは no-op。
+        /// </summary>
+        public void Unfreeze()
+        {
+            if (!IsActive || mirrorCamera == null) return;
+            mirrorCamera.enabled = true;
         }
 
         /// <summary>
@@ -90,6 +124,44 @@ namespace Rhizomode.UI
         {
             Deactivate();
         }
+
+        /// <summary>
+        /// Mirror カメラに PerformerUI Layer を含めるかを切り替える。
+        /// true で VR HMD と同じく UI を含めて配信、false で VFX/Shader 結果のみの clean output。
+        /// Activate 前に呼んだ場合は IsUIVisible のみ更新し、Activate 時に反映される。
+        /// </summary>
+        public void SetUIVisible(bool visible)
+        {
+            if (IsUIVisible == visible && IsActive) return;
+            ApplyUIVisibility(visible);
+        }
+
+        private void ApplyUIVisibility(bool visible)
+        {
+            IsUIVisible = visible;
+            if (mirrorCamera == null) return;
+
+            int uiBit = PerformerUILayer.LayerMaskBit;
+            if (uiBit == 0)
+            {
+                // PerformerUI layer が TagManager に未登録 (Layer.NameToLayer < 0)。
+                // 切替は no-op だが警告は 1 度だけ。
+                if (!_warnedMissingLayer)
+                {
+                    Debug.LogWarning(
+                        $"[MirrorOutput] Layer '{PerformerUILayer.LayerName}' が TagManager に未登録です。"
+                      + "Mirror カメラの UI 表示切替は無効化されています。");
+                    _warnedMissingLayer = true;
+                }
+                return;
+            }
+
+            mirrorCamera.cullingMask = visible
+                ? _baseCullingMask | uiBit
+                : _baseCullingMask & ~uiBit;
+        }
+
+        private bool _warnedMissingLayer;
 
         /// <summary>
         /// URP用カメラ設定。Overlay不要のスタンドアロンBaseカメラとして構成。

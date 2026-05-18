@@ -62,19 +62,26 @@ namespace Rhizomode.XR
 
         private void OnRightGrab(bool pressed)
         {
+            Debug.Log($"[PathGrab] OnRightGrab pressed={pressed} isEditing={_visualManager?.IsEditing} hasHit={_sharedRaycast?.HasHit}");
             if (pressed) TryStartGrab();
             else ReleaseGrab();
         }
 
         private void TryStartGrab()
         {
-            if (_isGrabbing) return;
-            if (_visualManager == null || !_visualManager.IsEditing) return;
-            if (_sharedRaycast == null || _controllerPose == null) return;
-            if (!_sharedRaycast.HasHit) return;
+            if (_isGrabbing) { Debug.Log("[PathGrab] skip: already grabbing"); return; }
+            if (_visualManager == null) { Debug.Log("[PathGrab] skip: visualManager null"); return; }
+            if (!_visualManager.IsEditing) { Debug.Log("[PathGrab] skip: not editing"); return; }
+            if (_sharedRaycast == null || _controllerPose == null) { Debug.Log("[PathGrab] skip: no raycast or pose"); return; }
+            if (!_sharedRaycast.HasHit) { Debug.Log("[PathGrab] skip: no raycast hit"); return; }
 
-            var visual = _visualManager.GetVisualByCollider(_sharedRaycast.CurrentHit.collider);
-            if (visual == null) return;
+            var collider = _sharedRaycast.CurrentHit.collider;
+            var visual = _visualManager.GetVisualByCollider(collider);
+            if (visual == null)
+            {
+                Debug.Log($"[PathGrab] skip: collider '{collider?.name}' not a path visual");
+                return;
+            }
 
             _grabbedVisual = visual;
             _grabPose = GrabPoseSolver.Capture(
@@ -83,6 +90,7 @@ namespace Rhizomode.XR
                 _controllerPose.RayOrigin,
                 _controllerPose.ControllerRotation);
             _isGrabbing = true;
+            Debug.Log($"[PathGrab] grabbed knot={visual.KnotIndex}");
         }
 
         private void ReleaseGrab()
