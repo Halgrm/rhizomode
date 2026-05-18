@@ -62,8 +62,8 @@ namespace Rhizomode.UI
             // Quad生成
             CreateQuad();
 
-            // Mirror カメラに preview Quad が映り込まないよう PerformerUI layer に揃える。
-            PerformerUILayer.ApplyRecursive(gameObject);
+            // Mirror カメラに preview Quad が映り込まないよう MirrorHidden layer に揃える。
+            MirrorHiddenLayer.ApplyRecursive(gameObject);
 
             Debug.Log("[CinemachinePreviewMonitor] Initialized");
         }

@@ -33,13 +33,13 @@ namespace Rhizomode.XR
         private void Awake()
         {
             ValidateSetup();
-            ApplyPerformerUILayer();
+            ApplyMirrorHiddenLayer();
         }
 
         private void Start()
         {
             // Start で再適用 (Awake 後にスポーンした子も拾う)。さらに数回の遅延 retry を回す。
-            ApplyPerformerUILayer();
+            ApplyMirrorHiddenLayer();
             StartCoroutine(DeferredApplyRoutine());
         }
 
@@ -48,20 +48,20 @@ namespace Rhizomode.XR
             for (int i = 0; i < DeferredApplyAttempts; i++)
             {
                 yield return new WaitForSeconds(DeferredApplyDelaySec);
-                ApplyPerformerUILayer();
+                ApplyMirrorHiddenLayer();
             }
         }
 
         /// <summary>
-        /// 左右コントローラーの子孫を PerformerUI layer に揃える。Mirror カメラから controller
+        /// 左右コントローラーの子孫を MirrorHidden layer に揃える。Mirror カメラから controller
         /// モデルやレイビジュアライザーを隠すため。HMD カメラ側は <c>cameraOffset</c> を意図的に
         /// 触らない (camera 自体は何もレンダリングしないし、children に映したい requisite mesh が
         /// あった場合の事故を避ける)。
         /// </summary>
-        private void ApplyPerformerUILayer()
+        private void ApplyMirrorHiddenLayer()
         {
-            if (rightController != null) PerformerUILayer.ApplyRecursive(rightController.gameObject);
-            if (leftController != null) PerformerUILayer.ApplyRecursive(leftController.gameObject);
+            if (rightController != null) MirrorHiddenLayer.ApplyRecursive(rightController.gameObject);
+            if (leftController != null) MirrorHiddenLayer.ApplyRecursive(leftController.gameObject);
         }
 
         private void ValidateSetup()

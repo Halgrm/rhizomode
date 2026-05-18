@@ -84,8 +84,8 @@ namespace Rhizomode.UI
                 Mathf.Lerp(baseColor.b, accent.b, 0.6f),
                 0.9f);
 
-            // Accent / Label の子 GameObject も含めて PerformerUI layer に揃える。
-            PerformerUILayer.ApplyRecursive(go);
+            // Accent / Label の子 GameObject も含めて MirrorHidden layer に揃える。
+            MirrorHiddenLayer.ApplyRecursive(go);
 
             return new CategoryBarEntry(category, go, col, mat, baseColor, highlightColor, angleDeg);
         }

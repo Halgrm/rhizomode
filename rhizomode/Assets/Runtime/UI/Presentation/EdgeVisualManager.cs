@@ -92,7 +92,7 @@ namespace Rhizomode.UI
 
             var go = new GameObject($"Edge_{edge.EdgeId}");
             go.transform.SetParent(transform);
-            PerformerUILayer.ApplyRecursive(go);
+            MirrorHiddenLayer.ApplyRecursive(go);
 
             var line = go.AddComponent<LineRenderer>();
 

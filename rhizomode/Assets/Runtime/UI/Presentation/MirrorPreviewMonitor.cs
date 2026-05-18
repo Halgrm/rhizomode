@@ -46,9 +46,9 @@ namespace Rhizomode.UI
 
             _source = source;
             CreateQuad();
-            // Mirror カメラに自身が再帰的に映り込まないよう PerformerUI layer に揃える
+            // Mirror カメラに自身が再帰的に映り込まないよう MirrorHidden layer に揃える
             // (preview Quad は VR HMD だけに見せる)。
-            PerformerUILayer.ApplyRecursive(gameObject);
+            MirrorHiddenLayer.ApplyRecursive(gameObject);
             IsInitialized = true;
         }
 

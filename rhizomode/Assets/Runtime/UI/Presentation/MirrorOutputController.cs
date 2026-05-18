@@ -32,7 +32,7 @@ namespace Rhizomode.UI
         // 起動時 (Activate) に最初に観測した cullingMask。
         // SetUIVisible(true) で復元するための baseline。Inspector で UI layer を含めて
         // 設定してあっても、起動直後に自動で UI を除外できるよう Activate 時に
-        // PerformerUI bit を落とす。
+        // MirrorHidden bit を落とす。
         private int _baseCullingMask;
 
         /// <summary>ミラー出力用のRenderTexture。Activate後に有効。</summary>
@@ -41,7 +41,7 @@ namespace Rhizomode.UI
         /// <summary>ミラー出力が有効かどうか。</summary>
         public bool IsActive { get; private set; }
 
-        /// <summary>Mirror 出力に UI (PerformerUI layer) を含めるか。default は false (= 配信に UI を出さない)。</summary>
+        /// <summary>Mirror 出力に UI (MirrorHidden layer) を含めるか。default は false (= 配信に UI を出さない)。</summary>
         public bool IsUIVisible { get; private set; }
 
         /// <summary>
@@ -126,7 +126,7 @@ namespace Rhizomode.UI
         }
 
         /// <summary>
-        /// Mirror カメラに PerformerUI Layer を含めるかを切り替える。
+        /// Mirror カメラに MirrorHidden Layer を含めるかを切り替える。
         /// true で VR HMD と同じく UI を含めて配信、false で VFX/Shader 結果のみの clean output。
         /// Activate 前に呼んだ場合は IsUIVisible のみ更新し、Activate 時に反映される。
         /// </summary>
@@ -141,15 +141,15 @@ namespace Rhizomode.UI
             IsUIVisible = visible;
             if (mirrorCamera == null) return;
 
-            int uiBit = PerformerUILayer.LayerMaskBit;
+            int uiBit = MirrorHiddenLayer.LayerMaskBit;
             if (uiBit == 0)
             {
-                // PerformerUI layer が TagManager に未登録 (Layer.NameToLayer < 0)。
+                // MirrorHidden layer が TagManager に未登録 (Layer.NameToLayer < 0)。
                 // 切替は no-op だが警告は 1 度だけ。
                 if (!_warnedMissingLayer)
                 {
                     Debug.LogWarning(
-                        $"[MirrorOutput] Layer '{PerformerUILayer.LayerName}' が TagManager に未登録です。"
+                        $"[MirrorOutput] Layer '{MirrorHiddenLayer.LayerName}' が TagManager に未登録です。"
                       + "Mirror カメラの UI 表示切替は無効化されています。");
                     _warnedMissingLayer = true;
                 }

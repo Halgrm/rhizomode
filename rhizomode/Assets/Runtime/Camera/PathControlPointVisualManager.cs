@@ -80,11 +80,11 @@ namespace Rhizomode.Cameras
                 ? new CoordinateReferenceRenderer().Render(mapper!, miniatureHandleRadius)
                 : null;
 
-            // Mirror カメラから path edit 系を隠せるよう PerformerUI layer に揃える。
+            // Mirror カメラから path edit 系を隠せるよう MirrorHidden layer に揃える。
             // visuals (球ハンドル) は PathHandleFactory 側で個別に Apply 済 (子無し)。
-            PerformerUILayer.ApplyRecursive(visualizerInstance);
-            PerformerUILayer.ApplyRecursive(miniLineGo);
-            PerformerUILayer.ApplyRecursive(coordRoot);
+            MirrorHiddenLayer.ApplyRecursive(visualizerInstance);
+            MirrorHiddenLayer.ApplyRecursive(miniLineGo);
+            MirrorHiddenLayer.ApplyRecursive(coordRoot);
 
             _session = new PathEditSession(
                 target, visuals, visualizerInstance, miniLineGo, miniLineRenderer, coordRoot);

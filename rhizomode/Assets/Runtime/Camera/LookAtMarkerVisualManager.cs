@@ -55,7 +55,7 @@ namespace Rhizomode.Cameras
             go.name = name;
             go.transform.position = worldPosition;
             go.transform.localScale = Vector3.one * (handleRadius * 2f);
-            PerformerUILayer.ApplyRecursive(go);
+            MirrorHiddenLayer.ApplyRecursive(go);
 
             if (handleMaterial != null)
             {

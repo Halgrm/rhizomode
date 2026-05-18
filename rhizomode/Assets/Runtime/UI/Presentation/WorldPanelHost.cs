@@ -79,7 +79,7 @@ namespace Rhizomode.UI
             // VR HMD には見せるが Mirror カメラ (Spout/NDI/Desktop 配信) には隠せる
             // 専用 Layer に揃える。Scene-placed パネル (CameraManager/Status/CueList/Ableton*)
             // と runtime spawn (NodeVisual / Scroll) を一括カバー。
-            PerformerUILayer.ApplyRecursive(gameObject);
+            MirrorHiddenLayer.ApplyRecursive(gameObject);
         }
 
         /// <summary>
