@@ -50,25 +50,17 @@ namespace Rhizomode.Editor
         [MenuItem("Tools/rhizomode/Validate MirrorHidden Coverage")]
         public static void RunFromMenu()
         {
+            // モーダル dialog は MCP 経由実行で session を切るため Console 出力のみにする
+            // (BoundaryViolationValidator と同じ理由)。手動 Editor 実行でも Console を読めば十分。
             var violations = ValidateAll();
             if (violations.Length == 0)
             {
                 Debug.Log("[MirrorHiddenValidator] All MirrorHidden coverage rules pass.");
-                if (!Application.isBatchMode)
-                    EditorUtility.DisplayDialog(
-                        "MirrorHidden Coverage Validation",
-                        "All MirrorHidden coverage rules pass.",
-                        "OK");
                 return;
             }
 
             Debug.LogError($"[MirrorHiddenValidator] {violations.Length} violation(s) found:");
             foreach (var v in violations) Debug.LogError($"[MirrorHiddenValidator]   • {v}");
-            if (Application.isBatchMode) return;
-            EditorUtility.DisplayDialog(
-                "MirrorHidden Coverage Validation",
-                $"{violations.Length} violation(s) — see Console for details.",
-                "OK");
         }
 
         // ---------------------------------------------------------------
