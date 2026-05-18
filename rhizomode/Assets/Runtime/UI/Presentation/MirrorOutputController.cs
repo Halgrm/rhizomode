@@ -77,10 +77,11 @@ namespace Rhizomode.UI
             ConfigureUrpCamera(mirrorCamera);
 
             _baseCullingMask = mirrorCamera.cullingMask;
-            // 立ち上げ時は UI 非表示モード (配信に UI を見せない) でスタート。
-            ApplyUIVisibility(false);
-
             IsActive = true;
+            // Activate 前に SetUIVisible で事前注入された値 (default = false) を cullingMask へ反映。
+            // RhizomodeSettings.MirrorShowUiDefault で起動時挙動を制御する場合は wiring 側で
+            // Activate 直前に SetUIVisible(...) を呼ぶ。
+            ApplyUIVisibility(IsUIVisible);
         }
 
         /// <summary>
@@ -128,11 +129,17 @@ namespace Rhizomode.UI
         /// <summary>
         /// Mirror カメラに MirrorHidden Layer を含めるかを切り替える。
         /// true で VR HMD と同じく UI を含めて配信、false で VFX/Shader 結果のみの clean output。
-        /// Activate 前に呼んだ場合は IsUIVisible のみ更新し、Activate 時に反映される。
+        /// Activate 前に呼んだ場合は IsUIVisible のみ更新し、Activate 内で baseCullingMask 確定後に反映。
         /// </summary>
         public void SetUIVisible(bool visible)
         {
-            if (IsUIVisible == visible && IsActive) return;
+            if (!IsActive)
+            {
+                // baseCullingMask 未確定なので cullingMask は触らず state だけ保持。
+                IsUIVisible = visible;
+                return;
+            }
+            if (IsUIVisible == visible) return;
             ApplyUIVisibility(visible);
         }
 

@@ -9,9 +9,7 @@ namespace Rhizomode.Bootstrap
     /// <c>Assets/Data/Config/RhizomodeSettings.asset</c> の実体。
     /// </summary>
     /// <remarks>
-    /// Vf-d で新設 (§15 リスト 19 個目 = 最後の Installer)。現状の Plan v5.4 ではグローバルに
-    /// 必要な設定値の具体 field は未指定なため、空の ScriptableObject として placeholder 化する。
-    /// 後続 phase (Phase 12+ の PanelBudget / Audio sample rate 等) で field を追加していく。
+    /// Vf-d で新設 (§15 リスト 19 個目 = 最後の Installer)。後続 phase で field を追加していく。
     ///
     /// <see cref="Installers.RhizomodeSettingsInstaller"/> が <see cref="VContainer.Lifetime.Singleton"/>
     /// で container 登録し、consumer (将来の wiring / service) が ctor 注入で受け取る。
@@ -19,5 +17,16 @@ namespace Rhizomode.Bootstrap
     [CreateAssetMenu(fileName = "RhizomodeSettings", menuName = "Rhizomode/Settings", order = 0)]
     public sealed class RhizomodeSettings : ScriptableObject
     {
+        [Header("Mirror Output")]
+        [Tooltip("起動時に Mirror カメラへ UI (MirrorHidden layer) を含めるかの既定値。"
+               + "false = clean show output (UI 非表示)、true = リハ用に UI 込み配信。"
+               + "ライブ中は CameraManagerPanel の \"Show UI in Mirror\" toggle で動的切替可。")]
+        [SerializeField] private bool mirrorShowUiDefault = false;
+
+        /// <summary>
+        /// Mirror カメラの起動時 UI 可視性既定値。
+        /// VerticalSliceBootstrapWiring が Activate 前に MirrorOutputController に注入する。
+        /// </summary>
+        public bool MirrorShowUiDefault => mirrorShowUiDefault;
     }
 }

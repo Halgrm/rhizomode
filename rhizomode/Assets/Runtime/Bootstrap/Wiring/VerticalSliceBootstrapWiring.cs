@@ -96,6 +96,13 @@ namespace Rhizomode.Bootstrap.Wiring
             if (mirrorOutput != null && headTransform != null)
             {
                 mirrorOutput.Initialize(headTransform);
+
+                // Plan 5-phase Phase 5: RhizomodeSettings.MirrorShowUiDefault を Activate 前に
+                // 注入することで、起動時挙動 (clean show output vs UI 込み) を SO で persist する。
+                // SO 未設定なら従来通り false (clean output)。
+                var initialUiVisible = _refs.RhizomodeSettings?.MirrorShowUiDefault ?? false;
+                mirrorOutput.SetUIVisible(initialUiVisible);
+
                 mirrorOutput.Activate();
 
                 if (mirrorOutput.OutputTexture != null)
@@ -107,7 +114,7 @@ namespace Rhizomode.Bootstrap.Wiring
                 }
 
                 // CameraManagerPanel の "Show UI in Mirror" toggle と双方向同期。
-                // Activate 時点で default は IsUIVisible=false (clean show output)。
+                // Toggle 初期値は MirrorShowUiDefault を反映する (SyncMirrorToggleFromOutput)。
                 cameraManagerPanel?.BindMirrorOutput(mirrorOutput);
             }
 
