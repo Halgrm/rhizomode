@@ -395,3 +395,24 @@ Bootstrap.Services / Bootstrap.Wiring に移送。Codex review (`ad3f33ebd5fdf11
 - **指摘内容**: raycast hit が無いときの fallback 位置を `Mathf.Max(FallbackPlaceDistance=1.5f, FallbackMinDistance=0.5f)` で計算するが、定数のままだと `Max` は実質 no-op で、コントローラ前方ベクトルが体内方向 (HMD 後方) を向いた場合の対策になっていない
 - **実害評価**: 通常 VR 利用では右手コントローラが体を向くケースは少なく、起きても marker を再 grab で動かせる。映像配信に直接影響しない。fix には HMD forward / コントローラ direction の dot 判定など追加ロジックが必要で複雑化
 - **将来 trigger**: live 中に「自分の頭に marker が刺さる」体験が報告されたら fix に格上げ。HMD forward は `IControllerInput.HeadForward` / `HeadPosition` で取れるので、内積 ≤ 0 なら直近の有効方向 (memo: 前回 fallback direction) または HMD forward に置換する形が候補
+
+---
+
+## Plan 5-phase MirrorHidden (2026-05-19, Codex review loop)
+
+### F-MH.1: RequireMirrorHidden 属性の付け忘れが CI で検出されない (silent dropout)
+- **検出**: Plan 5-phase Phase 1-3 完了後 Codex re-review (`a413367ade17bf809`、Axis 3 WARN)
+- **対象**: `rhizomode/Assets/Editor/MirrorHiddenSceneValidator.cs:179-194` (GetRequireMirrorHiddenTypes)
+- **指摘内容**: `MirrorHiddenSceneValidator` は `[RequireMirrorHidden]` 属性が付いた MonoBehaviour 型のみを reflection で discovery する。**属性自体を付け忘れた新 visual manager は validator の対象外** になり CI を素通りする。明示的なエスケープハッチではなく "silent dropout"
+- **実害評価**: 軽微。現状 8 manager class に属性付与済 + コードレビューで catch できる。新規 manager 追加プロトコル (`feedback_node_addition_protocol` 相当) の運用で押さえれば実害は低い。完全自動化には「対象型をオプトアウト型で blacklist」「全 MonoBehaviour 中 Mirror に露出する可能性のある集合の自動推論」など別アプローチが必要
+- **将来 trigger**: 新規 visual manager の Mirror 漏れ事故が発生したら fix に格上げ。または `[RequireMirrorHidden]` 属性を `MonoBehaviour` 派生 + 特定の component (LineRenderer/MeshRenderer/UIDocument 等) を持つ class に reflection で自動推論する分析 pass を追加する方向で再検討
+
+### F-MH.2: Path/LookAt handle の manager-transform coupling (latent risk)
+- **検出**: Plan 5-phase Phase 1-3 完了後 Codex re-review (Axis 4 WARN)
+- **対象**:
+  - `rhizomode/Assets/Runtime/Camera/PathHandleFactory.cs:52` (`go.transform.SetParent(parent, worldPositionStays: true)`)
+  - `rhizomode/Assets/Runtime/Camera/PathControlPointVisualManager.cs:90-92` (visualizerInstance / miniLineGo / coordRoot)
+  - `rhizomode/Assets/Runtime/Camera/LookAtMarkerVisualManager.cs:63` (handle 球)
+- **指摘内容**: Phase 3 で world 配置だった spawn を `manager.transform` の子に `SetParent(worldPositionStays: true)` で入れたことで、**PathEditor / LookAtEditor の GameObject が移動すると handle が引きずられる latent coupling** が発生
+- **実害評価**: 軽微。現状シーン (`SampleScene.unity:1456-1460, 1790-1795`) は PathEditor / LookAtEditor を world-root 配置で動かさない。Cinemachine / Spline 系も transform を不変前提で設計済。将来 manager GameObject を movable parent (例: XR Rig 配下) に変更したら破綻
+- **将来 trigger**: manager GameObject を movable parent に置く必要が出たら、scope 子化の代替策 (例: 別の "MirrorHiddenChildRoot" 静的 GameObject を使う、または scope component を spawn 直後に AddComponent する) を検討

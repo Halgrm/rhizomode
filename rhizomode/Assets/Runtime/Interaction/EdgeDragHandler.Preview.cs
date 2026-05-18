@@ -41,6 +41,11 @@ namespace Rhizomode.UI
         private void CreatePreviewLine(ParamType paramType)
         {
             _previewGo = new GameObject("EdgePreview");
+            // self (= EdgeDragHandler が attach されている GameObject = Game Manager etc.) を親に
+            // 据え、その GameObject 上の MirrorHiddenScope.OnTransformChildrenChanged で
+            // MirrorHidden layer を自動適用させる。Mirror カメラ (Spout/NDI/Desktop 配信) に
+            // edge-drag preview が漏れないようにする (Codex F-1 fix, 2026-05-19)。
+            _previewGo.transform.SetParent(transform, worldPositionStays: true);
             _previewLine = _previewGo.AddComponent<LineRenderer>();
             ConfigurePreviewLine(_previewLine, paramType);
         }
