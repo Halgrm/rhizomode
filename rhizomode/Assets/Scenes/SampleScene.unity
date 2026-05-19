@@ -2890,6 +2890,7 @@ MonoBehaviour:
   - Dark
   - White
   - Nature
+  - Forest
   baseSceneEnvironment: {fileID: 654588759}
 --- !u!114 &1213701953
 MonoBehaviour:

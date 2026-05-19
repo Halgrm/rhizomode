@@ -17,6 +17,9 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Scenes/White.unity
     guid: f0569a92897c00644af92ff524836e1b
+  - enabled: 1
+    path: Assets/Scenes/Forest.unity
+    guid: d87112e36e02f1a4b886184b77b6cae5
   m_configObjects:
     Unity.XR.Oculus.Settings: {fileID: 11400000, guid: f979f9391cdcd4a4cb2c23be868677b7, type: 2}
     com.unity.input.settings.actions: {fileID: -944628639613478452, guid: 052faaac586de48259a63d0c4782560b, type: 3}
