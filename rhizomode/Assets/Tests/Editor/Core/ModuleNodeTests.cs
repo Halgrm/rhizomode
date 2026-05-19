@@ -193,5 +193,133 @@ namespace Rhizomode.Core.Tests
             // 一致時は warning を出さない (LogAssert.NoUnexpectedReceived が validate する)
             node.RestoreParamsFromJson(sameJson);
         }
+
+        [Test]
+        public void MonochromeModule_HasPerformanceModuleAttribute()
+        {
+            var attr = typeof(MonochromeModule).GetCustomAttribute<PerformanceModuleAttribute>();
+            Assert.IsNotNull(attr);
+            Assert.AreEqual(NodeCategory.Shader, attr!.Category);
+            Assert.IsNull(attr.CustomNodeType);
+        }
+
+        [Test]
+        public void MonochromeModule_Activate_SetsFeatureEnabled()
+        {
+            MonochromeFeatureSettings.ResetToDefaults();
+            var go = new GameObject("MonoTest");
+            try
+            {
+                var module = go.AddComponent<MonochromeModule>();
+                module.Activate();
+                Assert.IsTrue(MonochromeFeatureSettings.Enabled);
+                module.Deactivate();
+                Assert.IsFalse(MonochromeFeatureSettings.Enabled);
+            }
+            finally
+            {
+                Object.DestroyImmediate(go);
+                MonochromeFeatureSettings.ResetToDefaults();
+            }
+        }
+
+        [Test]
+        public void MonochromeModule_SetParam_UpdatesStaticSettings()
+        {
+            MonochromeFeatureSettings.ResetToDefaults();
+            var go = new GameObject("MonoTest");
+            try
+            {
+                var module = go.AddComponent<MonochromeModule>();
+                module.SetParam("MonoBlend", 0.5f);
+                Assert.AreEqual(0.5f, MonochromeFeatureSettings.MonoBlend, 1e-4f);
+
+                module.SetParam("RedWeight", 0.3f);
+                module.SetParam("GreenWeight", 0.4f);
+                module.SetParam("BlueWeight", 0.3f);
+                Assert.AreEqual(0.3f, MonochromeFeatureSettings.RedWeight, 1e-4f);
+                Assert.AreEqual(0.4f, MonochromeFeatureSettings.GreenWeight, 1e-4f);
+                Assert.AreEqual(0.3f, MonochromeFeatureSettings.BlueWeight, 1e-4f);
+            }
+            finally
+            {
+                Object.DestroyImmediate(go);
+                MonochromeFeatureSettings.ResetToDefaults();
+            }
+        }
+
+        [Test]
+        public void MonochromeModule_SetParam_ClampsBlendAndToneCurve()
+        {
+            MonochromeFeatureSettings.ResetToDefaults();
+            var go = new GameObject("MonoTest");
+            try
+            {
+                var module = go.AddComponent<MonochromeModule>();
+                module.SetParam("MonoBlend", 5f);
+                Assert.AreEqual(1f, MonochromeFeatureSettings.MonoBlend, 1e-4f);
+
+                module.SetParam("MonoBlend", -1f);
+                Assert.AreEqual(0f, MonochromeFeatureSettings.MonoBlend, 1e-4f);
+
+                module.SetParam("ToneShadow", 2f);
+                Assert.AreEqual(1f, MonochromeFeatureSettings.ToneShadow, 1e-4f);
+            }
+            finally
+            {
+                Object.DestroyImmediate(go);
+                MonochromeFeatureSettings.ResetToDefaults();
+            }
+        }
+
+        [Test]
+        public void MonochromeModule_SetParam_HandlesNonFiniteValue()
+        {
+            MonochromeFeatureSettings.ResetToDefaults();
+            var before = MonochromeFeatureSettings.RedWeight;
+            var go = new GameObject("MonoTest");
+            try
+            {
+                var module = go.AddComponent<MonochromeModule>();
+                module.SetParam("RedWeight", float.NaN);
+                Assert.AreEqual(before, MonochromeFeatureSettings.RedWeight, 1e-4f,
+                    "NaN は fallback で前値維持 (Video must never stop 原則)");
+            }
+            finally
+            {
+                Object.DestroyImmediate(go);
+                MonochromeFeatureSettings.ResetToDefaults();
+            }
+        }
+
+        [Test]
+        public void BloomModule_HasPerformanceModuleAttribute()
+        {
+            var attr = typeof(BloomModule).GetCustomAttribute<PerformanceModuleAttribute>();
+            Assert.IsNotNull(attr);
+            Assert.AreEqual(NodeCategory.Shader, attr!.Category);
+            Assert.IsNull(attr.CustomNodeType);
+        }
+
+        [Test]
+        public void BloomModule_SetParam_DoesNotThrowWhenBloomMissing()
+        {
+            // EditMode test 環境では Bloom override がないので EnsureBloom が null になる経路。
+            // SetParam は warning 1 回 (EnsureBloom 内) 出すが throw しない。
+            var go = new GameObject("BloomTest");
+            try
+            {
+                var module = go.AddComponent<BloomModule>();
+                LogAssert.ignoreFailingMessages = true;
+                Assert.DoesNotThrow(() => module.SetParam("Intensity", 1.5f));
+                Assert.DoesNotThrow(() => module.Activate());
+                Assert.DoesNotThrow(() => module.Deactivate());
+            }
+            finally
+            {
+                LogAssert.ignoreFailingMessages = false;
+                Object.DestroyImmediate(go);
+            }
+        }
     }
 }
