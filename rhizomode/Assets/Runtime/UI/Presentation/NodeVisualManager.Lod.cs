@@ -66,9 +66,13 @@ namespace Rhizomode.UI
                 host.SetUIActive(uiActive);
                 if (uiActive) activatedCount++;
 
-                // LOD 解像度切り替え (UI active 時のみ意味がある)
-                int targetWidth = ResolveLodTextureWidth(dist);
-                host.ChangeResolution(targetWidth);
+                // UI 無効ノードに ChangeResolution を呼ぶと RT Release/Create で
+                // 黒画面化し、UIDocument が再描画しないため最後のフレームが失われる。
+                if (uiActive)
+                {
+                    int targetWidth = ResolveLodTextureWidth(dist);
+                    host.ChangeResolution(targetWidth);
+                }
             }
         }
 

@@ -95,9 +95,15 @@ namespace Rhizomode.UI
         /// RenderTextureの解像度を変更する。LODシステムから呼び出される。
         /// アスペクト比は維持される。
         /// </summary>
+        /// <remarks>
+        /// UI 非アクティブ時 (PanelSettings.targetTexture == null) は no-op。
+        /// Release/Create で RT を黒に初期化した直後に panel が描画しないと
+        /// 最後のフレームが失われ Quad が黒くなるため。
+        /// </remarks>
         public void ChangeResolution(int newWidth)
         {
             if (_renderTexture == null || _panelSettings == null) return;
+            if (_panelSettings.targetTexture == null) return;
             if (_renderTexture.width == newWidth) return;
 
             var aspectRatio = (float)_renderTexture.height / _renderTexture.width;
@@ -239,17 +245,34 @@ namespace Rhizomode.UI
         }
 
         /// <summary>
-        /// UIDocument の有効/無効を切り替える。無効時はRenderTextureへの描画が停止し、
-        /// 最後のフレームがQuad上に残る。LODによる負荷軽減に使用。
+        /// パネル描画の有効/無効を切り替える。LODによる負荷軽減に使用。
         /// </summary>
+        /// <remarks>
+        /// 無効化は <c>PanelSettings.targetTexture</c> を null にすることで実現する。
+        /// <c>UIDocument.enabled = false</c> を使うと clearColor=true との組み合わせで
+        /// RT が一度黒 clear された後 dirty 化されず、再有効化しても黒のまま戻らない
+        /// 挙動になるため避ける。targetTexture 方式なら描画パスが走らないので
+        /// RT は最後のフレームを保持し、有効化時に <see cref="VisualElement.MarkDirtyRepaint"/>
+        /// で確実に再描画される。
+        /// </remarks>
         public void SetUIActive(bool active)
         {
-            if (_uiDocument != null)
-                _uiDocument.enabled = active;
+            if (_panelSettings == null || _renderTexture == null) return;
+
+            if (active)
+            {
+                if (_panelSettings.targetTexture != _renderTexture)
+                    _panelSettings.targetTexture = _renderTexture;
+                _uiDocument?.rootVisualElement?.MarkDirtyRepaint();
+            }
+            else
+            {
+                _panelSettings.targetTexture = null;
+            }
         }
 
-        /// <summary>UIDocumentが現在有効かどうか。</summary>
-        public bool IsUIActive => _uiDocument != null && _uiDocument.enabled;
+        /// <summary>パネルが現在 RT に描画中かどうか。</summary>
+        public bool IsUIActive => _panelSettings != null && _panelSettings.targetTexture != null;
 
         private void Update()
         {

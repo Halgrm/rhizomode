@@ -8,6 +8,7 @@
         "Rhizomode.NodeCatalog.Contracts",
         "Rhizomode.NodeCatalog.Runtime",
         "Rhizomode.UI",
+        "Rhizomode.UI.Presentation",
         "R3.Unity"
     ],
     "includePlatforms": [
