@@ -1,5 +1,35 @@
 %YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
+--- !u!114 &-4571438153513653393
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0ec76aa8df032334a9d5681ae8bf9d8c, type: 3}
+  m_Name: MonochromeRendererFeature
+  m_EditorClassIdentifier: Rhizomode.Modules.Runtime::Rhizomode.Modules.MonochromeRendererFeature
+  m_Active: 1
+  shader: {fileID: 4800000, guid: 78c9a375f2fb6bc418742139d2ce026e, type: 3}
+  injectionPoint: 600
+--- !u!114 &-3471438153513653393
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ac72e87102b3a124385a57e03784695f, type: 3}
+  m_Name: BinarizationRendererFeature
+  m_EditorClassIdentifier: Rhizomode.Modules.Runtime::Rhizomode.Modules.BinarizationRendererFeature
+  m_Active: 1
+  shader: {fileID: 4800000, guid: 6c69c5db6be033745b9836e459d03c2f, type: 3}
+  injectionPoint: 600
 --- !u!114 &11400000
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -26,7 +56,9 @@ MonoBehaviour:
     probeVolumeBlendStatesCS: {fileID: 7200000, guid: b9a23f869c4fd45f19c5ada54dd82176, type: 3}
   m_RendererFeatures:
   - {fileID: 7833122117494664109}
-  m_RendererFeatureMap: ad6b866f10d7b46c
+  - {fileID: -4571438153513653393}
+  - {fileID: -3471438153513653393}
+  m_RendererFeatureMap: ad6b866f10d7b46c6fab264b38fd8ec0
   m_UseNativeRenderPass: 1
   xrSystemData: {fileID: 0}
   postProcessData: {fileID: 11400000, guid: 41439944d30ece34e96484bdb6645b55, type: 2}

@@ -9,21 +9,22 @@ using UnityEngine;
 namespace Rhizomode.Modules
 {
     /// <summary>
-    /// Monochrome (グレースケール化) PostEffect をノードグラフから driving するモジュール。
+    /// Binarization (S 字トーンで二値化的) PostEffect をノードグラフから driving するモジュール。
     /// </summary>
     /// <remarks>
-    /// PostEffect は scene 単一の global resource なので <see cref="MonochromeFeatureSettings"/>
-    /// (static) を介して値を共有する。複数 spawn 時は last-write-wins。
-    /// "Active" Bool ポートで効果の on/off を制御する (default false: spawn 直後は無効)。
-    /// 二値化的な S 字トーン処理は <see cref="BinarizationModule"/> が担う (本モジュールは純グレースケール化)。
+    /// Shadow / Highlight 端点を狭めると near-binary 化、広げるとソフトコントラストになる。
+    /// 純粋なグレースケール化は <see cref="MonochromeModule"/> 側で扱う。
+    /// "Active" Bool ポートで効果の on/off を制御する (default false)。
     /// </remarks>
     [PerformanceModule(NodeCategory.Shader)]
-    public sealed class MonochromeModule : MonoBehaviour, IPerformanceModule
+    public sealed class BinarizationModule : MonoBehaviour, IPerformanceModule
     {
         private const string ParamActive = "Active";
         private const string ParamRedWeight = "RedWeight";
         private const string ParamGreenWeight = "GreenWeight";
         private const string ParamBlueWeight = "BlueWeight";
+        private const string ParamToneShadow = "ToneShadow";
+        private const string ParamToneHighlight = "ToneHighlight";
         private const string ParamMonoBlend = "MonoBlend";
 
         private static readonly List<ParamDefinition> EmptyParams = new();
@@ -31,7 +32,7 @@ namespace Rhizomode.Modules
         [SerializeField] private ModuleDefinition? definition;
 
         /// <inheritdoc />
-        public string ModuleName => definition != null ? definition.moduleName : "Monochrome";
+        public string ModuleName => definition != null ? definition.moduleName : "Binarization";
 
         /// <inheritdoc />
         public IReadOnlyList<ParamDefinition> Params =>
@@ -51,25 +52,31 @@ namespace Rhizomode.Modules
                 switch (paramName)
                 {
                     case ParamActive:
-                        MonochromeFeatureSettings.Enabled = (bool)value;
+                        BinarizationFeatureSettings.Enabled = (bool)value;
                         break;
                     case ParamRedWeight:
-                        MonochromeFeatureSettings.RedWeight = ToFinite((float)value, MonochromeFeatureSettings.RedWeight);
+                        BinarizationFeatureSettings.RedWeight = ToFinite((float)value, BinarizationFeatureSettings.RedWeight);
                         break;
                     case ParamGreenWeight:
-                        MonochromeFeatureSettings.GreenWeight = ToFinite((float)value, MonochromeFeatureSettings.GreenWeight);
+                        BinarizationFeatureSettings.GreenWeight = ToFinite((float)value, BinarizationFeatureSettings.GreenWeight);
                         break;
                     case ParamBlueWeight:
-                        MonochromeFeatureSettings.BlueWeight = ToFinite((float)value, MonochromeFeatureSettings.BlueWeight);
+                        BinarizationFeatureSettings.BlueWeight = ToFinite((float)value, BinarizationFeatureSettings.BlueWeight);
+                        break;
+                    case ParamToneShadow:
+                        BinarizationFeatureSettings.ToneShadow = Mathf.Clamp01(ToFinite((float)value, BinarizationFeatureSettings.ToneShadow));
+                        break;
+                    case ParamToneHighlight:
+                        BinarizationFeatureSettings.ToneHighlight = Mathf.Clamp01(ToFinite((float)value, BinarizationFeatureSettings.ToneHighlight));
                         break;
                     case ParamMonoBlend:
-                        MonochromeFeatureSettings.MonoBlend = Mathf.Clamp01(ToFinite((float)value, MonochromeFeatureSettings.MonoBlend));
+                        BinarizationFeatureSettings.MonoBlend = Mathf.Clamp01(ToFinite((float)value, BinarizationFeatureSettings.MonoBlend));
                         break;
                 }
             }
             catch (Exception ex)
             {
-                Debug.LogWarning($"[MonochromeModule] SetParam failed: {paramName} = {value} ({ex.Message})");
+                Debug.LogWarning($"[BinarizationModule] SetParam failed: {paramName} = {value} ({ex.Message})");
             }
         }
 
@@ -82,8 +89,7 @@ namespace Rhizomode.Modules
         /// <inheritdoc />
         public void Deactivate()
         {
-            // despawn 時に PostFX を完全停止 (Active port が後から false を送らない経路もあるため)
-            MonochromeFeatureSettings.Enabled = false;
+            BinarizationFeatureSettings.Enabled = false;
         }
 
         private static float ToFinite(float value, float fallback)

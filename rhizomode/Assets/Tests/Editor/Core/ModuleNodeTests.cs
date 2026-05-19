@@ -204,17 +204,18 @@ namespace Rhizomode.Core.Tests
         }
 
         [Test]
-        public void MonochromeModule_Activate_SetsFeatureEnabled()
+        public void MonochromeModule_Deactivate_ForcesDisabled()
         {
             MonochromeFeatureSettings.ResetToDefaults();
             var go = new GameObject("MonoTest");
             try
             {
                 var module = go.AddComponent<MonochromeModule>();
-                module.Activate();
+                module.SetParam("Active", true);
                 Assert.IsTrue(MonochromeFeatureSettings.Enabled);
                 module.Deactivate();
-                Assert.IsFalse(MonochromeFeatureSettings.Enabled);
+                Assert.IsFalse(MonochromeFeatureSettings.Enabled,
+                    "Deactivate (despawn) は Active port の値に関わらず強制 OFF");
             }
             finally
             {
@@ -249,7 +250,7 @@ namespace Rhizomode.Core.Tests
         }
 
         [Test]
-        public void MonochromeModule_SetParam_ClampsBlendAndToneCurve()
+        public void MonochromeModule_SetParam_ClampsBlend()
         {
             MonochromeFeatureSettings.ResetToDefaults();
             var go = new GameObject("MonoTest");
@@ -261,14 +262,71 @@ namespace Rhizomode.Core.Tests
 
                 module.SetParam("MonoBlend", -1f);
                 Assert.AreEqual(0f, MonochromeFeatureSettings.MonoBlend, 1e-4f);
-
-                module.SetParam("ToneShadow", 2f);
-                Assert.AreEqual(1f, MonochromeFeatureSettings.ToneShadow, 1e-4f);
             }
             finally
             {
                 Object.DestroyImmediate(go);
                 MonochromeFeatureSettings.ResetToDefaults();
+            }
+        }
+
+        [Test]
+        public void MonochromeModule_SetParam_ActiveTogglesEnabled()
+        {
+            MonochromeFeatureSettings.ResetToDefaults();
+            Assert.IsFalse(MonochromeFeatureSettings.Enabled, "default は無効");
+            var go = new GameObject("MonoTest");
+            try
+            {
+                var module = go.AddComponent<MonochromeModule>();
+                module.Activate(); // lifecycle Activate は no-op (Active port が制御)
+                Assert.IsFalse(MonochromeFeatureSettings.Enabled);
+
+                module.SetParam("Active", true);
+                Assert.IsTrue(MonochromeFeatureSettings.Enabled);
+
+                module.SetParam("Active", false);
+                Assert.IsFalse(MonochromeFeatureSettings.Enabled);
+            }
+            finally
+            {
+                Object.DestroyImmediate(go);
+                MonochromeFeatureSettings.ResetToDefaults();
+            }
+        }
+
+        [Test]
+        public void BinarizationModule_HasPerformanceModuleAttribute()
+        {
+            var attr = typeof(BinarizationModule).GetCustomAttribute<PerformanceModuleAttribute>();
+            Assert.IsNotNull(attr);
+            Assert.AreEqual(NodeCategory.Shader, attr!.Category);
+            Assert.IsNull(attr.CustomNodeType);
+        }
+
+        [Test]
+        public void BinarizationModule_SetParam_TonesAndActive()
+        {
+            BinarizationFeatureSettings.ResetToDefaults();
+            var go = new GameObject("BinTest");
+            try
+            {
+                var module = go.AddComponent<BinarizationModule>();
+                module.SetParam("ToneShadow", 2f);
+                Assert.AreEqual(1f, BinarizationFeatureSettings.ToneShadow, 1e-4f);
+                module.SetParam("ToneHighlight", -0.5f);
+                Assert.AreEqual(0f, BinarizationFeatureSettings.ToneHighlight, 1e-4f);
+
+                Assert.IsFalse(BinarizationFeatureSettings.Enabled);
+                module.SetParam("Active", true);
+                Assert.IsTrue(BinarizationFeatureSettings.Enabled);
+                module.Deactivate();
+                Assert.IsFalse(BinarizationFeatureSettings.Enabled, "Deactivate で完全停止");
+            }
+            finally
+            {
+                Object.DestroyImmediate(go);
+                BinarizationFeatureSettings.ResetToDefaults();
             }
         }
 
