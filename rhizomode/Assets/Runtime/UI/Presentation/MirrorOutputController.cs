@@ -176,10 +176,11 @@ namespace Rhizomode.UI
         private static void ConfigureUrpCamera(Camera camera)
         {
             var urpData = camera.GetUniversalAdditionalCameraData();
-            if (urpData == null) return;
+            if (urpData != null)
+                urpData.renderType = CameraRenderType.Base;
 
-            // VRメインカメラとは独立したBaseカメラとしてレンダリング
-            urpData.renderType = CameraRenderType.Base;
+            // Bloom / Vignette / Tonemapping + BloomModule / MonochromeModule の有効化
+            Rhizomode.Cameras.CameraPostFxConfigurator.EnablePostProcessing(camera);
         }
 
         private void ReleaseOutputTexture()

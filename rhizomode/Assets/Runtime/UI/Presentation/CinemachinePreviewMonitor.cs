@@ -60,6 +60,9 @@ namespace Rhizomode.UI
             if (urpData != null)
                 urpData.renderType = CameraRenderType.Base;
 
+            // PreviewMonitor = audience output の WYSIWYG プレビュー → Mirror と同じ PostFX を適用
+            Rhizomode.Cameras.CameraPostFxConfigurator.EnablePostProcessing(previewCamera);
+
             // Quad生成
             CreateQuad();
 

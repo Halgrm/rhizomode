@@ -14,13 +14,16 @@ namespace Rhizomode.Modules
     /// URP Volume の Bloom Override を rhizomode ノードグラフから driving するモジュール。
     /// </summary>
     /// <remarks>
-    /// VolumeManager.instance.stack から現在の Bloom override を取得して直接書き込む。
-    /// Bloom が profile に存在しない場合は SetParam を no-op に倒し、映像継続を保証する。
-    /// Module が複数 spawn された場合は last-write-wins (Bloom は scene 単一)。
+    /// シーン内の <see cref="Volume"/> を見つけ、その <c>profile</c> (instance copy) の Bloom override を
+    /// 直接書き換える。VolumeManager.stack はフレーム毎に source Volume から再ブレンドされて
+    /// 上書きされてしまうため、stack 側の書き換えは効かない。
+    /// "Active" Bool ポートで Bloom override 自体の active を切り替える (default true)。
+    /// 複数 spawn 時は last-write-wins (Bloom は scene 単一の global resource)。
     /// </remarks>
     [PerformanceModule(NodeCategory.Shader)]
     public sealed class BloomModule : MonoBehaviour, IPerformanceModule
     {
+        private const string ParamActive = "Active";
         private const string ParamThreshold = "Threshold";
         private const string ParamIntensity = "Intensity";
         private const string ParamScatter = "Scatter";
@@ -30,8 +33,7 @@ namespace Rhizomode.Modules
         [SerializeField] private ModuleDefinition? definition;
 
         private Bloom? _bloom;
-        private float _intensityBeforeDeactivate;
-        private bool _intensitySnapshotValid;
+        private bool _searchAttempted;
 
         /// <inheritdoc />
         public string ModuleName => definition != null ? definition.moduleName : "Bloom";
@@ -49,24 +51,14 @@ namespace Rhizomode.Modules
         /// <inheritdoc />
         public void Activate()
         {
-            EnsureBloom();
-            if (_bloom == null) return;
-            if (_intensitySnapshotValid)
-            {
-                _bloom.intensity.value = _intensityBeforeDeactivate;
-                _intensitySnapshotValid = false;
-            }
+            // Active 状態は "Active" Bool ポートが SetParam 経由で push する。
         }
 
         /// <inheritdoc />
         public void Deactivate()
         {
             EnsureBloom();
-            if (_bloom == null) return;
-            // Bloom override を残したまま intensity 0 で実質無効化 (Profile を壊さない)
-            _intensityBeforeDeactivate = _bloom.intensity.value;
-            _intensitySnapshotValid = true;
-            _bloom.intensity.value = 0f;
+            if (_bloom != null) _bloom.active = false;
         }
 
         /// <inheritdoc />
@@ -77,20 +69,22 @@ namespace Rhizomode.Modules
 
             try
             {
-                var f = ToFinite((float)value, 0f);
                 switch (paramName)
                 {
+                    case ParamActive:
+                        _bloom.active = (bool)value;
+                        break;
                     case ParamThreshold:
                         _bloom.threshold.overrideState = true;
-                        _bloom.threshold.value = Mathf.Max(0f, f);
+                        _bloom.threshold.value = Mathf.Max(0f, ToFinite((float)value, _bloom.threshold.value));
                         break;
                     case ParamIntensity:
                         _bloom.intensity.overrideState = true;
-                        _bloom.intensity.value = Mathf.Max(0f, f);
+                        _bloom.intensity.value = Mathf.Max(0f, ToFinite((float)value, _bloom.intensity.value));
                         break;
                     case ParamScatter:
                         _bloom.scatter.overrideState = true;
-                        _bloom.scatter.value = Mathf.Clamp01(f);
+                        _bloom.scatter.value = Mathf.Clamp01(ToFinite((float)value, _bloom.scatter.value));
                         break;
                 }
             }
@@ -103,11 +97,33 @@ namespace Rhizomode.Modules
         private void EnsureBloom()
         {
             if (_bloom != null) return;
+            if (_searchAttempted) return; // warning 連発を避ける
+            _searchAttempted = true;
+
             try
             {
-                _bloom = VolumeManager.instance?.stack?.GetComponent<Bloom>();
-                if (_bloom == null)
-                    Debug.LogWarning("[BloomModule] Bloom override not found in active VolumeStack. Add it to a Volume Profile.");
+                var volumes = UnityEngine.Object.FindObjectsByType<Volume>(FindObjectsSortMode.None);
+                Volume? target = null;
+                foreach (var v in volumes)
+                {
+                    if (v == null || !v.isActiveAndEnabled) continue;
+                    // global Volume を優先、なければ最初の有効な Volume
+                    if (v.isGlobal) { target = v; break; }
+                    if (target == null) target = v;
+                }
+
+                if (target == null || target.profile == null)
+                {
+                    Debug.LogWarning("[BloomModule] No active Volume with profile found in scene.");
+                    return;
+                }
+
+                // profile (instance) は volume が runtime copy を持つので asset を汚さない。
+                if (!target.profile.TryGet(out _bloom))
+                {
+                    Debug.LogWarning($"[BloomModule] Bloom override not found in '{target.profile.name}'. Add Bloom override to the Volume Profile.");
+                    _bloom = null;
+                }
             }
             catch (Exception ex)
             {

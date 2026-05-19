@@ -15,13 +15,21 @@ MonoBehaviour:
   moduleName: Bloom
   prefab: {fileID: 2913685373000711155, guid: 7077bb84416593f4991210f3941b7455, type: 3}
   parameters:
+  - name: Active
+    type: 2
+    defaultFloat: 0
+    minFloat: 0
+    maxFloat: 0
+    defaultColor: {r: 0, g: 0, b: 0, a: 0}
+    defaultBool: 1
+    isEvent: 0
   - name: Threshold
     type: 0
     defaultFloat: 0.8
     minFloat: 0
     maxFloat: 2
     defaultColor: {r: 0, g: 0, b: 0, a: 0}
-    defaultBool: 0
+    defaultBool: 1
     isEvent: 0
   - name: Intensity
     type: 0
@@ -29,7 +37,7 @@ MonoBehaviour:
     minFloat: 0
     maxFloat: 10
     defaultColor: {r: 0, g: 0, b: 0, a: 0}
-    defaultBool: 0
+    defaultBool: 1
     isEvent: 0
   - name: Scatter
     type: 0
@@ -37,6 +45,6 @@ MonoBehaviour:
     minFloat: 0
     maxFloat: 1
     defaultColor: {r: 0, g: 0, b: 0, a: 0}
-    defaultBool: 0
+    defaultBool: 1
     isEvent: 0
   events: []
