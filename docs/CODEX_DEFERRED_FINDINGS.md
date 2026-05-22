@@ -416,3 +416,42 @@ Bootstrap.Services / Bootstrap.Wiring に移送。Codex review (`ad3f33ebd5fdf11
 - **指摘内容**: Phase 3 で world 配置だった spawn を `manager.transform` の子に `SetParent(worldPositionStays: true)` で入れたことで、**PathEditor / LookAtEditor の GameObject が移動すると handle が引きずられる latent coupling** が発生
 - **実害評価**: 軽微。現状シーン (`SampleScene.unity:1456-1460, 1790-1795`) は PathEditor / LookAtEditor を world-root 配置で動かさない。Cinemachine / Spline 系も transform を不変前提で設計済。将来 manager GameObject を movable parent (例: XR Rig 配下) に変更したら破綻
 - **将来 trigger**: manager GameObject を movable parent に置く必要が出たら、scope 子化の代替策 (例: 別の "MirrorHiddenChildRoot" 静的 GameObject を使う、または scope component を spawn 直後に AddComponent する) を検討
+
+---
+
+## Codex review loop (2026-05-22): Rector カメラ blend / VelocityFov + VFX 自動ポート
+
+`codex:codex-rescue` review 11 件中、3 件 (CameraBlendController の NaN guard / CinemachineVelocityFov 初回フレーム速度スパイク / DiscoverVfxProperties 33 行分割) を即修正。残り 8 件を以下に記録。critical は 0 件。
+
+### F-CR1: TryCacheUI / VFXModule.SetParam のメソッド長超過 (pre-existing)
+- **対象**: `CameraManagerPanelController.cs` TryCacheUI (~95 行)、`VFXModule.cs` SetParam (~64 行)
+- **指摘内容**: CLAUDE.md「メソッド ≤30 行」違反
+- **実害評価**: 軽微。両メソッドとも本セッション以前から 30 行超 (TryCacheUI は ~30 UI 要素の平坦な Q/Register 列、SetParam は event 分岐の Debug.Log 群)。今回の追加分 (blend/velfov caching ~15 行、SetUndefinedParam 呼び出し 5 行) は既存パターン踏襲で、追加分のみ helper 化しても本体は 30 行超のまま残る pre-existing debt
+- **将来 trigger**: Presentation 層 cleanup 時にまとめて helper 分割
+
+### F-CR2: CinemachineVelocityFov の null curve / 非有限値 Lens 代入前チェック欠如
+- **対象**: `CinemachineVelocityFov.cs` PostPipelineStageCallback
+- **指摘内容**: curve.Evaluate / FOV を null・finite チェックせず state.Lens に代入
+- **実害評価**: 軽微/理論。初回フレーム速度スパイク (即修正済) を直したことで velocity は常に有限 → t も FOV も有限。残るは curve が null のケースのみだが `[SerializeField] AnimationCurve curve = AnimationCurve.Linear(...)` の初期化子で実質到達不能。毎フレーム callback への per-frame null guard 追加は overengineering
+- **将来 trigger**: 実機で VelocityFov カメラの FOV 異常が出たら
+
+### F-CR3: OnBlendTimeChanged が clamp 後でなく raw 値を表示
+- **対象**: `CameraManagerPanelController.Blend.cs` OnBlendTimeChanged
+- **実害評価**: 軽微/理論。blend-time slider は uxml で low-value=0 / 有限レンジに制約済のため SetBlendTime の `Mathf.Max(0,_)` と NaN guard が実際に発火する経路が無く、表示は常に accepted 値と一致
+- **将来 trigger**: スライダー以外から blend time を駆動する UI を足したら
+
+### F-CR4: blend/velocity-FOV callback を OnDestroy で Unregister していない
+- **対象**: `CameraManagerPanelController.cs` RegisterValueChangedCallback 群
+- **実害評価**: 非問題。既存の fov/dutch/progress 等の callback も Unregister していない (本コードベースの確立パターン)。callback は VisualElement が保持し、panel GameObject 破棄で WorldPanelHost の visual tree ごと GC される (controller と同 GameObject で寿命一致) → leak しない。今回分だけ Unregister するとパターン不整合
+- **将来 trigger**: visual tree が controller より長寿命になる設計変更が入ったら一括対応
+
+### F-CR5: events に "Active" がある場合の二重 subscribe
+- **対象**: `VFXModuleNode.cs` Active port / Setup
+- **実害評価**: 非問題 (既存の意図的設計)。コード内コメントが prior Codex "FAIL 5" fix を明記: events 経由の Active は base が true 時しか飛ばさず false で Deactivate できないため VFXModuleNode 側 subscribe が必須。true 二重発火は SetParam("Active") = `_vfx.enabled` 代入で冪等・無害。本セッションで該当ロジックは未変更
+- **将来 trigger**: なし (意図的)
+
+### F-CR6: Vector3 軸ポート名 "<name> X/Y/Z" が実プロパティ名と衝突しうる
+- **対象**: `VFXModuleNode.cs` RegisterAutoPortsFor / `VFXModule.cs` SetUndefinedParam・TrySetVector3Axis
+- **指摘内容**: VFX に Vector3 "Foo" と scalar "Foo X" が同居すると軸ポート名 "Foo X" が衝突し、SetUndefinedParam の HasFloat 先行判定で誤ルーティング/片方が駆動不能になる
+- **実害評価**: 軽微/理論。Vector3 "Foo" と float "Foo X" を同一 VFX に共存させる命名は病的ケース。ユーザの実アセット (Angle / _Position / _Target / _Center) では衝突なし。AddAutoPort の ContainsKey 重複ガードで crash はせず、最悪「片方の軸が駆動不能」に留まる。完全解決は SetParam(string,object) contract (Breaking Change 禁止) を変えずには side-channel が要る
+- **将来 trigger**: 実 VFX で軸名衝突が報告されたら scalar 先行登録の 2-pass 化 + escaped suffix を検討

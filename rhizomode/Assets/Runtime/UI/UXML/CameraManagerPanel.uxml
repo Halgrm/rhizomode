@@ -4,7 +4,18 @@
         <ui:VisualElement name="mirror-row" class="dropdown-row">
             <ui:Toggle name="mirror-show-ui-toggle" label="Show UI in Mirror" class="camera-toggle" />
         </ui:VisualElement>
-        <ui:VisualElement name="camera-list" class="camera-list" />
+        <ui:VisualElement name="blend-row" class="dropdown-row">
+            <ui:VisualElement class="progress-source-row">
+                <ui:Label text="Blend" class="slider-label" />
+                <ui:DropdownField name="blend-style" class="camera-dropdown" />
+            </ui:VisualElement>
+            <ui:VisualElement class="slider-row">
+                <ui:Label text="Blend Time" class="slider-label" />
+                <ui:Slider name="blend-time-slider" low-value="0" high-value="6" value="1" class="camera-slider" />
+                <ui:Label name="blend-time-value" text="1.00" class="slider-value" />
+            </ui:VisualElement>
+        </ui:VisualElement>
+        <ui:ScrollView name="camera-list" class="camera-list" />
         <ui:VisualElement name="details" class="camera-details">
             <ui:Label name="details-title" text="—" class="camera-details-title" />
             <ui:VisualElement class="slider-row">
@@ -19,12 +30,12 @@
             </ui:VisualElement>
             <ui:VisualElement name="progress-row" class="dropdown-row">
                 <ui:VisualElement class="progress-source-row">
-                    <ui:Label text="Progress src" class="slider-label" />
+                    <ui:Label name="progress-src-label" text="Progress src" class="slider-label" />
                     <ui:DropdownField name="progress-source" class="camera-dropdown" />
                     <ui:Button name="progress-refresh" text="↻" class="progress-refresh-button" />
                 </ui:VisualElement>
                 <ui:VisualElement class="slider-row">
-                    <ui:Label text="Progress" class="slider-label" />
+                    <ui:Label name="progress-label" text="Progress" class="slider-label" />
                     <ui:Slider name="progress-slider" low-value="0" high-value="1" value="0" class="camera-slider" />
                     <ui:Label name="progress-value" text="0.00" class="slider-value" />
                 </ui:VisualElement>
@@ -32,6 +43,74 @@
             <ui:VisualElement name="lookat-row" class="dropdown-row">
                 <ui:Label text="Look At" class="slider-label" />
                 <ui:DropdownField name="lookat-target" class="camera-dropdown" />
+            </ui:VisualElement>
+            <ui:VisualElement name="follow-row" class="dropdown-row">
+                <ui:Label text="Follow" class="slider-label" />
+                <ui:DropdownField name="follow-target" class="camera-dropdown" />
+            </ui:VisualElement>
+            <ui:VisualElement name="follow-offset-row" class="dropdown-row">
+                <ui:Label text="Follow Offset" class="slider-label" />
+                <ui:VisualElement class="slider-row">
+                    <ui:Label text="X" class="slider-label" />
+                    <ui:Slider name="follow-offset-x" low-value="-8" high-value="8" value="0" class="camera-slider" />
+                    <ui:Label name="follow-offset-x-value" text="0.00" class="slider-value" />
+                </ui:VisualElement>
+                <ui:VisualElement class="slider-row">
+                    <ui:Label text="Y" class="slider-label" />
+                    <ui:Slider name="follow-offset-y" low-value="-8" high-value="8" value="0" class="camera-slider" />
+                    <ui:Label name="follow-offset-y-value" text="0.00" class="slider-value" />
+                </ui:VisualElement>
+                <ui:VisualElement class="slider-row">
+                    <ui:Label text="Z" class="slider-label" />
+                    <ui:Slider name="follow-offset-z" low-value="-8" high-value="8" value="0" class="camera-slider" />
+                    <ui:Label name="follow-offset-z-value" text="0.00" class="slider-value" />
+                </ui:VisualElement>
+            </ui:VisualElement>
+            <ui:VisualElement name="noise-row" class="dropdown-row">
+                <ui:VisualElement class="slider-row">
+                    <ui:Label text="Noise Amp" class="slider-label" />
+                    <ui:Slider name="noise-amp-slider" low-value="0" high-value="3" value="1" class="camera-slider" />
+                    <ui:Label name="noise-amp-value" text="1.00" class="slider-value" />
+                </ui:VisualElement>
+                <ui:VisualElement class="slider-row">
+                    <ui:Label text="Noise Freq" class="slider-label" />
+                    <ui:Slider name="noise-freq-slider" low-value="0" high-value="3" value="1" class="camera-slider" />
+                    <ui:Label name="noise-freq-value" text="1.00" class="slider-value" />
+                </ui:VisualElement>
+            </ui:VisualElement>
+            <ui:VisualElement name="wander-row" class="dropdown-row">
+                <ui:VisualElement class="slider-row">
+                    <ui:Label text="Speed" class="slider-label" />
+                    <ui:Slider name="wander-speed-slider" low-value="0" high-value="2" value="0.2" class="camera-slider" />
+                    <ui:Label name="wander-speed-value" text="0.20" class="slider-value" />
+                </ui:VisualElement>
+                <ui:VisualElement class="slider-row">
+                    <ui:Label text="Radius" class="slider-label" />
+                    <ui:Slider name="wander-radius-slider" low-value="0" high-value="8" value="1" class="camera-slider" />
+                    <ui:Label name="wander-radius-value" text="1.00" class="slider-value" />
+                </ui:VisualElement>
+                <ui:VisualElement class="slider-row">
+                    <ui:Label text="Period" class="slider-label" />
+                    <ui:Slider name="wander-period-slider" low-value="0" high-value="4" value="1" class="camera-slider" />
+                    <ui:Label name="wander-period-value" text="1.00" class="slider-value" />
+                </ui:VisualElement>
+            </ui:VisualElement>
+            <ui:VisualElement name="velocity-fov-row" class="dropdown-row">
+                <ui:VisualElement class="slider-row">
+                    <ui:Label text="Vel FOV Min" class="slider-label" />
+                    <ui:Slider name="velfov-min-slider" low-value="10" high-value="150" value="60" class="camera-slider" />
+                    <ui:Label name="velfov-min-value" text="60" class="slider-value" />
+                </ui:VisualElement>
+                <ui:VisualElement class="slider-row">
+                    <ui:Label text="Vel FOV Max" class="slider-label" />
+                    <ui:Slider name="velfov-max-slider" low-value="10" high-value="150" value="120" class="camera-slider" />
+                    <ui:Label name="velfov-max-value" text="120" class="slider-value" />
+                </ui:VisualElement>
+                <ui:VisualElement class="slider-row">
+                    <ui:Label text="Vel Range" class="slider-label" />
+                    <ui:Slider name="velfov-maxvel-slider" low-value="1" high-value="30" value="10" class="camera-slider" />
+                    <ui:Label name="velfov-maxvel-value" text="10.0" class="slider-value" />
+                </ui:VisualElement>
             </ui:VisualElement>
             <ui:VisualElement name="edit-row" class="dropdown-row">
                 <ui:Toggle name="edit-path-toggle" label="Edit Path" class="camera-toggle" />

@@ -20,6 +20,8 @@
         "Rhizomode.Observability.Contracts",
         "Rhizomode.Cameras",
         "Unity.Cinemachine",
+        "Unity.Splines",
+        "Unity.Mathematics",
         "R3.Unity",
         "Unity.InputSystem",
         "Unity.TextMeshPro"

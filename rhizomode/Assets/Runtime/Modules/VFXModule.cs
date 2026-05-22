@@ -22,6 +22,10 @@ namespace Rhizomode.Modules
 
         private VisualEffect? _vfx;
 
+        // VFXModuleNode が Vector3 プロパティを XYZ 3 つの Float ポートへ分解するため、
+        // 軸ごとに届く値をプロパティ名で束ね Vector3 を再構成して保持する。
+        private readonly Dictionary<string, Vector3> _vec3Accum = new();
+
         /// <inheritdoc />
         public string ModuleName => definition != null ? definition.moduleName : "";
 
@@ -88,7 +92,13 @@ namespace Rhizomode.Modules
                 }
 
                 var paramDef = definition.GetParam(paramName);
-                if (paramDef == null) return;
+                if (paramDef == null)
+                {
+                    // ModuleDefinition 未登録 = VFXModuleNode が VFX アセットの Exposed
+                    // プロパティを自動ポート化したケース。VFX 側の型に合わせて駆動する。
+                    SetUndefinedParam(paramName, value);
+                    return;
+                }
 
                 switch (paramDef.type)
                 {
@@ -126,6 +136,72 @@ namespace Rhizomode.Modules
             {
                 _vfx.SetBool(paramName, value);
             }
+        }
+
+        /// <summary>
+        /// ModuleDefinition に未登録のパラメータを、VFX アセットが公開する型に合わせて駆動する。
+        /// VFXModuleNode が VFX Graph の Exposed プロパティを自動ポート化したケースで使う。
+        /// </summary>
+        /// <remarks>
+        /// 値の C# 型 (= ノードのポート型) と VFX 側の Has* を突き合わせ、型不一致は黙って無視する。
+        /// int プロパティは float ポートで届くため HasInt 経由で丸めて送る。
+        /// Vector3 プロパティは VFXModuleNode が " X"/" Y"/" Z" 付きの 3 Float ポートに分解して
+        /// 送ってくるため、軸サフィックスを <see cref="TrySetVector3Axis"/> で束ね直す。
+        /// </remarks>
+        private void SetUndefinedParam(string paramName, object value)
+        {
+            if (_vfx == null) return;
+
+            if (value is float f)
+            {
+                if (_vfx.HasFloat(paramName)) _vfx.SetFloat(paramName, f);
+                else if (_vfx.HasInt(paramName)) _vfx.SetInt(paramName, Mathf.RoundToInt(f));
+                else TrySetVector3Axis(paramName, f);
+                return;
+            }
+            if (value is Color c && _vfx.HasVector4(paramName))
+            {
+                _vfx.SetVector4(paramName, (Vector4)c);
+                return;
+            }
+            if (value is bool b && _vfx.HasBool(paramName))
+            {
+                _vfx.SetBool(paramName, b);
+            }
+        }
+
+        /// <summary>
+        /// " X"/" Y"/" Z" サフィックス付きの Float 値を、対応する Vector3 プロパティの 1 軸として反映する。
+        /// 他 2 軸の現在値は <see cref="_vec3Accum"/> (初回は VFX の現値) から引き継ぐ。
+        /// </summary>
+        private void TrySetVector3Axis(string portName, float value)
+        {
+            if (_vfx == null) return;
+
+            int axis = AxisIndex(portName);
+            if (axis < 0) return;
+
+            var baseName = portName.Substring(0, portName.Length - 2);
+            if (!_vfx.HasVector3(baseName)) return;
+
+            if (!_vec3Accum.TryGetValue(baseName, out var vec))
+                vec = _vfx.GetVector3(baseName);
+            vec[axis] = value;
+            _vec3Accum[baseName] = vec;
+            _vfx.SetVector3(baseName, vec);
+        }
+
+        /// <summary>ポート名末尾の " X"/" Y"/" Z" を軸インデックス 0/1/2 に変換する。該当なしは -1。</summary>
+        private static int AxisIndex(string portName)
+        {
+            if (portName.Length < 3 || portName[portName.Length - 2] != ' ') return -1;
+            return portName[portName.Length - 1] switch
+            {
+                'X' => 0,
+                'Y' => 1,
+                'Z' => 2,
+                _ => -1,
+            };
         }
 
         /// <inheritdoc />

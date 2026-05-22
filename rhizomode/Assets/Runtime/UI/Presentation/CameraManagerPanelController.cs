@@ -25,6 +25,7 @@ namespace Rhizomode.UI
     /// - <c>CameraManagerPanelController.Path.cs</c>: PathCameraController 連動 (Progress source / Edit toggle)
     /// </remarks>
     [RequireComponent(typeof(WorldPanelHost))]
+    [RequireComponent(typeof(CameraBlendController))]
     public partial class CameraManagerPanelController : MonoBehaviour
     {
         private const int LivePriority = 20;
@@ -33,10 +34,13 @@ namespace Rhizomode.UI
         private const string NoLookAtLabel = "(none)";
         private const int PanelTextureWidth = 360;
         // LookAt Phase 2-A で Place/Edit Toggle 2 行追加されたため縦を 480 → 680 に拡大 (約 40% 増)。
-        // 同時に WorldHeight も 0.36 → 0.51 に拡大しアスペクトを維持。
-        private const int PanelTextureHeight = 680;
+        // Follow ターゲット行で 680 → 730、Follow オフセット / Noise / Wander 行追加で 730 → 920、
+        // さらに表示余裕確保のため 920 → 1080 に拡大。
+        // Blend 行 (常時) + Velocity FOV 行 (PathDolly 等) 追加で 1080 → 1320 に拡大。
+        // WorldHeight はテクスチャ比に合わせアスペクト維持。
+        private const int PanelTextureHeight = 1320;
         private const float PanelWorldWidth = 0.28f;
-        private const float PanelWorldHeight = 0.51f;
+        private const float PanelWorldHeight = 1.03f;
 
         [SerializeField] private VisualTreeAsset? panelUxml;
         [SerializeField] private StyleSheet? panelStyleSheet;
@@ -67,12 +71,46 @@ namespace Rhizomode.UI
         private Button? _progressRefreshButton;
         private Slider? _progressSlider;
         private Label? _progressValue;
+        private Label? _progressSrcLabel;
+        private Label? _progressLabel;
         private DropdownField? _lookAtDropdown;
+        private VisualElement? _followRow;
+        private DropdownField? _followDropdown;
+        private VisualElement? _followOffsetRow;
+        private Slider? _followOffsetX;
+        private Slider? _followOffsetY;
+        private Slider? _followOffsetZ;
+        private Label? _followOffsetXValue;
+        private Label? _followOffsetYValue;
+        private Label? _followOffsetZValue;
+        private VisualElement? _noiseRow;
+        private Slider? _noiseAmpSlider;
+        private Slider? _noiseFreqSlider;
+        private Label? _noiseAmpValue;
+        private Label? _noiseFreqValue;
+        private VisualElement? _wanderRow;
+        private Slider? _wanderSpeedSlider;
+        private Slider? _wanderRadiusSlider;
+        private Slider? _wanderPeriodSlider;
+        private Label? _wanderSpeedValue;
+        private Label? _wanderRadiusValue;
+        private Label? _wanderPeriodValue;
         private Toggle? _editPathToggle;
         private Toggle? _lookAtPlaceToggle;
         private Toggle? _lookAtEditToggle;
         private Toggle? _mirrorShowUiToggle;
         private MirrorOutputController? _mirrorOutput;
+        private CameraBlendController? _blendController;
+        private DropdownField? _blendStyleDropdown;
+        private Slider? _blendTimeSlider;
+        private Label? _blendTimeValue;
+        private VisualElement? _velocityFovRow;
+        private Slider? _velFovMinSlider;
+        private Slider? _velFovMaxSlider;
+        private Slider? _velFovMaxVelSlider;
+        private Label? _velFovMinValue;
+        private Label? _velFovMaxValue;
+        private Label? _velFovMaxVelValue;
         private bool _initialized;
 
         /// <summary>
@@ -109,6 +147,7 @@ namespace Rhizomode.UI
         private void Awake()
         {
             _panelHost = GetComponent<WorldPanelHost>();
+            _blendController = GetComponent<CameraBlendController>();
         }
 
         private void Update()
@@ -171,11 +210,44 @@ namespace Rhizomode.UI
             _progressRefreshButton = _root.Q<Button>("progress-refresh");
             _progressSlider = _root.Q<Slider>("progress-slider");
             _progressValue = _root.Q<Label>("progress-value");
+            _progressSrcLabel = _root.Q<Label>("progress-src-label");
+            _progressLabel = _root.Q<Label>("progress-label");
             _lookAtDropdown = _root.Q<DropdownField>("lookat-target");
+            _followRow = _root.Q<VisualElement>("follow-row");
+            _followDropdown = _root.Q<DropdownField>("follow-target");
+            _followOffsetRow = _root.Q<VisualElement>("follow-offset-row");
+            _followOffsetX = _root.Q<Slider>("follow-offset-x");
+            _followOffsetY = _root.Q<Slider>("follow-offset-y");
+            _followOffsetZ = _root.Q<Slider>("follow-offset-z");
+            _followOffsetXValue = _root.Q<Label>("follow-offset-x-value");
+            _followOffsetYValue = _root.Q<Label>("follow-offset-y-value");
+            _followOffsetZValue = _root.Q<Label>("follow-offset-z-value");
+            _noiseRow = _root.Q<VisualElement>("noise-row");
+            _noiseAmpSlider = _root.Q<Slider>("noise-amp-slider");
+            _noiseFreqSlider = _root.Q<Slider>("noise-freq-slider");
+            _noiseAmpValue = _root.Q<Label>("noise-amp-value");
+            _noiseFreqValue = _root.Q<Label>("noise-freq-value");
+            _wanderRow = _root.Q<VisualElement>("wander-row");
+            _wanderSpeedSlider = _root.Q<Slider>("wander-speed-slider");
+            _wanderRadiusSlider = _root.Q<Slider>("wander-radius-slider");
+            _wanderPeriodSlider = _root.Q<Slider>("wander-period-slider");
+            _wanderSpeedValue = _root.Q<Label>("wander-speed-value");
+            _wanderRadiusValue = _root.Q<Label>("wander-radius-value");
+            _wanderPeriodValue = _root.Q<Label>("wander-period-value");
             _editPathToggle = _root.Q<Toggle>("edit-path-toggle");
             _lookAtPlaceToggle = _root.Q<Toggle>("lookat-place-toggle");
             _lookAtEditToggle = _root.Q<Toggle>("lookat-edit-toggle");
             _mirrorShowUiToggle = _root.Q<Toggle>("mirror-show-ui-toggle");
+            _blendStyleDropdown = _root.Q<DropdownField>("blend-style");
+            _blendTimeSlider = _root.Q<Slider>("blend-time-slider");
+            _blendTimeValue = _root.Q<Label>("blend-time-value");
+            _velocityFovRow = _root.Q<VisualElement>("velocity-fov-row");
+            _velFovMinSlider = _root.Q<Slider>("velfov-min-slider");
+            _velFovMaxSlider = _root.Q<Slider>("velfov-max-slider");
+            _velFovMaxVelSlider = _root.Q<Slider>("velfov-maxvel-slider");
+            _velFovMinValue = _root.Q<Label>("velfov-min-value");
+            _velFovMaxValue = _root.Q<Label>("velfov-max-value");
+            _velFovMaxVelValue = _root.Q<Label>("velfov-maxvel-value");
 
             if (_list == null || _fovSlider == null || _dutchSlider == null) return;
 
@@ -184,11 +256,26 @@ namespace Rhizomode.UI
             _progressDropdown?.RegisterValueChangedCallback(OnProgressSourceChanged);
             _progressSlider?.RegisterValueChangedCallback(OnProgressSliderChanged);
             _lookAtDropdown?.RegisterValueChangedCallback(OnLookAtChanged);
+            _followDropdown?.RegisterValueChangedCallback(OnFollowChanged);
+            _followOffsetX?.RegisterValueChangedCallback(OnFollowOffsetChanged);
+            _followOffsetY?.RegisterValueChangedCallback(OnFollowOffsetChanged);
+            _followOffsetZ?.RegisterValueChangedCallback(OnFollowOffsetChanged);
+            _noiseAmpSlider?.RegisterValueChangedCallback(OnNoiseAmpChanged);
+            _noiseFreqSlider?.RegisterValueChangedCallback(OnNoiseFreqChanged);
+            _wanderSpeedSlider?.RegisterValueChangedCallback(OnWanderSpeedChanged);
+            _wanderRadiusSlider?.RegisterValueChangedCallback(OnWanderRadiusChanged);
+            _wanderPeriodSlider?.RegisterValueChangedCallback(OnWanderPeriodChanged);
             _editPathToggle?.RegisterValueChangedCallback(OnEditPathToggleChanged);
             _lookAtPlaceToggle?.RegisterValueChangedCallback(OnLookAtPlaceToggleChanged);
             _lookAtEditToggle?.RegisterValueChangedCallback(OnLookAtEditToggleChanged);
             _mirrorShowUiToggle?.RegisterValueChangedCallback(OnMirrorShowUiToggleChanged);
+            _blendStyleDropdown?.RegisterValueChangedCallback(OnBlendStyleChanged);
+            _blendTimeSlider?.RegisterValueChangedCallback(OnBlendTimeChanged);
+            _velFovMinSlider?.RegisterValueChangedCallback(OnVelFovMinChanged);
+            _velFovMaxSlider?.RegisterValueChangedCallback(OnVelFovMaxChanged);
+            _velFovMaxVelSlider?.RegisterValueChangedCallback(OnVelFovMaxVelChanged);
             SyncMirrorToggleFromOutput();
+            InitBlendControls();
             if (_progressRefreshButton != null) _progressRefreshButton.clicked += OnProgressRefreshClicked;
 
             // LookAt registry の追加/削除/命名変化で dropdown を自動更新する。
@@ -223,6 +310,7 @@ namespace Rhizomode.UI
         {
             if (_selected == null) return;
             RefreshLookAtDropdown(_selected);
+            RefreshFollowRow(_selected);
         }
     }
 }

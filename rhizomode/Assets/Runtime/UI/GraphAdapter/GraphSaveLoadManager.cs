@@ -34,6 +34,7 @@ namespace Rhizomode.UI
         private HydrationPlanExecutor? _executor;
         private INodeFactory? _factory;
         private ISavePathProvider? _pathProvider;
+        private ICameraStatePersistence? _cameraPersistence;
 
         /// <summary>グラフ保存完了時に発火するイベント。引数はファイル名。</summary>
         public event Action<string>? OnGraphSaved;
@@ -78,6 +79,15 @@ namespace Rhizomode.UI
             _pathProvider = pathProvider;
         }
 
+        /// <summary>
+        /// カメラ状態の永続化サービスを注入する (Phase 4)。GraphSaveLoadBootstrapWiring から呼ぶ。
+        /// 未注入でもセーブ/ロードは動作する (カメラ状態のみスキップ)。
+        /// </summary>
+        public void SetCameraPersistence(ICameraStatePersistence cameraPersistence)
+        {
+            _cameraPersistence = cameraPersistence;
+        }
+
         /// <summary>現在のグラフを JSON で保存する。</summary>
         /// <param name="fileName">ファイル名 (拡張子不要)。null/空なら timestamp で自動生成。</param>
         public bool SaveGraph(string? fileName = null)
@@ -90,6 +100,7 @@ namespace Rhizomode.UI
 
             var resolved = ResolveFileName(fileName);
             var data = _graphContext.Context.Serialize();
+            CaptureCameraState(data);
 
             if (!_repository.SaveGraph(resolved, data)) return false;
             OnGraphSaved?.Invoke(resolved);
@@ -132,6 +143,10 @@ namespace Rhizomode.UI
                 RestoreFromBackup(backup);
                 return false;
             }
+
+            // カメラ状態の復元は OnGraphLoaded より前 — パネルが OnGraphLoaded で
+            // 復元済みの binding / priority を読み直して購読を張り直すため。
+            RestoreCameraState(data);
 
             Debug.Log($"[GraphSaveLoadManager] Loaded: {resolved} ({data.nodes.Count} nodes, {data.edges.Count} edges)");
             OnGraphLoaded?.Invoke();
@@ -176,6 +191,37 @@ namespace Rhizomode.UI
         {
             if (_repository == null) return false;
             return _repository.DeleteSave(EnsureExtension(fileName));
+        }
+
+        /// <summary>カメラ状態を捕捉して GraphData に書き込む。失敗してもセーブは続行 (fail-open)。</summary>
+        private void CaptureCameraState(GraphData data)
+        {
+            if (_cameraPersistence == null) return;
+            try
+            {
+                data.cameraState = _cameraPersistence.Capture();
+            }
+            catch (Exception e)
+            {
+                Debug.LogError($"[GraphSaveLoadManager] Camera state capture failed: {e.Message}");
+            }
+        }
+
+        /// <summary>
+        /// GraphData のカメラ状態をシーンへ復元する。失敗してもグラフロードは成功扱いで続行する
+        /// (fail-open — カメラ復元失敗を映像停止に伝播させない)。
+        /// </summary>
+        private void RestoreCameraState(GraphData data)
+        {
+            if (_cameraPersistence == null) return;
+            try
+            {
+                _cameraPersistence.Restore(data.cameraState);
+            }
+            catch (Exception e)
+            {
+                Debug.LogError($"[GraphSaveLoadManager] Camera state restore failed: {e.Message}");
+            }
         }
 
         private static string ResolveFileName(string? fileName)

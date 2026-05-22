@@ -44,6 +44,7 @@ namespace Rhizomode.Bootstrap.Wiring
         private readonly ModuleLifecycleProcessor _moduleProcessor;
         private readonly Object3DProxyBindService _proxyBindService;
         private readonly GraphLoadCoordinator _loadCoordinator;
+        private readonly ICameraStatePersistence _cameraPersistence;
 
         private GraphSaveLoadManager? _subscribedSaveLoad;
         private Action? _onLoadingHandler;
@@ -60,7 +61,8 @@ namespace Rhizomode.Bootstrap.Wiring
             ISavePathProvider savePathProvider,
             ModuleLifecycleProcessor moduleProcessor,
             Object3DProxyBindService proxyBindService,
-            GraphLoadCoordinator loadCoordinator)
+            GraphLoadCoordinator loadCoordinator,
+            ICameraStatePersistence cameraPersistence)
         {
             _refs = refs;
             _nodeRuntime = nodeRuntime;
@@ -71,6 +73,7 @@ namespace Rhizomode.Bootstrap.Wiring
             _moduleProcessor = moduleProcessor;
             _proxyBindService = proxyBindService;
             _loadCoordinator = loadCoordinator;
+            _cameraPersistence = cameraPersistence;
         }
 
         /// <summary>
@@ -92,6 +95,7 @@ namespace Rhizomode.Bootstrap.Wiring
             var executor = new HydrationPlanExecutor(_nodeRuntime);
             graphSaveLoad.Configure(
                 _graphRepository, _graphHydrator, executor, _nodeFactory, _savePathProvider);
+            graphSaveLoad.SetCameraPersistence(_cameraPersistence);
             Debug.Log("[GraphSaveLoadBootstrapWiring] SaveLoad configured (Repository + Hydrator + Executor).");
 
             _onLoadingHandler = OnGraphLoadingHandler;

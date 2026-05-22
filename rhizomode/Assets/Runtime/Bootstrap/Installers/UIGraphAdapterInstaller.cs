@@ -26,6 +26,8 @@ namespace Rhizomode.Bootstrap.Installers
         {
             builder.Register<GraphLoadCoordinator>(Lifetime.Singleton);
             builder.Register<MenuNodeSpawnCoordinator>(Lifetime.Singleton);
+            builder.Register<CameraStatePersistenceService>(Lifetime.Singleton)
+                .As<ICameraStatePersistence>();
             builder.Register<GraphSaveLoadBootstrapWiring>(Lifetime.Singleton);
         }
     }

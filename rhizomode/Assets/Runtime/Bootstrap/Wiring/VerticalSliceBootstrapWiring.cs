@@ -44,6 +44,8 @@ namespace Rhizomode.Bootstrap.Wiring
         private IDisposable? _healthSubscription;
         private CameraManagerPanelController? _editModePanel;
         private Action<bool>? _editModeListener;
+        private GraphSaveLoadManager? _cameraStateSaveLoad;
+        private Action? _onCameraStateRestored;
         private bool _wired;
 
         public VerticalSliceBootstrapWiring(
@@ -139,6 +141,15 @@ namespace Rhizomode.Bootstrap.Wiring
                 cueListPanel.Initialize(cueService);
             }
 
+            // Phase 4: キュー (グラフ) ロード後、カメラ状態が GraphSaveLoadManager により復元される。
+            // パネルはカメラ一覧の再列挙・ライブ選択・Motion 購読の貼り直しを行う必要がある。
+            if (cameraManagerPanel != null && graphSaveLoad != null)
+            {
+                _cameraStateSaveLoad = graphSaveLoad;
+                _onCameraStateRestored = cameraManagerPanel.OnCameraStateRestored;
+                graphSaveLoad.OnGraphLoaded += _onCameraStateRestored;
+            }
+
             // Phase 13C: health → StatusPanel 購読 (旧 GameBootstrap.InitializeHealthMonitoring)。
             if (statusPanel != null)
                 _healthSubscription = _healthAggregator.OnHealthChange.Subscribe(statusPanel.SetHealth);
@@ -155,6 +166,11 @@ namespace Rhizomode.Bootstrap.Wiring
             }
             _editModePanel = null;
             _editModeListener = null;
+
+            if (_cameraStateSaveLoad != null && _onCameraStateRestored != null)
+                _cameraStateSaveLoad.OnGraphLoaded -= _onCameraStateRestored;
+            _cameraStateSaveLoad = null;
+            _onCameraStateRestored = null;
         }
     }
 }

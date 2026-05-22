@@ -18,6 +18,8 @@
 
 .camera-list {
     margin-bottom: 8px;
+    max-height: 300px;
+    flex-shrink: 0;
 }
 
 .camera-button {

@@ -11,7 +11,7 @@ namespace Rhizomode.Cameras
     /// CameraManagerPanel から typed API 経由でパラメータを受け取る。
     /// </summary>
     [RequireComponent(typeof(CinemachineCamera))]
-    public class PathCameraController : MonoBehaviour
+    public class PathCameraController : MonoBehaviour, ICameraMotion
     {
         [SerializeField] private CinemachineSplineDolly? splineDolly;
         [SerializeField] private SplineContainer? splineContainer;
@@ -38,6 +38,11 @@ namespace Rhizomode.Cameras
             if (splineDolly == null) return;
             splineDolly.CameraPosition = Mathf.Clamp01(value);
         }
+
+        // --- ICameraMotion: パネルの汎用 Motion 駆動 (グラフ Float 購読) はこの実装を通る ---
+        string ICameraMotion.MotionLabel => "Progress";
+        float ICameraMotion.Drive => Progress;
+        void ICameraMotion.SetDrive(float value) => SetProgress(value);
 
         public void SetFov(float value)
         {

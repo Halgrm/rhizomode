@@ -126,30 +126,83 @@ namespace Rhizomode.UI
             _progressSubscription = null;
 
             if (_selected == null) return;
-            var pathCam = _selected.GetComponent<PathCameraController>();
-            if (pathCam == null) return;
-            if (string.IsNullOrEmpty(e.newValue) || e.newValue == NoSourceLabel) return;
-            if (_floatOutputCatalog == null) return;
+            var motion = _selected.GetComponent<ICameraMotion>();
+            if (motion == null) return;
 
-            FloatOutputRef? target = null;
-            foreach (var p in _floatOutputs)
+            // ソース選択を CameraMotionSourceBinding に耐久記録する (セーブ/ロード対象)。
+            var binding = _selected.GetComponent<CameraMotionSourceBinding>();
+            if (string.IsNullOrEmpty(e.newValue) || e.newValue == NoSourceLabel)
             {
-                if (p.DisplayName != e.newValue) continue;
-                target = p;
-                break;
+                binding?.Clear();
+                return;
             }
+
+            var target = FindFloatOutput(e.newValue);
             if (target == null) return;
 
+            binding?.SetBinding(target.Value.NodeId, target.Value.PortName);
+            SubscribeMotion(motion, target.Value);
+        }
+
+        /// <summary>表示名で Float 出力ポートを引く。見つからなければ null。</summary>
+        private FloatOutputRef? FindFloatOutput(string displayName)
+        {
+            foreach (var p in _floatOutputs)
+                if (p.DisplayName == displayName) return p;
+            return null;
+        }
+
+        /// <summary>nodeId + portName で Float 出力ポートを引く (ロード復元用)。</summary>
+        private FloatOutputRef? FindFloatOutputByPort(string nodeId, string portName)
+        {
+            foreach (var p in _floatOutputs)
+                if (p.NodeId == nodeId && p.PortName == portName) return p;
+            return null;
+        }
+
+        /// <summary>指定 Float 出力ポートを購読し、カメラの Motion を駆動する。</summary>
+        private void SubscribeMotion(ICameraMotion motion, FloatOutputRef source)
+        {
+            if (_floatOutputCatalog == null) return;
             _progressSubscription = _floatOutputCatalog.Subscribe(
-                target.Value.NodeId,
-                target.Value.PortName,
+                source.NodeId,
+                source.PortName,
                 v =>
                 {
-                    pathCam.SetProgress(v);
+                    motion.SetDrive(v);
                     // スライダーも追従させて現在値を可視化
                     if (_progressSlider != null) _progressSlider.SetValueWithoutNotify(Mathf.Clamp01(v));
                     if (_progressValue != null) _progressValue.text = $"{v:F2}";
                 });
+        }
+
+        /// <summary>Float 出力ポート一覧を取得し、Motion ソース dropdown の選択肢を再構築する。</summary>
+        private void PopulateMotionSourceDropdown()
+        {
+            RefreshFloatOutputs();
+            if (_progressDropdown == null) return;
+            var labels = new List<string> { NoSourceLabel };
+            foreach (var p in _floatOutputs) labels.Add(p.DisplayName);
+            _progressDropdown.choices = labels;
+        }
+
+        /// <summary>
+        /// カメラの <see cref="CameraMotionSourceBinding"/> を読み、保存済みソースがあれば
+        /// 購読を貼り直して dropdown を一致させる。未設定 / 解決不能なら (none) に戻す。
+        /// </summary>
+        private void BindMotionRowToSavedSource(ICameraMotion motion, CameraMotionSourceBinding? binding)
+        {
+            if (binding != null && binding.HasBinding)
+            {
+                var target = FindFloatOutputByPort(binding.NodeId, binding.PortName);
+                if (target != null)
+                {
+                    SubscribeMotion(motion, target.Value);
+                    _progressDropdown?.SetValueWithoutNotify(target.Value.DisplayName);
+                    return;
+                }
+            }
+            _progressDropdown?.SetValueWithoutNotify(NoSourceLabel);
         }
 
         /// <summary>
@@ -158,9 +211,9 @@ namespace Rhizomode.UI
         private void OnProgressSliderChanged(ChangeEvent<float> e)
         {
             if (_selected == null) return;
-            var pathCam = _selected.GetComponent<PathCameraController>();
-            if (pathCam == null) return;
-            pathCam.SetProgress(e.newValue);
+            var motion = _selected.GetComponent<ICameraMotion>();
+            if (motion == null) return;
+            motion.SetDrive(e.newValue);
             if (_progressValue != null) _progressValue.text = $"{e.newValue:F2}";
         }
 
@@ -171,8 +224,8 @@ namespace Rhizomode.UI
         private void OnProgressRefreshClicked()
         {
             if (_selected == null) return;
-            var pathCam = _selected.GetComponent<PathCameraController>();
-            if (pathCam == null || _progressDropdown == null) return;
+            var motion = _selected.GetComponent<ICameraMotion>();
+            if (motion == null || _progressDropdown == null) return;
 
             RefreshFloatOutputs();
             var labels = new List<string> { NoSourceLabel };
