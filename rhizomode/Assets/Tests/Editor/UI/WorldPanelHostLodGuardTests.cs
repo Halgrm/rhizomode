@@ -83,6 +83,30 @@ namespace Rhizomode.UI.Tests
             Assert.AreEqual(96, host.TextureWidth, "再有効化後は resize が反映される");
         }
 
+        [Test]
+        public void HasRenderedAtLeastOnce_FalseImmediatelyAfterInitialize()
+        {
+            // cue 透明ノード fix: Initialize 直後は UIToolkit がまだ paint していないため
+            // HasRenderedAtLeastOnce は false。LOD はこの間 deactivate を抑止する契約。
+            _go = CreateInitializedHost(initialWidth: 256, initialHeight: 154);
+            var host = _go.GetComponent<WorldPanelHost>();
+
+            Assert.IsFalse(host.HasRenderedAtLeastOnce,
+                "Initialize 直後は layout+paint 未完了 — LOD は強制 active を維持する");
+        }
+
+        [Test]
+        public void HasRenderedAtLeastOnce_RemainsFalse_WhenInactive()
+        {
+            // Initialize 後すぐ deactivate された panel は UIToolkit が描画しないため
+            // 何フレーム経過しても HasRenderedAtLeastOnce は false のまま (LOD 強制 active 継続)。
+            _go = CreateInitializedHost(initialWidth: 256, initialHeight: 154);
+            var host = _go.GetComponent<WorldPanelHost>();
+
+            host.SetUIActive(false);
+            Assert.IsFalse(host.HasRenderedAtLeastOnce, "active でないと paint されない");
+        }
+
         private static GameObject CreateInitializedHost(int initialWidth, int initialHeight)
         {
             var go = new GameObject("PanelHostTest");

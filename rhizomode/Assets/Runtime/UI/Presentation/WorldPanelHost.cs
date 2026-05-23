@@ -46,6 +46,21 @@ namespace Rhizomode.UI
         private StyleSheet? _pendingStyleSheet;
         private bool _styleSheetApplied;
 
+        /// <summary>
+        /// 初回 Initialize 後に UIToolkit が少なくとも 1 フレームの layout + paint を完了したか。
+        /// </summary>
+        /// <remarks>
+        /// cue 透明ノード fix: ロード直後 LOD が <see cref="SetUIActive"/>(false) を呼ぶと、
+        /// UIDocument が一度も描画していない RT が targetTexture から外され空のまま残り、
+        /// quad が透明描画になる。LOD は本フラグが true になるまで deactivate を保留する。
+        /// </remarks>
+        private const int FramesBeforeFirstRender = 2;
+        private int _initFrame = -1;
+        private bool _hasRenderedAtLeastOnce;
+
+        /// <inheritdoc cref="_hasRenderedAtLeastOnce"/>
+        public bool HasRenderedAtLeastOnce => _hasRenderedAtLeastOnce;
+
         /// <summary>UIDocumentのルートVisualElementへのアクセス。</summary>
         public VisualElement? Root => _uiDocument?.rootVisualElement;
 
@@ -76,6 +91,7 @@ namespace Rhizomode.UI
             CreatePanelSettings();
             CreateUIDocument(uxml, styleSheet);
             SetupQuad();
+            _initFrame = Time.frameCount;
 
             // [RequireMirrorHidden] + 同 GameObject 上の MirrorHiddenScope (Scene 配置 or
             // runtime spawn 元の reparent) によって layer は自動適用されるため明示呼出は不要。
@@ -281,6 +297,16 @@ namespace Rhizomode.UI
                 _uiDocument.rootVisualElement.styleSheets.Add(_pendingStyleSheet);
                 _pendingStyleSheet = null;
                 _styleSheetApplied = true;
+            }
+
+            // 初回 layout + paint 完了判定 (sticky flag)。targetTexture が active な状態で
+            // FramesBeforeFirstRender フレーム経過したら、UIToolkit の repaint pass を経た想定。
+            // LOD が deactivate した状態ではカウントしない (RT に新規描画されないため)。
+            if (!_hasRenderedAtLeastOnce && _initFrame >= 0 &&
+                _panelSettings != null && _panelSettings.targetTexture != null &&
+                Time.frameCount - _initFrame >= FramesBeforeFirstRender)
+            {
+                _hasRenderedAtLeastOnce = true;
             }
         }
 

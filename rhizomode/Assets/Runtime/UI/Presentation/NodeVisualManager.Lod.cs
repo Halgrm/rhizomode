@@ -63,6 +63,11 @@ namespace Rhizomode.UI
                 bool withinDistance = dist < lodFarDistance;
                 bool uiActive = withinBudget && withinDistance;
 
+                // cue 透明ノード fix: 初回 paint 未完了の panel を deactivate すると RT が
+                // 空のまま固着 → 透明 quad に。少なくとも 1 回 layout+paint を経るまで強制 active。
+                if (!uiActive && !host.HasRenderedAtLeastOnce)
+                    uiActive = true;
+
                 host.SetUIActive(uiActive);
                 if (uiActive) activatedCount++;
 
