@@ -17,14 +17,13 @@ namespace Rhizomode.UI
     /// 移送 (NodeVisualManager / EdgeVisualManager は Rhizomode.UI asmdef、NodeViewAdapter は UI.GraphAdapter
     /// asmdef — UI.GraphAdapter は両方を参照済のため adapter 層として自然な所属先)。
     ///
-    /// cue 表裏 fix (2026-05-23): <see cref="Rebuild"/> に <c>savedRotations</c> 引数を追加。
-    /// 保存された rotation がある node はそれを復元し、無い node (旧形式 cue) のみ
-    /// LookRotation fallback に流す。
+    /// 「保存したときのローテーションのまま」原則 (2026-05-23, user 指示): ロード時に
+    /// プレイヤー側へ自動回転 (LookRotation) する処理は廃止。保存値があればそれを適用、
+    /// 無い node (旧形式 cue) は <see cref="NodeVisualManager.CreateNodeVisual"/> が初期化した
+    /// identity rotation のままにする。旧 cue を player 向きに戻したい場合は再保存が必要。
     /// </remarks>
     public sealed class GraphLoadCoordinator
     {
-        private const float HeadSingularityEpsilonSqr = 1e-6f;
-
         private readonly NodeVisualManager _visualManager;
         private readonly EdgeVisualManager _edgeVisualManager;
 
@@ -38,18 +37,20 @@ namespace Rhizomode.UI
         /// ロード後のグラフ状態から visual を全再構築する。
         /// </summary>
         /// <param name="state">ロード後の GraphState (caller が graphContext.Context 等で取得)。</param>
-        /// <param name="controllerInput">プレイヤー視点。null ならノード回転をスキップ (LookRotation fallback のみ)。</param>
+        /// <param name="controllerInput">未使用 (旧 LookRotation fallback の引数)。signature 互換のため残存。</param>
         /// <param name="savedRotations">
-        /// id → quaternion の保存済み rotation map。null または node id 未登録なら LookRotation fallback。
+        /// id → quaternion の保存済み rotation map。null または node id 未登録なら rotation は
+        /// 触らない (identity / 既存 transform.rotation のまま)。
         /// </param>
         public void Rebuild(
             GraphState state,
             IControllerInput? controllerInput,
             IReadOnlyDictionary<string, Quaternion>? savedRotations = null)
         {
+            _ = controllerInput; // 互換のため受け取るが未使用 (LookRotation fallback 廃止)
             RebuildNodeVisuals(state);
             RebuildEdgeVisuals(state);
-            ApplyNodeRotations(state, controllerInput, savedRotations);
+            ApplySavedRotations(state, savedRotations);
         }
 
         private void RebuildNodeVisuals(GraphState state)
@@ -72,34 +73,18 @@ namespace Rhizomode.UI
             _edgeVisualManager.RebuildAllEdgeVisuals(edgePairs);
         }
 
-        private void ApplyNodeRotations(
+        private void ApplySavedRotations(
             GraphState state,
-            IControllerInput? controllerInput,
             IReadOnlyDictionary<string, Quaternion>? savedRotations)
         {
-            var hasHead = controllerInput != null;
-            var headPos = controllerInput?.HeadPosition ?? Vector3.zero;
-            var headForward = controllerInput?.HeadForward ?? Vector3.forward;
+            if (savedRotations == null || savedRotations.Count == 0) return;
 
             foreach (var node in state.Nodes.Values)
             {
+                if (!savedRotations.TryGetValue(node.Id, out var saved)) continue;
                 var visual = _visualManager.GetVisual(node.Id);
                 if (visual == null) continue;
-
-                if (savedRotations != null && savedRotations.TryGetValue(node.Id, out var saved))
-                {
-                    visual.transform.rotation = saved;
-                    continue;
-                }
-
-                if (!hasHead) continue;
-
-                var pos = visual.transform.position;
-                var diff = pos - headPos;
-                // 特異点: head が node 位置と重なると LookRotation(0) → identity に潰れて
-                // プレイヤー側を向かない。headForward (プレイヤーの視線方向) を fallback に使う。
-                var forward = diff.sqrMagnitude < HeadSingularityEpsilonSqr ? headForward : diff;
-                visual.transform.rotation = Quaternion.LookRotation(forward);
+                visual.transform.rotation = saved;
             }
         }
     }
