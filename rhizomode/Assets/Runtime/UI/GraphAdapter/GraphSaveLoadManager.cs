@@ -1,11 +1,13 @@
 #nullable enable
 
 using System;
+using System.Collections.Generic;
 using Rhizomode.Graph.CatalogBridge;
 using Rhizomode.Graph.Runtime;
 using Rhizomode.Graph.Serialization;
 using Rhizomode.Persistence.Contracts;
 using Rhizomode.SharedKernel;
+using Rhizomode.UI.Contracts;
 using UnityEngine;
 
 using Rhizomode.NodeCatalog.Contracts;
@@ -35,6 +37,18 @@ namespace Rhizomode.UI
         private INodeFactory? _factory;
         private ISavePathProvider? _pathProvider;
         private ICameraStatePersistence? _cameraPersistence;
+        private INodeVisualRotationProvider? _rotationProvider;
+        private readonly Dictionary<string, Quaternion> _lastLoadedRotations = new();
+
+        /// <summary>
+        /// 直近 <see cref="LoadGraph"/> で読み込んだ NodeData.rotation を id 経由で取得する map。
+        /// </summary>
+        /// <remarks>
+        /// cue 復元時の表裏破綻 fix: <c>GraphLoadCoordinator.Rebuild</c> 直前に subscriber
+        /// (<c>GraphSaveLoadBootstrapWiring.OnLoaded</c>) が読み出し、Rebuild に渡して visual の
+        /// 回転を保存値で復元する。rotation 未保存 (旧形式 cue) の node は dict に含まれない。
+        /// </remarks>
+        public IReadOnlyDictionary<string, Quaternion> LastLoadedRotations => _lastLoadedRotations;
 
         /// <summary>グラフ保存完了時に発火するイベント。引数はファイル名。</summary>
         public event Action<string>? OnGraphSaved;
@@ -88,6 +102,15 @@ namespace Rhizomode.UI
             _cameraPersistence = cameraPersistence;
         }
 
+        /// <summary>
+        /// ノード visual の rotation 取得 provider を注入する (cue 表裏 fix)。
+        /// 未注入でもセーブ/ロードは動作する (rotation enrichment のみスキップ → LookRotation fallback)。
+        /// </summary>
+        public void SetNodeVisualRotationProvider(INodeVisualRotationProvider provider)
+        {
+            _rotationProvider = provider;
+        }
+
         /// <summary>現在のグラフを JSON で保存する。</summary>
         /// <param name="fileName">ファイル名 (拡張子不要)。null/空なら timestamp で自動生成。</param>
         public bool SaveGraph(string? fileName = null)
@@ -100,6 +123,7 @@ namespace Rhizomode.UI
 
             var resolved = ResolveFileName(fileName);
             var data = _graphContext.Context.Serialize();
+            EnrichNodeRotations(data);
             CaptureCameraState(data);
 
             if (!_repository.SaveGraph(resolved, data)) return false;
@@ -120,6 +144,8 @@ namespace Rhizomode.UI
             var resolved = EnsureExtension(fileName);
             var data = _repository.LoadGraph(resolved);
             if (data == null) return false;
+
+            CapturePendingRotations(data);
 
             // Phase 8 Codex review fix #1+#3: load 開始通知。subscriber (例: GameBootstrap) が
             // 旧 module instance の破棄を行う。state.Clear() より前に呼ぶ — Executor が新 module を
@@ -191,6 +217,48 @@ namespace Rhizomode.UI
         {
             if (_repository == null) return false;
             return _repository.DeleteSave(EnsureExtension(fileName));
+        }
+
+        /// <summary>
+        /// 全ノードの visual rotation を <see cref="NodeData.rotation"/> に書き込む。
+        /// </summary>
+        /// <remarks>
+        /// provider 未注入 / visual 未存在のノードは rotation 空のまま (旧形式) → ロード時に
+        /// <c>GraphLoadCoordinator</c> が LookRotation fallback に流す。fail-open。
+        /// </remarks>
+        private void EnrichNodeRotations(GraphData data)
+        {
+            if (_rotationProvider == null) return;
+            foreach (var nd in data.nodes)
+            {
+                try
+                {
+                    if (_rotationProvider.TryGetRotation(nd.id, out var q))
+                        nd.rotation = NodeData.FromQuaternion(q);
+                }
+                catch (Exception e)
+                {
+                    Debug.LogWarning($"[GraphSaveLoadManager] Rotation enrich failed: {nd.id} — {e.Message}");
+                }
+            }
+        }
+
+        /// <summary>
+        /// 直近 LoadGraph で読み込んだ <see cref="NodeData.rotation"/> を id 経由 dict に保持する。
+        /// </summary>
+        /// <remarks>
+        /// <c>GraphLoadCoordinator.Rebuild</c> は OnGraphLoaded subscriber 経由で呼ばれるため、
+        /// その時点で <c>data</c> 自体は scope 外。subscriber が <see cref="LastLoadedRotations"/>
+        /// を読み取れるよう、stash しておく。
+        /// </remarks>
+        private void CapturePendingRotations(GraphData data)
+        {
+            _lastLoadedRotations.Clear();
+            foreach (var nd in data.nodes)
+            {
+                if (nd.HasRotation)
+                    _lastLoadedRotations[nd.id] = nd.ToQuaternion();
+            }
         }
 
         /// <summary>カメラ状態を捕捉して GraphData に書き込む。失敗してもセーブは続行 (fail-open)。</summary>

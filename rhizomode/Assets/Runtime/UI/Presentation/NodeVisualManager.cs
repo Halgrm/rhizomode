@@ -24,7 +24,7 @@ namespace Rhizomode.UI
     /// 渡す。RebuildAllVisuals も IReadOnlyList&lt;INodeView&gt; を受ける。
     /// </remarks>
     [RequireMirrorHidden]
-    public partial class NodeVisualManager : MonoBehaviour
+    public partial class NodeVisualManager : MonoBehaviour, INodeVisualRotationProvider
     {
         [Header("ノードサイズ")]
         [SerializeField, Range(0.05f, 0.5f), Tooltip("ノードパネルのワールド幅（メートル）")]
@@ -173,6 +173,19 @@ namespace Rhizomode.UI
         public NodeVisualController? GetVisual(string nodeId)
         {
             return _visuals.TryGetValue(nodeId, out var controller) ? controller : null;
+        }
+
+        /// <inheritdoc/>
+        public bool TryGetRotation(string nodeId, out Quaternion rotation)
+        {
+            if (_visuals.TryGetValue(nodeId, out var controller) &&
+                controller != null && controller.transform != null)
+            {
+                rotation = controller.transform.rotation;
+                return true;
+            }
+            rotation = Quaternion.identity;
+            return false;
         }
 
         /// <summary>

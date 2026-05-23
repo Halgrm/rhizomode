@@ -8,6 +8,7 @@ using Rhizomode.Input.Contracts;
 using Rhizomode.Modules;
 using Rhizomode.Persistence.Contracts;
 using Rhizomode.UI;
+using Rhizomode.UI.Contracts;
 using UnityEngine;
 
 namespace Rhizomode.Bootstrap.Wiring
@@ -45,6 +46,7 @@ namespace Rhizomode.Bootstrap.Wiring
         private readonly Object3DProxyBindService _proxyBindService;
         private readonly GraphLoadCoordinator _loadCoordinator;
         private readonly ICameraStatePersistence _cameraPersistence;
+        private readonly INodeVisualRotationProvider _rotationProvider;
 
         private GraphSaveLoadManager? _subscribedSaveLoad;
         private Action? _onLoadingHandler;
@@ -62,7 +64,8 @@ namespace Rhizomode.Bootstrap.Wiring
             ModuleLifecycleProcessor moduleProcessor,
             Object3DProxyBindService proxyBindService,
             GraphLoadCoordinator loadCoordinator,
-            ICameraStatePersistence cameraPersistence)
+            ICameraStatePersistence cameraPersistence,
+            INodeVisualRotationProvider rotationProvider)
         {
             _refs = refs;
             _nodeRuntime = nodeRuntime;
@@ -74,6 +77,7 @@ namespace Rhizomode.Bootstrap.Wiring
             _proxyBindService = proxyBindService;
             _loadCoordinator = loadCoordinator;
             _cameraPersistence = cameraPersistence;
+            _rotationProvider = rotationProvider;
         }
 
         /// <summary>
@@ -96,6 +100,7 @@ namespace Rhizomode.Bootstrap.Wiring
             graphSaveLoad.Configure(
                 _graphRepository, _graphHydrator, executor, _nodeFactory, _savePathProvider);
             graphSaveLoad.SetCameraPersistence(_cameraPersistence);
+            graphSaveLoad.SetNodeVisualRotationProvider(_rotationProvider);
             Debug.Log("[GraphSaveLoadBootstrapWiring] SaveLoad configured (Repository + Hydrator + Executor).");
 
             _onLoadingHandler = OnGraphLoadingHandler;
@@ -123,7 +128,9 @@ namespace Rhizomode.Bootstrap.Wiring
             _proxyBindService.BindAllInGraph();
 
             // visual rebuild + プレイヤー方向への回転
-            _loadCoordinator.Rebuild(ctx, _activeInput);
+            // cue 表裏 fix: 保存済 rotation があれば優先復元、無い node のみ LookRotation fallback。
+            var savedRotations = _refs.GraphSaveLoad?.LastLoadedRotations;
+            _loadCoordinator.Rebuild(ctx, _activeInput, savedRotations);
         }
 
         public void Dispose()

@@ -63,7 +63,9 @@ namespace Rhizomode.Bootstrap
             // null の場合は登録をスキップせず、明示的に diagnostic を出してから skip する
             // (旧版は静かに skip して resolve 時に VContainer exception が露出していた)。
             if (sceneRefs.VisualManager != null)
-                builder.RegisterInstance(sceneRefs.VisualManager);
+                builder.RegisterInstance(sceneRefs.VisualManager)
+                    .AsSelf()
+                    .As<Rhizomode.UI.Contracts.INodeVisualRotationProvider>();
             else
                 Debug.LogWarning(
                     "[RootLifetimeScope] sceneRefs.VisualManager is null — visual-related wiring will fail to resolve.");
