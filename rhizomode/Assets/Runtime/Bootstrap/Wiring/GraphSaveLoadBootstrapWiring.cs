@@ -108,6 +108,15 @@ namespace Rhizomode.Bootstrap.Wiring
             graphSaveLoad.OnGraphLoading += _onLoadingHandler;
             graphSaveLoad.OnGraphLoaded += _onLoadedHandler;
             _subscribedSaveLoad = graphSaveLoad;
+
+            // Cue 起因のシーン切替後 — 旧シーンの GraphSaveLoadManager.LoadGraph が
+            // PendingCueLoad に cue 名を予約してから SceneManager.LoadSceneAsync を発行している。
+            // 新シーン bootstrap (本 Wire) が予約を消費して LoadGraph を再発火する。
+            if (PendingCueLoad.TryConsume(out var pendingCueName))
+            {
+                Debug.Log($"[GraphSaveLoadBootstrapWiring] Resuming deferred cue load after scene switch: '{pendingCueName}'");
+                graphSaveLoad.LoadGraph(pendingCueName);
+            }
         }
 
         private void OnGraphLoadingHandler()

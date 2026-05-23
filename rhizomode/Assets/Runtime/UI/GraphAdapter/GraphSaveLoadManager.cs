@@ -9,6 +9,7 @@ using Rhizomode.Persistence.Contracts;
 using Rhizomode.SharedKernel;
 using Rhizomode.UI.Contracts;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 using Rhizomode.NodeCatalog.Contracts;
 using Rhizomode.NodeCatalog.Runtime;
@@ -125,6 +126,7 @@ namespace Rhizomode.UI
             var data = _graphContext.Context.Serialize();
             EnrichNodeRotations(data);
             CaptureCameraState(data);
+            CaptureActiveSceneName(data);
 
             if (!_repository.SaveGraph(resolved, data)) return false;
             OnGraphSaved?.Invoke(resolved);
@@ -144,6 +146,10 @@ namespace Rhizomode.UI
             var resolved = EnsureExtension(fileName);
             var data = _repository.LoadGraph(resolved);
             if (data == null) return false;
+
+            // Scene 切替が必要なら graph mutation せず deferred load に切り替える。
+            // 新シーン bootstrap が PendingCueLoad を消費して再度 LoadGraph を呼ぶ。
+            if (TryScheduleSceneSwitch(resolved, data)) return true;
 
             CapturePendingRotations(data);
 
@@ -258,6 +264,63 @@ namespace Rhizomode.UI
             {
                 if (nd.HasRotation)
                     _lastLoadedRotations[nd.id] = nd.ToQuaternion();
+            }
+        }
+
+        /// <summary>
+        /// data.sceneName が active scene と異なる場合、cue 名を <see cref="PendingCueLoad"/> に
+        /// 予約してシーン切替を発行し、true を返す (caller は graph mutation を skip する)。
+        /// </summary>
+        /// <remarks>
+        /// 旧形式 cue (sceneName 空) は常に false を返し従来の同一シーンロードに流れる。
+        /// シーン切替自体は <see cref="SceneManager.LoadSceneAsync(string)"/> で非同期に行うため、
+        /// 本メソッドは即座に戻る。シーン切替完了後、新 bootstrap の wire が
+        /// <see cref="PendingCueLoad.TryConsume"/> を呼んで LoadGraph を再発火する。
+        /// 失敗 (例: scene が build settings に無い) しても video は止めない (fail-open)。
+        /// </remarks>
+        private static bool TryScheduleSceneSwitch(string resolvedFileName, GraphData data)
+        {
+            if (string.IsNullOrEmpty(data.sceneName)) return false;
+
+            string activeName;
+            try
+            {
+                activeName = SceneManager.GetActiveScene().name ?? "";
+            }
+            catch (Exception e)
+            {
+                Debug.LogWarning($"[GraphSaveLoadManager] Active scene query failed: {e.Message}");
+                return false;
+            }
+
+            if (string.Equals(data.sceneName, activeName, StringComparison.Ordinal)) return false;
+
+            try
+            {
+                PendingCueLoad.Schedule(resolvedFileName);
+                SceneManager.LoadSceneAsync(data.sceneName);
+                Debug.Log($"[GraphSaveLoadManager] Scene switch scheduled: '{activeName}' → '{data.sceneName}' (cue '{resolvedFileName}' will reload after).");
+                return true;
+            }
+            catch (Exception e)
+            {
+                Debug.LogError($"[GraphSaveLoadManager] Scene switch failed: '{data.sceneName}' — {e.Message}");
+                PendingCueLoad.Clear();
+                return false;
+            }
+        }
+
+        /// <summary>active scene 名を GraphData に書き込む (cue scene 切替用)。失敗時は空のまま。</summary>
+        private static void CaptureActiveSceneName(GraphData data)
+        {
+            try
+            {
+                data.sceneName = SceneManager.GetActiveScene().name ?? "";
+            }
+            catch (Exception e)
+            {
+                Debug.LogWarning($"[GraphSaveLoadManager] Active scene name capture failed: {e.Message}");
+                data.sceneName = "";
             }
         }
 
