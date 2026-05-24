@@ -35,7 +35,9 @@ namespace Rhizomode.Catalog.Tests
             "LFO", "Noise",
             // Nodes.Standard / Utility (9)
             "Threshold", "Toggle", "FloatMonitor", "BoolMonitor", "ColorMonitor",
-            "ColorToFloats", "FloatsToColor", "ColorToHSV", "HSVToColor"
+            "ColorToFloats", "FloatsToColor", "ColorToHSV", "HSVToColor",
+            // Nodes.Video (1)
+            "NdiReceiver"
         };
 
         [Test]

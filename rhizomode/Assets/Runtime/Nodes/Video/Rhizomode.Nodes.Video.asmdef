@@ -1,0 +1,20 @@
+{
+    "name": "Rhizomode.Nodes.Video",
+    "rootNamespace": "Rhizomode.Nodes.Video",
+    "references": [
+        "Rhizomode.SharedKernel",
+        "Rhizomode.Graph.Model",
+        "Rhizomode.Graph.Serialization",
+        "Rhizomode.NodeCatalog.Contracts",
+        "Rhizomode.UI.Contracts"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

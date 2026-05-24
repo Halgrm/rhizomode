@@ -86,6 +86,7 @@ namespace Rhizomode.UI
             BuildInlineWaveform(root, _node);
             BuildInlineSpectrum(root, _node);
             BuildInlineColorPicker(root, _node);
+            EnsureNdiReceiverPresenter(_node);
 
             // レイアウト完了を待ってからポート座標を有効にする
             _layoutReady = false;
@@ -93,6 +94,28 @@ namespace Rhizomode.UI
 
             _needsBind = false;
             return true;
+        }
+
+        private NdiReceiverPresenter? _ndiPresenter;
+
+        /// <summary>
+        /// node が <c>INdiReceiverNode</c> なら <see cref="NdiReceiverPresenter"/> を attach する。
+        /// 二重 attach 抑止: 既に同じ node に bind 済なら no-op。
+        /// </summary>
+        private void EnsureNdiReceiverPresenter(INodeView node)
+        {
+            var receiver = node.AsNdiReceiver();
+            if (receiver == null)
+            {
+                // 別 node に再 bind されたケースを考慮: 古い presenter は detach
+                if (_ndiPresenter != null) { Destroy(_ndiPresenter); _ndiPresenter = null; }
+                return;
+            }
+
+            if (_ndiPresenter != null) return; // 既に attach 済
+
+            _ndiPresenter = gameObject.AddComponent<NdiReceiverPresenter>();
+            _ndiPresenter.Attach(receiver);
         }
 
         private void OnLayoutReady(GeometryChangedEvent evt)

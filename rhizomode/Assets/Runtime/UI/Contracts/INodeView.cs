@@ -50,5 +50,8 @@ namespace Rhizomode.UI.Contracts
 
         /// <summary>IInlineColorPicker 実装なら取得、未実装なら null。</summary>
         IInlineColorPicker? AsColorPicker();
+
+        /// <summary>INdiReceiverNode 実装なら取得、未実装なら null。</summary>
+        INdiReceiverNode? AsNdiReceiver();
     }
 }
