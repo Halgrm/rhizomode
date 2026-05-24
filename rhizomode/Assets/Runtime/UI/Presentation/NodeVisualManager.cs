@@ -197,6 +197,29 @@ namespace Rhizomode.UI
         }
 
         /// <summary>
+        /// 子 GameObject の補助 collider (例: NDI 受信 node のプレビュー Quad) を親 NodeVisualController
+        /// へ resolve するために登録する。grab / edge interaction が「子コライダーを射してもノード本体と
+        /// して扱える」ようにする。
+        /// </summary>
+        /// <remarks>
+        /// Presenter (NdiReceiverPresenter 等) が <see cref="DestroyNodeVisual"/> や Detach の際に必ず
+        /// <see cref="UnregisterAuxiliaryCollider"/> を呼ぶこと。dict に残ると collider 破棄後も
+        /// resolve で stale 参照が返る恐れがある。
+        /// </remarks>
+        public void RegisterAuxiliaryCollider(Collider collider, NodeVisualController controller)
+        {
+            if (collider == null || controller == null) return;
+            _colliderToVisual[collider] = controller;
+        }
+
+        /// <summary>補助 collider 登録を解除する。<see cref="RegisterAuxiliaryCollider"/> と対。</summary>
+        public void UnregisterAuxiliaryCollider(Collider collider)
+        {
+            if (collider == null) return;
+            _colliderToVisual.Remove(collider);
+        }
+
+        /// <summary>
         /// 全ノードVisualを破棄する。
         /// </summary>
         public void Clear()

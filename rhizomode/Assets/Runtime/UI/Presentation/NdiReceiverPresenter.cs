@@ -37,6 +37,8 @@ namespace Rhizomode.UI
         private GameObject? _previewQuad;
         private MeshRenderer? _previewRenderer;
         private Material? _previewMaterial;
+        private BoxCollider? _previewCollider;
+        private NodeVisualManager? _registeredManager;
 
 #if KLAK_NDI
         private Klak.Ndi.NdiReceiver? _receiver;
@@ -64,7 +66,7 @@ namespace Rhizomode.UI
 #endif
         }
 
-        /// <summary>presenter を停止。receiver / preview Quad / Material を破棄する。</summary>
+        /// <summary>presenter を停止。receiver / preview Quad / Material / 補助 collider 登録を全破棄する。</summary>
         public void Detach()
         {
             if (_node != null)
@@ -74,6 +76,14 @@ namespace Rhizomode.UI
             }
 
             ReleaseClaim();
+
+            // 補助 collider 登録解除は visual 破棄より先に行う (dict に stale 参照を残さない)
+            if (_registeredManager != null && _previewCollider != null)
+            {
+                _registeredManager.UnregisterAuxiliaryCollider(_previewCollider);
+            }
+            _registeredManager = null;
+            _previewCollider = null;
 
 #if KLAK_NDI
             if (_receiver != null)
@@ -216,6 +226,36 @@ namespace Rhizomode.UI
             // 受信前のプレビューが真っ黒に見えないよう薄いグレーを下地に
             _previewMaterial.SetColor("_BaseColor", new Color(0.08f, 0.08f, 0.10f, 1f));
             _previewRenderer.sharedMaterial = _previewMaterial;
+
+            // grab 対応: preview quad を射しても親 NodeVisualController に解決されるよう補助 collider 登録。
+            // localScale は (PreviewWorldWidth, PreviewWorldHeight, 1) なので BoxCollider.size = (1,1,0.01) で
+            // ちょうどクワッドと同サイズの薄い板になる (WorldPanelHost と同 pattern)。
+            _previewCollider = _previewQuad.AddComponent<BoxCollider>();
+            _previewCollider.center = Vector3.zero;
+            _previewCollider.size = new Vector3(1f, 1f, 0.01f);
+
+            RegisterColliderWithVisualManager();
+        }
+
+        /// <summary>
+        /// 親 GameObject の <see cref="NodeVisualController"/> と <see cref="NodeVisualManager"/> を解決し、
+        /// preview collider を補助 collider として登録する。manager が見つからない場合は静かに skip
+        /// (test 環境 / 単体配置時の壊れ防止)。
+        /// </summary>
+        private void RegisterColliderWithVisualManager()
+        {
+            if (_previewCollider == null) return;
+
+            var controller = GetComponent<NodeVisualController>();
+            if (controller == null) return;
+
+            // NodeVisualController は NodeVisualManager の子として配置される (CreateNodeGameObject で SetParent)。
+            // GetComponentInParent で manager を辿る。
+            var manager = GetComponentInParent<NodeVisualManager>();
+            if (manager == null) return;
+
+            manager.RegisterAuxiliaryCollider(_previewCollider, controller);
+            _registeredManager = manager;
         }
 
         private static Mesh GetSharedPreviewQuad()
