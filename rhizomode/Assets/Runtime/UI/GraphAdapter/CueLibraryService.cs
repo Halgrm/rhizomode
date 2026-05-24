@@ -64,6 +64,46 @@ namespace Rhizomode.UI
             return result;
         }
 
+        /// <summary>指定 cue の保存時 sceneName を取得 (旧形式 / 失敗時は空文字)。</summary>
+        public string GetCueSceneName(string cueName) =>
+            string.IsNullOrWhiteSpace(cueName) ? "" : _saveLoad.PeekCueSceneName(cueName);
+
+        /// <summary>
+        /// 保存済み cue 群に出現する distinct な scene 名一覧を返す (alphabetical、旧形式は除外)。
+        /// </summary>
+        /// <remarks>
+        /// CueListPanel の scene タブ生成用。cue 数 × 1 file read のコスト
+        /// (LoadGraph by repository) がかかるが、cue 数 &lt; 100 想定では数 ms 以内。
+        /// </remarks>
+        public IReadOnlyList<string> ListScenesInCues()
+        {
+            var set = new HashSet<string>(StringComparer.Ordinal);
+            foreach (var cue in ListCues())
+            {
+                var scene = GetCueSceneName(cue);
+                if (!string.IsNullOrEmpty(scene)) set.Add(scene);
+            }
+            var list = new List<string>(set);
+            list.Sort(StringComparer.OrdinalIgnoreCase);
+            return list;
+        }
+
+        /// <summary>
+        /// 指定 scene 名でフィルタした cue 一覧。sceneName が空文字 / null なら全件 ("All") を返す。
+        /// </summary>
+        public IReadOnlyList<string> ListCuesByScene(string? sceneName)
+        {
+            if (string.IsNullOrEmpty(sceneName)) return ListCues();
+
+            var result = new List<string>();
+            foreach (var cue in ListCues())
+            {
+                if (string.Equals(GetCueSceneName(cue), sceneName, StringComparison.Ordinal))
+                    result.Add(cue);
+            }
+            return result;
+        }
+
         /// <summary>現在の graph を指定名で保存する。同名 cue は上書き。MirrorOutput RT をサムネとして同時保存。</summary>
         public bool SaveAs(string name)
         {

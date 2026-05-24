@@ -219,6 +219,30 @@ namespace Rhizomode.UI
 
         public string[] GetSaveFiles() => _repository?.GetSaveFiles() ?? Array.Empty<string>();
 
+        /// <summary>
+        /// 指定 cue (JSON) を I/O だけして <see cref="GraphData.sceneName"/> を返す軽量プローブ。
+        /// </summary>
+        /// <remarks>
+        /// CueListPanel の scene タブ集計用。GraphState への適用 (hydrate / executor) は行わないため
+        /// graph 状態を破壊しない。ファイルが存在しない / 旧形式で sceneName が空 / 例外 のいずれの場合も
+        /// 空文字を返す (fail-open)。
+        /// </remarks>
+        public string PeekCueSceneName(string fileName)
+        {
+            if (_repository == null || string.IsNullOrWhiteSpace(fileName)) return "";
+            try
+            {
+                var resolved = EnsureExtension(fileName);
+                var data = _repository.LoadGraph(resolved);
+                return data?.sceneName ?? "";
+            }
+            catch (Exception e)
+            {
+                Debug.LogWarning($"[GraphSaveLoadManager] PeekCueSceneName failed for '{fileName}': {e.Message}");
+                return "";
+            }
+        }
+
         public bool DeleteSave(string fileName)
         {
             if (_repository == null) return false;

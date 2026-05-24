@@ -2,6 +2,8 @@
     <ui:VisualElement name="root" class="cue-panel">
         <ui:Label text="Cues" class="cue-panel__title" />
 
+        <ui:ScrollView name="scene-tabs" class="cue-panel__scene-tabs" mode="Horizontal" />
+
         <ui:VisualElement class="cue-panel__history-row">
             <ui:Button name="undo-btn" text="Undo" class="cue-panel__history-btn" />
             <ui:Button name="redo-btn" text="Redo" class="cue-panel__history-btn" />

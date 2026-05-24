@@ -40,6 +40,7 @@ namespace Rhizomode.UI
         private bool _isLoading;
 
         private ScrollView? _listRoot;
+        private ScrollView? _sceneTabsRoot;
         private TextField? _saveNameField;
         private Button? _saveButton;
         private Button? _undoButton;
@@ -48,6 +49,15 @@ namespace Rhizomode.UI
 
         private bool _initialized;
         private float _statusClearAt;
+
+        /// <summary>
+        /// 現在選択中の scene フィルタ。null/empty なら "All" (全件表示)。
+        /// </summary>
+        /// <remarks>
+        /// "シーンと演出を選んで cue る" mode (user 要望): scene タブで cue を絞り込む。
+        /// Quick slot (1-9) も本フィルタ後の一覧を対象とする (表示と一致させる)。
+        /// </remarks>
+        private string? _selectedScene;
 
         /// <summary>
         /// 依存サービスを注入してパネルを初期化する。Wiring から呼ばれる。
@@ -79,6 +89,7 @@ namespace Rhizomode.UI
             if (root == null) return;
 
             _listRoot = root.Q<ScrollView>("cue-list-root");
+            _sceneTabsRoot = root.Q<ScrollView>("scene-tabs");
             _saveNameField = root.Q<TextField>("save-name-field");
             _saveButton = root.Q<Button>("save-btn");
             _undoButton = root.Q<Button>("undo-btn");
@@ -157,9 +168,48 @@ namespace Rhizomode.UI
             _listRoot.Clear();
             DisposeThumbnails();
 
-            var cues = _service.ListCues();
+            // フィルタ前に scene タブを再構築 — 新規 cue 保存 / 削除で scene 集合が変動する。
+            RebuildSceneTabs();
+
+            var cues = _service.ListCuesByScene(_selectedScene);
             foreach (var name in cues)
                 _listRoot.Add(BuildCueRow(name));
+        }
+
+        /// <summary>
+        /// scene-tabs ScrollView を作り直す。"All" + 出現する scene 名一覧 (alphabetical) でボタンを並べる。
+        /// </summary>
+        /// <remarks>
+        /// 旧形式 cue (sceneName 空) は scene タブに現れず "All" でしか表示されない。Save 時に
+        /// active scene が自動で記録されるため、新規保存後は自動で該当 scene タブに分類される。
+        /// </remarks>
+        private void RebuildSceneTabs()
+        {
+            if (_sceneTabsRoot == null || _service == null) return;
+            _sceneTabsRoot.Clear();
+
+            _sceneTabsRoot.Add(BuildSceneTab(label: "All", sceneName: null));
+
+            foreach (var scene in _service.ListScenesInCues())
+                _sceneTabsRoot.Add(BuildSceneTab(label: scene, sceneName: scene));
+        }
+
+        private Button BuildSceneTab(string label, string? sceneName)
+        {
+            var btn = new Button(() => HandleSceneTabClicked(sceneName)) { text = label };
+            btn.AddToClassList("cue-panel__scene-tab");
+            // 選択中タブをハイライト (null↔null も等価扱い)。
+            if (string.Equals(_selectedScene ?? "", sceneName ?? "", StringComparison.Ordinal))
+                btn.AddToClassList("cue-panel__scene-tab--selected");
+            return btn;
+        }
+
+        private void HandleSceneTabClicked(string? sceneName)
+        {
+            // 同じタブ再クリックは no-op (rebuild 抑止)
+            if (string.Equals(_selectedScene ?? "", sceneName ?? "", StringComparison.Ordinal)) return;
+            _selectedScene = sceneName;
+            RefreshList();
         }
 
         private bool IsTextInputFocused()
@@ -389,7 +439,9 @@ namespace Rhizomode.UI
         {
             if (_service == null) return;
 
-            var cues = _service.ListCues();
+            // 表示中の scene フィルタを尊重 — quick slot は「画面に見えている 1-9 番目」と一致させる。
+            // "All" タブ (_selectedScene=null) のときは全件、scene タブ選択中はその scene の cue 群が対象。
+            var cues = _service.ListCuesByScene(_selectedScene);
             if (slot >= cues.Count)
             {
                 ShowStatus($"slot {slot + 1}: empty", isError: true);
