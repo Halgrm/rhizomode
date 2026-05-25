@@ -1,6 +1,7 @@
 #nullable enable
 
 using R3;
+using Rhizomode.Audio.Contracts;
 using Rhizomode.SharedKernel;
 using Rhizomode.Graph.Model;
 using UnityEngine;
@@ -9,27 +10,22 @@ using Rhizomode.NodeCatalog.Contracts;
 namespace Rhizomode.Nodes.Audio
 {
     /// <summary>
-    /// トリガー入力からBPMを推定し、Phase(0〜1)とBeatパルスを出力する。
-    /// 直近のトリガー間隔からBPMを計算するシンプルな実装。
+    /// トリガー入力 (オーディオ立上り 等) から BPM を推定し、Phase(0〜1) と Beat パルスを出力する。
     /// </summary>
+    /// <remarks>
+    /// 時刻は <see cref="AudioClock.Now"/> を使う (LatencyOffsetSeconds による audio I/F 遅延補正が
+    /// 適用される)。BPM 計算と phase は <see cref="TempoTracker"/> に集約。
+    /// </remarks>
     [NodeType("BeatDetector", "Beat Detector", NodeCategory.Input)]
     public class BeatDetectorNode : NodeBase
     {
-        private const float DefaultBPM = 120f;
-        private const int MaxTapHistory = 8;
-        private const float TapTimeout = 3f;
-
         private readonly OutputPort<float> _bpmOut;
         private readonly OutputPort<float> _phaseOut;
         private readonly OutputPort<bool> _beatOut;
 
-        private readonly float[] _tapTimes = new float[MaxTapHistory];
-        private int _tapCount;
-        private float _lastTapTime;
-        private float _bpm = DefaultBPM;
-        private float _beatInterval;
-        private float _phaseOrigin;
+        private TempoTracker _tracker;
         private bool _beatEmitted;
+        private float _lastTickTime;
 
         public BeatDetectorNode(string id) : base(id, "BeatDetector")
         {
@@ -37,18 +33,18 @@ namespace Rhizomode.Nodes.Audio
             _bpmOut = RegisterOutput<float>("BPM", ParamType.Float);
             _phaseOut = RegisterOutput<float>("Phase", ParamType.Float);
             _beatOut = RegisterOutput<bool>("Beat", ParamType.Bool);
-            _beatInterval = 60f / DefaultBPM;
         }
 
         public override void Setup(GraphState context)
         {
-            // トリガー入力の立ち上がりでBPM更新
+            // トリガー入力の立ち上がりで BPM 更新
             AddSubscription(
                 context.GetInputObservable<bool>(this, "Trigger")
                     .Where(v => v)
                     .Subscribe(_ => OnTrigger()));
 
-            // 毎フレームPhaseとBeatを発行
+            // 毎フレーム Phase と Beat を発行
+            _lastTickTime = AudioClock.Now;
             AddSubscription(
                 Observable.EveryUpdate()
                     .Subscribe(_ => UpdatePhase()));
@@ -56,64 +52,29 @@ namespace Rhizomode.Nodes.Audio
 
         private void OnTrigger()
         {
-            var now = UnityEngine.Time.time;
-
-            // タイムアウト判定: 前回から長すぎたらリセット
-            if (now - _lastTapTime > TapTimeout)
-            {
-                _tapCount = 0;
-            }
-
-            // 履歴に追加（リングバッファ）
-            if (_tapCount < MaxTapHistory)
-            {
-                _tapTimes[_tapCount] = now;
-                _tapCount++;
-            }
-            else
-            {
-                // シフト
-                for (var i = 1; i < MaxTapHistory; i++)
-                    _tapTimes[i - 1] = _tapTimes[i];
-                _tapTimes[MaxTapHistory - 1] = now;
-            }
-
-            _lastTapTime = now;
-
-            // 2つ以上のタップがあればBPM計算
-            if (_tapCount >= 2)
-            {
-                var totalInterval = _tapTimes[_tapCount - 1] - _tapTimes[0];
-                var avgInterval = totalInterval / (_tapCount - 1);
-                if (avgInterval > 0.001f)
-                {
-                    _bpm = 60f / avgInterval;
-                    _beatInterval = avgInterval;
-                    _phaseOrigin = now;
-                    _bpmOut.Emit(_bpm);
-                }
-            }
+            var now = AudioClock.Now;
+            if (_tracker.OnTap(now))
+                _bpmOut.Emit(_tracker.Bpm);
         }
 
         private void UpdatePhase()
         {
+            // 前フレームで発射した Beat=true を 1 frame 後に false に戻す (pulse 化)
             if (_beatEmitted)
             {
                 _beatOut.Emit(false);
                 _beatEmitted = false;
             }
 
-            if (_beatInterval <= 0.001f) return;
+            var now = AudioClock.Now;
+            var dt = now - _lastTickTime;
+            _lastTickTime = now;
+            if (dt < 0f) dt = 0f;
 
-            var elapsed = UnityEngine.Time.time - _phaseOrigin;
-            var phase = (elapsed % _beatInterval) / _beatInterval;
+            var (phase, isBeat) = _tracker.Tick(now, dt);
+            if (_tracker.BeatInterval <= TempoTracker.MinBeatIntervalSec) return;
+
             _phaseOut.Emit(phase);
-
-            // ビート検出: phaseが0に近い瞬間
-            var prevElapsed = elapsed - UnityEngine.Time.deltaTime;
-            if (prevElapsed < 0) prevElapsed = 0;
-            var prevPhase = (prevElapsed % _beatInterval) / _beatInterval;
-            var isBeat = phase < prevPhase;
             if (isBeat)
             {
                 _beatOut.Emit(true);

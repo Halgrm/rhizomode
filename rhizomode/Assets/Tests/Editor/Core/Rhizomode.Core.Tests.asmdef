@@ -8,6 +8,7 @@
         "Rhizomode.Graph.Serialization",
         "Rhizomode.Nodes.Standard",
         "Rhizomode.Nodes.Audio",
+        "Rhizomode.Audio.Contracts",
         "Rhizomode.Nodes.OscMidi",
         "Rhizomode.Nodes.Ableton",
         "Rhizomode.Nodes.Scene",

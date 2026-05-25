@@ -5,6 +5,7 @@ using Lasp;
 using Rhizomode.Audio.Analysis.Capture;
 using Rhizomode.Audio.Analysis.Infrastructure;
 using Rhizomode.Audio.Analysis.Spectrum;
+using Rhizomode.Audio.Contracts;
 using UnityEngine;
 
 namespace Rhizomode.Audio.Analysis
@@ -25,6 +26,13 @@ namespace Rhizomode.Audio.Analysis
         [Header("FFT設定")]
         [SerializeField, Tooltip("FFTサンプル数（2の累乗: 256, 512, 1024, 2048）")]
         private int fftSize = 1024;
+
+        [Header("レイテンシ補正")]
+        [SerializeField, Range(0f, 500f), Tooltip(
+            "audio I/F のキャプチャ遅延 (ms)。BeatDetectorNode の時刻参照から差し引かれる。" +
+            "実機リハで「映像が音から遅れる」場合に増やしてキャリブする。PlayerPrefs で永続化。")]
+        private float audioLatencyOffsetMs;
+        private const string LatencyOffsetPrefsKey = "Rhizomode_AudioLatencyOffsetMs";
 
         // --- デバイス管理 (Capture namespace に委譲) ---
         private readonly AudioDeviceMap _deviceMap = new();
@@ -135,11 +143,37 @@ namespace Rhizomode.Audio.Analysis
             }
         }
 
+        /// <summary>
+        /// 現在の audio I/F レイテンシ補正値 (秒)。<see cref="AudioClock.LatencyOffsetSeconds"/> と同期する。
+        /// </summary>
+        public float LatencyOffsetSeconds => audioLatencyOffsetMs * 0.001f;
+
+        /// <summary>
+        /// レイテンシ補正 (ms) を設定。<see cref="AudioClock"/> と PlayerPrefs に伝搬する。
+        /// </summary>
+        public void SetLatencyOffsetMs(float ms)
+        {
+            if (!float.IsFinite(ms)) ms = 0f;
+            audioLatencyOffsetMs = Mathf.Clamp(ms, 0f, 500f);
+            ApplyLatencyOffsetToClock();
+            PlayerPrefs.SetFloat(LatencyOffsetPrefsKey, audioLatencyOffsetMs);
+        }
+
         // --- Unity ライフサイクル ---
 
         private void Awake()
         {
             _gpuBuffer = new AudioGpuBuffer(fftSize, WaveformBufferSize);
+
+            // PlayerPrefs から前回のキャリブ値を復元 (実機リハでの調整値を保存)
+            if (PlayerPrefs.HasKey(LatencyOffsetPrefsKey))
+                audioLatencyOffsetMs = PlayerPrefs.GetFloat(LatencyOffsetPrefsKey, audioLatencyOffsetMs);
+            ApplyLatencyOffsetToClock();
+        }
+
+        private void ApplyLatencyOffsetToClock()
+        {
+            AudioClock.LatencyOffsetSeconds = audioLatencyOffsetMs * 0.001f;
         }
 
         private void Update()
