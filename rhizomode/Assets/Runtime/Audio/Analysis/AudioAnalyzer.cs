@@ -39,9 +39,8 @@ namespace Rhizomode.Audio.Analysis
 
         // --- デバイス管理 (Capture namespace に委譲) ---
         private readonly AudioDeviceMap _deviceMap = new();
+        private readonly AudioAnalyzerInitializationCoordinator _initialization = new();
         private string? _currentDevice;
-        private string? _pendingDevice;
-        private bool _isShuttingDown;
 
         // --- LASP コンポーネント ---
         private GameObject? _laspGo;
@@ -60,6 +59,7 @@ namespace Rhizomode.Audio.Analysis
         // --- 公開 API ---
         public bool IsInitialized => _spectrum != null;
         public string? CurrentDevice => _currentDevice;
+        internal bool IsInitializationTransitionActive => _initialization.IsTransitionActive;
         public float Level => _levelTracker != null ? _levelTracker.normalizedLevel : 0f;
         public float LevelLow => _lowTracker != null ? _lowTracker.normalizedLevel : 0f;
         public float LevelMid => _midTracker != null ? _midTracker.normalizedLevel : 0f;
@@ -82,39 +82,30 @@ namespace Rhizomode.Audio.Analysis
         /// <list type="bullet">
         ///   <item>空 / null name は no-op</item>
         ///   <item>既に同一 device で稼働中なら no-op (連打耐性)</item>
-        ///   <item>shutdown 中 (pending flush 待ち) なら <see cref="_pendingDevice"/> を後勝ちで上書きするだけ
+        ///   <item>shutdown 中 (pending flush 待ち) なら pending device を後勝ちで上書きするだけ
         ///     (同フレ内の Initialize 連打で LASP destroy/create が parallel に走らないようにする)</item>
         ///   <item>別 device で稼働中なら <see cref="ShutdownInternal"/> + pending 設定 → 次 Update で
         ///     新 device 初期化</item>
         ///   <item>未初期化なら即 <see cref="InitializeInternal"/></item>
         /// </list>
-        /// LASP が destroy 直後に create で壊れる経験則があるため、必ず 1 フレ空けて新装着する。
+        /// LASP が destroy 直後に create で壊れる経験則があるため、native stream の sleep window を待って新装着する。
         /// </remarks>
         public void Initialize(string deviceName)
         {
-            if (string.IsNullOrEmpty(deviceName)) return;
-
-            // 同一 device 連打 → 状況に応じて no-op
-            if (_isShuttingDown && _pendingDevice == deviceName) return;
-            if (_spectrum != null && _currentDevice == deviceName && !_isShuttingDown) return;
-
-            // shutdown 中: 次フレで起動する device を後勝ちで上書き (parallel init を防ぐ)
-            if (_isShuttingDown)
+            var action = _initialization.RequestInitialize(
+                deviceName,
+                _spectrum != null,
+                _currentDevice,
+                Time.frameCount);
+            if (action == AudioAnalyzerInitializeAction.InitializeNow)
             {
-                _pendingDevice = deviceName;
+                InitializeInternal(deviceName);
                 return;
             }
-
-            // 別 device で稼働中: 内部 shutdown + pending 設定 (public Shutdown は pending もクリアするので使わない)
-            if (_spectrum != null)
+            if (action == AudioAnalyzerInitializeAction.ShutdownBeforePending)
             {
                 ShutdownInternal();
-                _pendingDevice = deviceName;
-                _isShuttingDown = true;
-                return;
             }
-
-            InitializeInternal(deviceName);
         }
 
         /// <summary>
@@ -122,8 +113,7 @@ namespace Rhizomode.Audio.Analysis
         /// </summary>
         public void Shutdown()
         {
-            _pendingDevice = null;
-            _isShuttingDown = false;
+            _initialization.Clear();
             ShutdownInternal();
         }
 
@@ -228,22 +218,8 @@ namespace Rhizomode.Audio.Analysis
 
         private void Update()
         {
-            // pending flush: 前フレで Initialize が shutdown を要求した分の起動を行う。
-            // LASP の destroy 直後 create で壊れるのを避けるため、必ず 1 フレ空ける。
-            if (_isShuttingDown)
-            {
-                if (_pendingDevice != null)
-                {
-                    var device = _pendingDevice;
-                    _pendingDevice = null;
-                    _isShuttingDown = false;
-                    InitializeInternal(device);
-                    return;
-                }
-                // pending が無いのに shutdown 状態が残っているのは inconsistent — log + 自己 reset
-                Debug.LogWarning("[AudioAnalyzer] _isShuttingDown=true but _pendingDevice=null — clearing.");
-                _isShuttingDown = false;
-            }
+            if (HandlePendingInitialization())
+                return;
 
             // fail-open: LASP / GraphicsBuffer の transient 例外 (device dropout, buffer not ready 等) は
             // 1 frame skip して継続する。映像は決して止めない (memory: feedback_health_monitor)。
@@ -264,6 +240,38 @@ namespace Rhizomode.Audio.Analysis
 
         private const float UpdateWarningIntervalSec = 1.0f;
         private float _nextUpdateWarningTime;
+
+        private bool HandlePendingInitialization()
+        {
+            var (action, deviceName) = _initialization.RequestUpdate(
+                _spectrum != null,
+                Time.frameCount);
+            if (action == AudioAnalyzerUpdateAction.None)
+                return false;
+            if (action == AudioAnalyzerUpdateAction.WaitForNextFrame)
+                return true;
+            return HandlePendingInitializationAction(action, deviceName);
+        }
+
+        private bool HandlePendingInitializationAction(
+            AudioAnalyzerUpdateAction action,
+            string? deviceName)
+        {
+            if (action == AudioAnalyzerUpdateAction.InitializePending && deviceName != null)
+            {
+                InitializeInternal(deviceName);
+                return true;
+            }
+            if (action == AudioAnalyzerUpdateAction.ShutdownBeforePending)
+            {
+                Debug.LogWarning("[AudioAnalyzer] pending switch still had live capture; shutting down first.");
+                ShutdownInternal();
+                _initialization.BeginShutdown(Time.frameCount);
+                return true;
+            }
+            Debug.LogWarning("[AudioAnalyzer] shutdown state had no pending device; clearing.");
+            return false;
+        }
 
         private void OnDestroy()
         {

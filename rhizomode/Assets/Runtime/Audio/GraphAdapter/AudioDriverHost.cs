@@ -61,6 +61,9 @@ namespace Rhizomode.Audio.GraphAdapter
             // Analyzer が未初期化かつ音声ノードが存在する場合、最初のデバイスで自動初期化
             if (!_analyzer.IsInitialized)
             {
+                // Device-node switches leave IsInitialized false during the LASP cooldown.
+                if (_analyzer.IsInitializationTransitionActive)
+                    return;
                 AutoInitializeIfRequested();
                 return;
             }
