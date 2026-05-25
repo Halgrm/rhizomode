@@ -20,7 +20,8 @@ namespace Rhizomode.Core.Tests
         public void SetLevel_EmitsLevelToOutput()
         {
             var node = new AudioTriggerNode("n1");
-            var levels = SubscribeLevel(node);
+            using var disposables = new CompositeDisposable();
+            var levels = SubscribeLevel(node, disposables);
 
             node.SetLevel(0.3f);
             node.SetLevel(0.7f);
@@ -32,7 +33,8 @@ namespace Rhizomode.Core.Tests
         public void SetLevel_NaN_EmitsZero()
         {
             var node = new AudioTriggerNode("n1");
-            var levels = SubscribeLevel(node);
+            using var disposables = new CompositeDisposable();
+            var levels = SubscribeLevel(node, disposables);
 
             node.SetLevel(float.NaN);
 
@@ -44,7 +46,8 @@ namespace Rhizomode.Core.Tests
         public void SetLevel_PositiveInfinity_EmitsZero()
         {
             var node = new AudioTriggerNode("n1");
-            var levels = SubscribeLevel(node);
+            using var disposables = new CompositeDisposable();
+            var levels = SubscribeLevel(node, disposables);
 
             node.SetLevel(float.PositiveInfinity);
 
@@ -55,7 +58,8 @@ namespace Rhizomode.Core.Tests
         public void SetLevel_NegativeInfinity_EmitsZero()
         {
             var node = new AudioTriggerNode("n1");
-            var levels = SubscribeLevel(node);
+            using var disposables = new CompositeDisposable();
+            var levels = SubscribeLevel(node, disposables);
 
             node.SetLevel(float.NegativeInfinity);
 
@@ -66,7 +70,8 @@ namespace Rhizomode.Core.Tests
         public void Trigger_RisingEdge_EmitsTrue()
         {
             var node = new AudioTriggerNode("n1");
-            var triggers = SubscribeTrigger(node);
+            using var disposables = new CompositeDisposable();
+            var triggers = SubscribeTrigger(node, disposables);
 
             // default threshold = 0.5
             node.SetLevel(0.3f); // below → no edge
@@ -79,7 +84,8 @@ namespace Rhizomode.Core.Tests
         public void Trigger_FallingEdge_EmitsFalse()
         {
             var node = new AudioTriggerNode("n1");
-            var triggers = SubscribeTrigger(node);
+            using var disposables = new CompositeDisposable();
+            var triggers = SubscribeTrigger(node, disposables);
 
             node.SetLevel(0.7f); // rising
             node.SetLevel(0.2f); // falling
@@ -91,7 +97,8 @@ namespace Rhizomode.Core.Tests
         public void Trigger_StayingAbove_NoExtraEmit()
         {
             var node = new AudioTriggerNode("n1");
-            var triggers = SubscribeTrigger(node);
+            using var disposables = new CompositeDisposable();
+            var triggers = SubscribeTrigger(node, disposables);
 
             node.SetLevel(0.7f);
             node.SetLevel(0.8f);
@@ -104,13 +111,28 @@ namespace Rhizomode.Core.Tests
         public void Trigger_StayingBelow_NoEmit()
         {
             var node = new AudioTriggerNode("n1");
-            var triggers = SubscribeTrigger(node);
+            using var disposables = new CompositeDisposable();
+            var triggers = SubscribeTrigger(node, disposables);
 
             node.SetLevel(0.1f);
             node.SetLevel(0.2f);
             node.SetLevel(0.3f);
 
             CollectionAssert.IsEmpty(triggers);
+        }
+
+        [Test]
+        public void Trigger_RearmsAfterFalling_EmitsSecondRisingEdge()
+        {
+            var node = new AudioTriggerNode("n1");
+            using var disposables = new CompositeDisposable();
+            var triggers = SubscribeTrigger(node, disposables);
+
+            node.SetLevel(0.7f);
+            node.SetLevel(0.2f);
+            node.SetLevel(0.8f);
+
+            CollectionAssert.AreEqual(new[] { true, false, true }, triggers);
         }
 
         [Test]
@@ -122,7 +144,8 @@ namespace Rhizomode.Core.Tests
             var ok = accessor.TrySetParam("Threshold", ParamValue.Float(0.2f));
             Assert.IsTrue(ok);
 
-            var triggers = SubscribeTrigger(node);
+            using var disposables = new CompositeDisposable();
+            var triggers = SubscribeTrigger(node, disposables);
             node.SetLevel(0.1f); // below new 0.2 threshold
             node.SetLevel(0.25f); // above → rising
 
@@ -159,19 +182,19 @@ namespace Rhizomode.Core.Tests
             Assert.AreEqual(0.5f, th.AsFloat, Default);
         }
 
-        private static List<float> SubscribeLevel(AudioTriggerNode node)
+        private static List<float> SubscribeLevel(AudioTriggerNode node, CompositeDisposable disposables)
         {
             var levels = new List<float>();
             var port = (OutputPort<float>)node.GetOutputPort("Level")!;
-            port.Observable.Subscribe(v => levels.Add(v));
+            disposables.Add(port.Observable.Subscribe(v => levels.Add(v)));
             return levels;
         }
 
-        private static List<bool> SubscribeTrigger(AudioTriggerNode node)
+        private static List<bool> SubscribeTrigger(AudioTriggerNode node, CompositeDisposable disposables)
         {
             var triggers = new List<bool>();
             var port = (OutputPort<bool>)node.GetOutputPort("Trigger")!;
-            port.Observable.Subscribe(v => triggers.Add(v));
+            disposables.Add(port.Observable.Subscribe(v => triggers.Add(v)));
             return triggers;
         }
     }

@@ -23,7 +23,8 @@ namespace Rhizomode.Core.Tests
         public void AudioBand_SetBandLevels_EmitsFourOutputs()
         {
             var node = new AudioBandNode("n1");
-            var (level, lo, mid, hi) = SubscribeBand(node);
+            using var disposables = new CompositeDisposable();
+            var (level, lo, mid, hi) = SubscribeBand(node, disposables);
 
             node.SetBandLevels(0.4f, 0.1f, 0.2f, 0.3f);
 
@@ -37,7 +38,8 @@ namespace Rhizomode.Core.Tests
         public void AudioBand_NaN_SanitizedToZero()
         {
             var node = new AudioBandNode("n1");
-            var (level, lo, mid, hi) = SubscribeBand(node);
+            using var disposables = new CompositeDisposable();
+            var (level, lo, mid, hi) = SubscribeBand(node, disposables);
 
             node.SetBandLevels(float.NaN, float.PositiveInfinity, float.NegativeInfinity, float.NaN);
 
@@ -55,12 +57,14 @@ namespace Rhizomode.Core.Tests
             var node = new AudioMonitorNode("n1");
             var port = (OutputPort<float>)node.GetOutputPort("Level")!;
             var levels = new List<float>();
-            port.Observable.Subscribe(v => levels.Add(v));
+            using var subscription = port.Observable.Subscribe(v => levels.Add(v));
 
             node.SetLevel(float.NaN);
+            node.SetLevel(float.PositiveInfinity);
+            node.SetLevel(float.NegativeInfinity);
             node.SetLevel(0.6f);
 
-            CollectionAssert.AreEqual(new[] { 0f, 0.6f }, levels);
+            CollectionAssert.AreEqual(new[] { 0f, 0f, 0f, 0.6f }, levels);
         }
 
         [Test]
@@ -91,6 +95,17 @@ namespace Rhizomode.Core.Tests
         }
 
         [Test]
+        public void AudioMonitor_SetWaveform_EmptyInput_SetsWriteIndexZero()
+        {
+            var node = new AudioMonitorNode("n1");
+
+            Assert.DoesNotThrow(() => node.SetWaveform(System.Array.Empty<float>()));
+
+            var waveform = (IInlineWaveform)node;
+            Assert.AreEqual(0, waveform.WaveformWriteIndex);
+        }
+
+        [Test]
         public void AudioMonitor_SetWaveform_LongerThanBuffer_TruncatedAt64()
         {
             var node = new AudioMonitorNode("n1");
@@ -103,6 +118,7 @@ namespace Rhizomode.Core.Tests
             var buf = waveform.WaveformBuffer!;
             Assert.AreEqual(0f, buf[0], Tol);
             Assert.AreEqual(63 * 0.01f, buf[63], Tol);
+            Assert.AreEqual(0, waveform.WaveformWriteIndex);
         }
 
         [Test]
@@ -151,33 +167,50 @@ namespace Rhizomode.Core.Tests
         }
 
         [Test]
+        public void SpectrumMonitor_SetSpectrum_EmptyInput_PadsAllWithZero()
+        {
+            var node = new SpectrumMonitorNode("n1");
+            var full = new float[64];
+            for (var i = 0; i < 64; i++) full[i] = 1f;
+            node.SetSpectrum(full);
+
+            Assert.DoesNotThrow(() => node.SetSpectrum(System.Array.Empty<float>()));
+
+            var spec = (IInlineSpectrum)node;
+            var buf = spec.SpectrumBuffer!;
+            Assert.AreEqual(0f, buf[0], Tol);
+            Assert.AreEqual(0f, buf[63], Tol);
+        }
+
+        [Test]
         public void SpectrumMonitor_SetLevel_NaNSanitized()
         {
             var node = new SpectrumMonitorNode("n1");
             var port = (OutputPort<float>)node.GetOutputPort("Level")!;
             var levels = new List<float>();
-            port.Observable.Subscribe(v => levels.Add(v));
+            using var subscription = port.Observable.Subscribe(v => levels.Add(v));
 
             node.SetLevel(float.NaN);
             node.SetLevel(float.PositiveInfinity);
+            node.SetLevel(float.NegativeInfinity);
             node.SetLevel(0.4f);
 
-            CollectionAssert.AreEqual(new[] { 0f, 0f, 0.4f }, levels);
+            CollectionAssert.AreEqual(new[] { 0f, 0f, 0f, 0.4f }, levels);
         }
 
         // ---------- helpers ----------
 
         private static (List<float> level, List<float> lo, List<float> mid, List<float> hi)
-            SubscribeBand(AudioBandNode node)
+            SubscribeBand(AudioBandNode node, CompositeDisposable disposables)
         {
             var l = new List<float>();
             var lo = new List<float>();
             var mid = new List<float>();
             var hi = new List<float>();
-            ((OutputPort<float>)node.GetOutputPort("Level")!).Observable.Subscribe(v => l.Add(v));
-            ((OutputPort<float>)node.GetOutputPort("Low")!).Observable.Subscribe(v => lo.Add(v));
-            ((OutputPort<float>)node.GetOutputPort("Mid")!).Observable.Subscribe(v => mid.Add(v));
-            ((OutputPort<float>)node.GetOutputPort("High")!).Observable.Subscribe(v => hi.Add(v));
+            disposables.Add(((OutputPort<float>)node.GetOutputPort("Level")!).Observable.Subscribe(v => l.Add(v)));
+            disposables.Add(((OutputPort<float>)node.GetOutputPort("Low")!).Observable.Subscribe(v => lo.Add(v)));
+            disposables.Add(((OutputPort<float>)node.GetOutputPort("Mid")!).Observable.Subscribe(v => mid.Add(v)));
+            disposables.Add(((OutputPort<float>)node.GetOutputPort("High")!).Observable.Subscribe(v => hi.Add(v)));
             return (l, lo, mid, hi);
         }
     }
