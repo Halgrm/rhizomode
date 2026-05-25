@@ -16,6 +16,7 @@ namespace Rhizomode.Graph.Model
     {
         private readonly Dictionary<string, IInputPort> _inputPorts = new();
         private readonly Dictionary<string, IOutputPort> _outputPorts = new();
+        private readonly Dictionary<string, PortUnit> _portUnits = new();
         private readonly List<IDisposable> _subscriptions = new();
         private List<PortDefinition>? _cachedPortDefinitions;
 
@@ -35,7 +36,8 @@ namespace Rhizomode.Graph.Model
         /// <summary>
         /// 入力ポートを登録する。コンストラクタ内で呼ぶこと。
         /// </summary>
-        protected InputPort<T> RegisterInput<T>(string name, ParamType type)
+        /// <param name="unit">UI ラベルに表示する物理単位 (Hz/Bpm/Sec 等)。接続バリデーションには影響しない。</param>
+        protected InputPort<T> RegisterInput<T>(string name, ParamType type, PortUnit unit = PortUnit.None)
         {
             // ポート名重複時は既存を返す（上書きによるリーク防止）
             if (_inputPorts.TryGetValue(name, out var existing))
@@ -45,13 +47,15 @@ namespace Rhizomode.Graph.Model
             }
             var port = new InputPort<T>(type);
             _inputPorts[name] = port;
+            if (unit != PortUnit.None) _portUnits[name] = unit;
             return port;
         }
 
         /// <summary>
         /// 出力ポートを登録する。コンストラクタ内で呼ぶこと。
         /// </summary>
-        protected OutputPort<T> RegisterOutput<T>(string name, ParamType type)
+        /// <param name="unit">UI ラベルに表示する物理単位 (Hz/Bpm/Sec 等)。接続バリデーションには影響しない。</param>
+        protected OutputPort<T> RegisterOutput<T>(string name, ParamType type, PortUnit unit = PortUnit.None)
         {
             // ポート名重複時は既存を返す（上書きによるリーク防止）
             if (_outputPorts.TryGetValue(name, out var existing))
@@ -61,6 +65,7 @@ namespace Rhizomode.Graph.Model
             }
             var port = new OutputPort<T>(type);
             _outputPorts[name] = port;
+            if (unit != PortUnit.None) _portUnits[name] = unit;
             return port;
         }
 
@@ -92,10 +97,15 @@ namespace Rhizomode.Graph.Model
 
             _cachedPortDefinitions = new List<PortDefinition>();
             foreach (var kvp in _inputPorts)
-                _cachedPortDefinitions.Add(new PortDefinition(kvp.Key, kvp.Value.Type, PortDirection.Input));
+                _cachedPortDefinitions.Add(new PortDefinition(kvp.Key, kvp.Value.Type, PortDirection.Input, GetPortUnit(kvp.Key)));
             foreach (var kvp in _outputPorts)
-                _cachedPortDefinitions.Add(new PortDefinition(kvp.Key, kvp.Value.Type, PortDirection.Output));
+                _cachedPortDefinitions.Add(new PortDefinition(kvp.Key, kvp.Value.Type, PortDirection.Output, GetPortUnit(kvp.Key)));
             return _cachedPortDefinitions;
+        }
+
+        private PortUnit GetPortUnit(string portName)
+        {
+            return _portUnits.TryGetValue(portName, out var u) ? u : PortUnit.None;
         }
 
         /// <summary>
@@ -111,6 +121,16 @@ namespace Rhizomode.Graph.Model
         /// ModuleNodeBase が ModuleDefinition.IsEvent を override する。それ以外のノードは常に false。
         /// </remarks>
         public virtual bool IsInputPortEvent(string portName) => false;
+
+        /// <summary>
+        /// 指定入力ポートに対し、メニュー生成時に Const/Toggle ソースノードを自動 spawn してよいか。
+        /// </summary>
+        /// <remarks>
+        /// false を返すポートは未接続のまま残す。ノード/モジュール側が固有の既定値を持っており、
+        /// ConstFloat 等の汎用既定値で上書きされると壊れるケース
+        /// (VFXModuleNode の自動検出ポート等) のための opt-out。
+        /// </remarks>
+        public virtual bool ShouldAutoSpawnInputSource(string portName) => true;
 
         /// <summary>
         /// edge 接続直後に source ノードから初期値を再発行する。

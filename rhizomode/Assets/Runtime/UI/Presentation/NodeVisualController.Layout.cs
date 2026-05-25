@@ -113,10 +113,10 @@ namespace Rhizomode.UI
                 element = CreatePortElementFallback();
             }
 
-            // ポート名を設定
+            // ポート名 + 単位ラベル (例: "Hz", "BPM") を設定。Unit == None なら名前のみ。
             var label = element.Q<Label>("port-label");
             if (label != null)
-                label.text = port.PortName;
+                label.text = FormatPortLabel(port);
 
             // ポートの型に応じた色クラスを追加
             var dot = element.Q("port-dot");
@@ -135,6 +135,26 @@ namespace Rhizomode.UI
 
             return element;
         }
+
+        private static string FormatPortLabel(PortViewModel port)
+        {
+            var symbol = UnitSymbol(port.Unit);
+            return string.IsNullOrEmpty(symbol) ? port.PortName : $"{port.PortName} ({symbol})";
+        }
+
+        private static string UnitSymbol(PortUnit unit) => unit switch
+        {
+            PortUnit.Hz => "Hz",
+            PortUnit.Bpm => "BPM",
+            PortUnit.Seconds => "s",
+            PortUnit.Milliseconds => "ms",
+            PortUnit.Decibels => "dB",
+            PortUnit.Normalized => "0-1",
+            PortUnit.Phase => "φ",
+            PortUnit.Note => "note",
+            PortUnit.Degrees => "°",
+            _ => "",
+        };
 
         private static VisualElement CreatePortElementFallback()
         {

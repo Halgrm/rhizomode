@@ -58,10 +58,10 @@ namespace Rhizomode.Nodes.Audio
 
         public AudioTriggerNode(string id) : base(id, "AudioTrigger")
         {
-            _freqMinIn = RegisterInput<float>("FreqMin", ParamType.Float);
-            _freqMaxIn = RegisterInput<float>("FreqMax", ParamType.Float);
-            _thresholdIn = RegisterInput<float>("Threshold", ParamType.Float);
-            _levelOut = RegisterOutput<float>("Level", ParamType.Float);
+            _freqMinIn = RegisterInput<float>("FreqMin", ParamType.Float, PortUnit.Hz);
+            _freqMaxIn = RegisterInput<float>("FreqMax", ParamType.Float, PortUnit.Hz);
+            _thresholdIn = RegisterInput<float>("Threshold", ParamType.Float, PortUnit.Normalized);
+            _levelOut = RegisterOutput<float>("Level", ParamType.Float, PortUnit.Normalized);
             _triggerOut = RegisterOutput<bool>("Trigger", ParamType.Bool);
         }
 

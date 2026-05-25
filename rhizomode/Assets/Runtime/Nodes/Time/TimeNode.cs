@@ -18,7 +18,7 @@ namespace Rhizomode.Nodes.Time
 
         public TimeNode(string id) : base(id, "Time")
         {
-            _timeOut = RegisterOutput<float>("Time", ParamType.Float);
+            _timeOut = RegisterOutput<float>("Time", ParamType.Float, PortUnit.Seconds);
         }
 
         public override void Setup(GraphState context)

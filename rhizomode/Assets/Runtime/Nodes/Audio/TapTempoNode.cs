@@ -30,8 +30,8 @@ namespace Rhizomode.Nodes.Audio
 
         public TapTempoNode(string id) : base(id, "TapTempo")
         {
-            _bpmOut = RegisterOutput<float>("BPM", ParamType.Float);
-            _phaseOut = RegisterOutput<float>("Phase", ParamType.Float);
+            _bpmOut = RegisterOutput<float>("BPM", ParamType.Float, PortUnit.Bpm);
+            _phaseOut = RegisterOutput<float>("Phase", ParamType.Float, PortUnit.Phase);
             _beatOut = RegisterOutput<bool>("Beat", ParamType.Bool);
         }
 

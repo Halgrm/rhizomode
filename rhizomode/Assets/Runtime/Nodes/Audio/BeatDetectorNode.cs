@@ -31,8 +31,8 @@ namespace Rhizomode.Nodes.Audio
         public BeatDetectorNode(string id) : base(id, "BeatDetector")
         {
             RegisterInput<bool>("Trigger", ParamType.Bool);
-            _bpmOut = RegisterOutput<float>("BPM", ParamType.Float);
-            _phaseOut = RegisterOutput<float>("Phase", ParamType.Float);
+            _bpmOut = RegisterOutput<float>("BPM", ParamType.Float, PortUnit.Bpm);
+            _phaseOut = RegisterOutput<float>("Phase", ParamType.Float, PortUnit.Phase);
             _beatOut = RegisterOutput<bool>("Beat", ParamType.Bool);
         }
 
@@ -44,7 +44,6 @@ namespace Rhizomode.Nodes.Audio
                     .Where(v => v)
                     .Subscribe(_ => OnTrigger()));
 
-            // 毎フレーム Phase と Beat を発行
             _lastTickTime = AudioClock.Now;
             _lastLatencyOffsetSeconds = AudioClock.LatencyOffsetSeconds;
             AddSubscription(

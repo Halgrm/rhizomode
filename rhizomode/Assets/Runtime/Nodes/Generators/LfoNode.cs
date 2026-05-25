@@ -41,9 +41,9 @@ namespace Rhizomode.Nodes.Generators
 
         public LfoNode(string id) : base(id, "LFO")
         {
-            RegisterInput<float>("Frequency", ParamType.Float);
-            RegisterInput<float>("Amplitude", ParamType.Float);
-            _valueOut = RegisterOutput<float>("Value", ParamType.Float);
+            RegisterInput<float>("Frequency", ParamType.Float, PortUnit.Hz);
+            RegisterInput<float>("Amplitude", ParamType.Float, PortUnit.Normalized);
+            _valueOut = RegisterOutput<float>("Value", ParamType.Float, PortUnit.Normalized);
         }
 
         public override void Setup(GraphState context)

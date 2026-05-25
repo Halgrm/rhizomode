@@ -102,15 +102,15 @@ namespace Rhizomode.UI
 
         private static NodeViewModel BuildNodeViewModel(NodeBase node)
         {
+            // PortDefinition 経由で unit metadata を含めて構築 (Rhizomode.Graph.Model.IInputPort には
+            // Unit プロパティを足さない設計のため、NodeBase 側の dict を経由する)。
             var inputs = new List<PortViewModel>(node.InputPorts.Count);
-            foreach (var kvp in node.InputPorts)
-            {
-                inputs.Add(new PortViewModel(kvp.Key, kvp.Value.Type, IsConnected: false));
-            }
             var outputs = new List<PortViewModel>(node.OutputPorts.Count);
-            foreach (var kvp in node.OutputPorts)
+            foreach (var p in node.GetPortDefinitions())
             {
-                outputs.Add(new PortViewModel(kvp.Key, kvp.Value.Type, IsConnected: false));
+                var vm = new PortViewModel(p.name, p.type, IsConnected: false, Unit: p.unit);
+                if (p.direction == PortDirection.Input) inputs.Add(vm);
+                else outputs.Add(vm);
             }
             var pos = new RzVector3(node.Position.x, node.Position.y, node.Position.z);
             return new NodeViewModel(

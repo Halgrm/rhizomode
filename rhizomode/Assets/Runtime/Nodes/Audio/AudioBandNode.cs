@@ -20,10 +20,10 @@ namespace Rhizomode.Nodes.Audio
 
         public AudioBandNode(string id) : base(id, "AudioBand")
         {
-            _levelOut = RegisterOutput<float>("Level", ParamType.Float);
-            _lowOut = RegisterOutput<float>("Low", ParamType.Float);
-            _midOut = RegisterOutput<float>("Mid", ParamType.Float);
-            _highOut = RegisterOutput<float>("High", ParamType.Float);
+            _levelOut = RegisterOutput<float>("Level", ParamType.Float, PortUnit.Normalized);
+            _lowOut = RegisterOutput<float>("Low", ParamType.Float, PortUnit.Normalized);
+            _midOut = RegisterOutput<float>("Mid", ParamType.Float, PortUnit.Normalized);
+            _highOut = RegisterOutput<float>("High", ParamType.Float, PortUnit.Normalized);
         }
 
         /// <summary>

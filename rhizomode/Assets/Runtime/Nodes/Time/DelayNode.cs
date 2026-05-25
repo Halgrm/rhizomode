@@ -31,7 +31,7 @@ namespace Rhizomode.Nodes.Time
         public DelayNode(string id) : base(id, "Delay")
         {
             RegisterInput<float>("Input", ParamType.Float);
-            RegisterInput<float>("DelayTime", ParamType.Float);
+            RegisterInput<float>("DelayTime", ParamType.Float, PortUnit.Seconds);
             _valueOut = RegisterOutput<float>("Value", ParamType.Float);
         }
 

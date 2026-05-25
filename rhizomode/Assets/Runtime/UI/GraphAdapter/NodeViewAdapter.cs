@@ -30,7 +30,7 @@ namespace Rhizomode.UI
             var outputs = new List<PortViewModel>();
             foreach (var p in node.GetPortDefinitions())
             {
-                var vm = new PortViewModel(p.name, p.type, IsConnected: false);
+                var vm = new PortViewModel(p.name, p.type, IsConnected: false, Unit: p.unit);
                 if (p.direction == PortDirection.Input) inputs.Add(vm);
                 else outputs.Add(vm);
             }

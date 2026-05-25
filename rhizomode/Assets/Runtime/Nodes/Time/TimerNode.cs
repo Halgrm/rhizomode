@@ -29,9 +29,9 @@ namespace Rhizomode.Nodes.Time
         public TimerNode(string id) : base(id, "Timer")
         {
             RegisterInput<bool>("Reset", ParamType.Bool);
-            RegisterInput<float>("Duration", ParamType.Float);
-            _elapsedOut = RegisterOutput<float>("Elapsed", ParamType.Float);
-            _phaseOut = RegisterOutput<float>("Phase", ParamType.Float);
+            RegisterInput<float>("Duration", ParamType.Float, PortUnit.Seconds);
+            _elapsedOut = RegisterOutput<float>("Elapsed", ParamType.Float, PortUnit.Seconds);
+            _phaseOut = RegisterOutput<float>("Phase", ParamType.Float, PortUnit.Phase);
         }
 
         public override void Setup(GraphState context)
