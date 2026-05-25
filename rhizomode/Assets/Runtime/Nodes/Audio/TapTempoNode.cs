@@ -46,14 +46,14 @@ namespace Rhizomode.Nodes.Audio
         /// </summary>
         public void Tap()
         {
-            var now = Time.unscaledTime;
+            var now = UnityEngine.Time.unscaledTime;
             if (_tracker.OnTap(now))
                 _bpmOut.Emit(_tracker.Bpm);
         }
 
         public override void Setup(GraphState context)
         {
-            _lastTickTime = Time.unscaledTime;
+            _lastTickTime = UnityEngine.Time.unscaledTime;
             AddSubscription(
                 Observable.EveryUpdate()
                     .Subscribe(_ => UpdatePhase()));
@@ -67,7 +67,7 @@ namespace Rhizomode.Nodes.Audio
                 _beatEmitted = false;
             }
 
-            var now = Time.unscaledTime;
+            var now = UnityEngine.Time.unscaledTime;
             var dt = now - _lastTickTime;
             _lastTickTime = now;
             if (dt < 0f) dt = 0f;

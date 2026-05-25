@@ -33,6 +33,9 @@ namespace Rhizomode.Audio.Analysis
             "実機リハで「映像が音から遅れる」場合に増やしてキャリブする。PlayerPrefs で永続化。")]
         private float audioLatencyOffsetMs;
         private const string LatencyOffsetPrefsKey = "Rhizomode_AudioLatencyOffsetMs";
+        private const float MinLatencyOffsetMs = 0f;
+        private const float MaxLatencyOffsetMs = 500f;
+        private static AudioAnalyzer? _clockOwner;
 
         // --- デバイス管理 (Capture namespace に委譲) ---
         private readonly AudioDeviceMap _deviceMap = new();
@@ -153,9 +156,11 @@ namespace Rhizomode.Audio.Analysis
         /// </summary>
         public void SetLatencyOffsetMs(float ms)
         {
-            if (!float.IsFinite(ms)) ms = 0f;
-            audioLatencyOffsetMs = Mathf.Clamp(ms, 0f, 500f);
-            ApplyLatencyOffsetToClock();
+            audioLatencyOffsetMs = ClampLatencyOffsetMs(ms);
+            if (_clockOwner == null)
+                _clockOwner = this;
+            if (IsClockOwner)
+                ApplyLatencyOffsetToClock();
             PlayerPrefs.SetFloat(LatencyOffsetPrefsKey, audioLatencyOffsetMs);
         }
 
@@ -168,7 +173,8 @@ namespace Rhizomode.Audio.Analysis
             // PlayerPrefs から前回のキャリブ値を復元 (実機リハでの調整値を保存)
             if (PlayerPrefs.HasKey(LatencyOffsetPrefsKey))
                 audioLatencyOffsetMs = PlayerPrefs.GetFloat(LatencyOffsetPrefsKey, audioLatencyOffsetMs);
-            ApplyLatencyOffsetToClock();
+            audioLatencyOffsetMs = ClampLatencyOffsetMs(audioLatencyOffsetMs);
+            ClaimClockOwnership();
         }
 
         private void ApplyLatencyOffsetToClock()
@@ -212,14 +218,37 @@ namespace Rhizomode.Audio.Analysis
             Shutdown();
             _gpuBuffer?.Dispose();
             _gpuBuffer = null;
+            ReleaseClockOwnership();
         }
 
         private void OnValidate()
         {
             fftSize = FftSizeValidator.Snap(fftSize);
+            audioLatencyOffsetMs = ClampLatencyOffsetMs(audioLatencyOffsetMs);
         }
 
         // --- 内部実装 ---
+
+        private bool IsClockOwner => ReferenceEquals(_clockOwner, this);
+
+        private static float ClampLatencyOffsetMs(float ms)
+        {
+            if (!float.IsFinite(ms)) return MinLatencyOffsetMs;
+            return Mathf.Clamp(ms, MinLatencyOffsetMs, MaxLatencyOffsetMs);
+        }
+
+        private void ClaimClockOwnership()
+        {
+            _clockOwner = this;
+            ApplyLatencyOffsetToClock();
+        }
+
+        private void ReleaseClockOwnership()
+        {
+            if (!IsClockOwner) return;
+            _clockOwner = null;
+            AudioClock.LatencyOffsetSeconds = 0f;
+        }
 
         private void InitializeInternal(string deviceName)
         {

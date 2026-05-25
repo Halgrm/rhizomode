@@ -26,6 +26,7 @@ namespace Rhizomode.Nodes.Audio
         private TempoTracker _tracker;
         private bool _beatEmitted;
         private float _lastTickTime;
+        private float _lastLatencyOffsetSeconds;
 
         public BeatDetectorNode(string id) : base(id, "BeatDetector")
         {
@@ -45,6 +46,7 @@ namespace Rhizomode.Nodes.Audio
 
             // 毎フレーム Phase と Beat を発行
             _lastTickTime = AudioClock.Now;
+            _lastLatencyOffsetSeconds = AudioClock.LatencyOffsetSeconds;
             AddSubscription(
                 Observable.EveryUpdate()
                     .Subscribe(_ => UpdatePhase()));
@@ -67,9 +69,10 @@ namespace Rhizomode.Nodes.Audio
             }
 
             var now = AudioClock.Now;
-            var dt = now - _lastTickTime;
+            if (TryHandleClockDiscontinuity(now)) return;
+
+            var dt = SanitizeDeltaTime(now - _lastTickTime);
             _lastTickTime = now;
-            if (dt < 0f) dt = 0f;
 
             var (phase, isBeat) = _tracker.Tick(now, dt);
             if (_tracker.BeatInterval <= TempoTracker.MinBeatIntervalSec) return;
@@ -80,6 +83,23 @@ namespace Rhizomode.Nodes.Audio
                 _beatOut.Emit(true);
                 _beatEmitted = true;
             }
+        }
+
+        private bool TryHandleClockDiscontinuity(float now)
+        {
+            var latencyOffset = AudioClock.LatencyOffsetSeconds;
+            if (Mathf.Approximately(latencyOffset, _lastLatencyOffsetSeconds))
+                return false;
+
+            _tracker.ShiftTime(_lastLatencyOffsetSeconds - latencyOffset);
+            _lastLatencyOffsetSeconds = latencyOffset;
+            _lastTickTime = now;
+            return true;
+        }
+
+        private static float SanitizeDeltaTime(float deltaTimeSec)
+        {
+            return float.IsFinite(deltaTimeSec) && deltaTimeSec > 0f ? deltaTimeSec : 0f;
         }
     }
 }

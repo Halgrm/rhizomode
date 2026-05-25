@@ -21,6 +21,8 @@ namespace Rhizomode.Audio.Contracts
     /// </remarks>
     public static class AudioClock
     {
+        private const float MaxLatencyOffsetSeconds = 0.5f;
+
         private static float _latencyOffsetSeconds;
 
         /// <summary>
@@ -30,7 +32,16 @@ namespace Rhizomode.Audio.Contracts
         public static float LatencyOffsetSeconds
         {
             get => _latencyOffsetSeconds;
-            set => _latencyOffsetSeconds = float.IsFinite(value) ? value : 0f;
+            set
+            {
+                if (!float.IsFinite(value))
+                {
+                    _latencyOffsetSeconds = 0f;
+                    return;
+                }
+
+                _latencyOffsetSeconds = Mathf.Clamp(value, 0f, MaxLatencyOffsetSeconds);
+            }
         }
 
         /// <summary>

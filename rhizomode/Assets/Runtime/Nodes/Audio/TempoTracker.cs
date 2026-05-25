@@ -92,8 +92,11 @@ namespace Rhizomode.Nodes.Audio
             if (_beatInterval <= MinBeatIntervalSec) return (0f, false);
 
             var elapsed = now - _phaseOrigin;
+            if (!float.IsFinite(elapsed) || elapsed < 0f) return (0f, false);
             var phase = (elapsed % _beatInterval) / _beatInterval;
 
+            if (!float.IsFinite(deltaTimeSec) || deltaTimeSec < 0f)
+                deltaTimeSec = 0f;
             var prevElapsed = elapsed - deltaTimeSec;
             if (prevElapsed < 0f) prevElapsed = 0f;
             var prevPhase = (prevElapsed % _beatInterval) / _beatInterval;
@@ -101,6 +104,18 @@ namespace Rhizomode.Nodes.Audio
             // phase が wrap した (前回より小さい値になった) → 拍境界跨ぎ
             var isBeat = phase < prevPhase;
             return (phase, isBeat);
+        }
+
+        internal void ShiftTime(float deltaSeconds)
+        {
+            if (!float.IsFinite(deltaSeconds)) return;
+
+            _lastTapTime += deltaSeconds;
+            _phaseOrigin += deltaSeconds;
+
+            if (_tapTimes == null) return;
+            for (var i = 0; i < _tapCount; i++)
+                _tapTimes[i] += deltaSeconds;
         }
 
         private void EnsureBuffer()
