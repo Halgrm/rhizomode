@@ -1,5 +1,6 @@
 #nullable enable
 
+using System;
 using System.Collections.Generic;
 using Rhizomode.Audio.Analysis;
 using Rhizomode.Graph.Model;
@@ -20,11 +21,20 @@ namespace Rhizomode.Audio.GraphAdapter
     /// N3 fix (2026-05-16): UI / UI.Presentation 直依存を撤去。<see cref="GraphContextBehaviour"/> 経由
     /// だった graph アクセスを <see cref="GraphState"/> 直接注入に切り替え、asmdef refs から
     /// <c>Rhizomode.UI</c> / <c>Rhizomode.UI.Presentation</c> を削除した。
+    ///
+    /// P2-B (2026-05-25): AudioMonitor / SpectrumMonitor の inline UI 描画は毎フレ走らせると
+    /// 60+ ノード時に main thread を圧迫する。<see cref="MonitorUpdateIntervalSec"/> ごとに
+    /// 間引いて push する (既定 ~30Hz)。AudioTrigger / AudioBand は毎フレ駆動を維持
+    /// (BeatDetector の rising edge 検出が漏れないように)。
     /// </remarks>
     public sealed class AudioDriverHost
     {
+        /// <summary>monitor (Audio/Spectrum) inline UI 描画の間引き間隔 (秒)。既定 ~30Hz。</summary>
+        public const float DefaultMonitorUpdateIntervalSec = 1f / 30f;
+
         private readonly AudioAnalyzer _analyzer;
         private readonly GraphState _graphState;
+        private readonly Func<float> _clock;
         private readonly List<AudioTriggerNode> _audioNodeBuffer = new();
         private readonly List<AudioDeviceNode> _deviceNodeBuffer = new();
         private readonly List<AudioMonitorNode> _monitorNodeBuffer = new();
@@ -32,11 +42,31 @@ namespace Rhizomode.Audio.GraphAdapter
         private readonly List<SpectrumMonitorNode> _spectrumMonitorBuffer = new();
         private readonly float[] _waveformBuffer = new float[64];
         private readonly float[] _spectrumBuffer = new float[64];
+        private float _monitorUpdateIntervalSec = DefaultMonitorUpdateIntervalSec;
+        private float _nextMonitorPushTime;
+
+        /// <summary>
+        /// AudioMonitor / SpectrumMonitor の更新間隔 (秒)。0 にすると毎フレ駆動 (P2-B 前の挙動)。
+        /// </summary>
+        public float MonitorUpdateIntervalSec
+        {
+            get => _monitorUpdateIntervalSec;
+            set => _monitorUpdateIntervalSec = value >= 0f && !float.IsInfinity(value) && !float.IsNaN(value)
+                ? value
+                : DefaultMonitorUpdateIntervalSec;
+        }
 
         public AudioDriverHost(AudioAnalyzer analyzer, GraphState graphState)
+            : this(analyzer, graphState, () => Time.unscaledTime)
+        {
+        }
+
+        /// <summary>テスト用: 時刻ソースを差し替えられる ctor (deterministic な monitor throttle 検証)。</summary>
+        internal AudioDriverHost(AudioAnalyzer analyzer, GraphState graphState, Func<float> clock)
         {
             _analyzer = analyzer;
             _graphState = graphState;
+            _clock = clock;
         }
 
         /// <summary>
@@ -68,10 +98,32 @@ namespace Rhizomode.Audio.GraphAdapter
                 return;
             }
 
+            // AudioTrigger / AudioBand は毎フレ駆動 (rising edge 検出 / reactive flow を維持)
             DriveAudioTriggers();
-            DriveAudioMonitors();
-            DriveSpectrumMonitors();
             DriveBandNodes();
+
+            // Monitor 系 (inline UI repaint コスト大) は間引き
+            if (ShouldDriveMonitorsThisTick())
+            {
+                DriveAudioMonitors();
+                DriveSpectrumMonitors();
+            }
+        }
+
+        private bool ShouldDriveMonitorsThisTick() => ShouldDriveMonitors(_clock());
+
+        /// <summary>テスト用: 任意の <paramref name="now"/> で throttle 判定を回す internal entry。</summary>
+        internal bool ShouldDriveMonitors(float now)
+        {
+            // interval=0 なら毎フレ駆動 (旧挙動)
+            if (_monitorUpdateIntervalSec <= 0f) return true;
+
+            // 起動直後 / 巨大ジャンプ guard: 異常な値は throttle window をリセットして 1 回だけ通す
+            if (!float.IsFinite(now)) return true;
+            if (now < _nextMonitorPushTime) return false;
+
+            _nextMonitorPushTime = now + _monitorUpdateIntervalSec;
+            return true;
         }
 
         private void SnapshotAudioNodes()
