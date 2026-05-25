@@ -131,6 +131,36 @@ namespace Rhizomode.Core.Tests
             Assert.AreEqual("0.123", waveform.WaveformLabel);
         }
 
+        [Test]
+        public void AudioMonitor_WaveformVersion_IncrementsOnSetWaveform()
+        {
+            var node = new AudioMonitorNode("n1");
+            var waveform = (IInlineWaveform)node;
+            var initial = waveform.WaveformVersion;
+
+            node.SetWaveform(new[] { 0.1f, 0.2f, 0.3f });
+            var afterFirst = waveform.WaveformVersion;
+            node.SetWaveform(new[] { 0.4f, 0.5f });
+            var afterSecond = waveform.WaveformVersion;
+
+            Assert.AreNotEqual(initial, afterFirst,
+                "P2-B: SetWaveform で version が変化することで NodeVisualController が repaint trigger 出来る");
+            Assert.AreNotEqual(afterFirst, afterSecond, "後続の SetWaveform でも version が進む");
+        }
+
+        [Test]
+        public void AudioMonitor_WaveformVersion_NoChangeOnSetLevelAlone()
+        {
+            var node = new AudioMonitorNode("n1");
+            var waveform = (IInlineWaveform)node;
+            var initial = waveform.WaveformVersion;
+
+            node.SetLevel(0.5f);
+
+            Assert.AreEqual(initial, waveform.WaveformVersion,
+                "SetLevel のみでは波形 version は進まない (waveform repaint を誘発しない)");
+        }
+
         // ---------- SpectrumMonitor ----------
 
         [Test]
@@ -196,6 +226,36 @@ namespace Rhizomode.Core.Tests
             node.SetLevel(0.4f);
 
             CollectionAssert.AreEqual(new[] { 0f, 0f, 0f, 0.4f }, levels);
+        }
+
+        [Test]
+        public void SpectrumMonitor_SpectrumVersion_IncrementsOnSetSpectrum()
+        {
+            var node = new SpectrumMonitorNode("n1");
+            var spec = (IInlineSpectrum)node;
+            var initial = spec.SpectrumVersion;
+
+            node.SetSpectrum(new[] { 0.1f, 0.2f });
+            var afterFirst = spec.SpectrumVersion;
+            node.SetSpectrum(new[] { 0.3f });
+            var afterSecond = spec.SpectrumVersion;
+
+            Assert.AreNotEqual(initial, afterFirst,
+                "P2-B: SetSpectrum で version が変化することで NodeVisualController が repaint trigger 出来る");
+            Assert.AreNotEqual(afterFirst, afterSecond);
+        }
+
+        [Test]
+        public void SpectrumMonitor_SpectrumVersion_NoChangeOnSetLevelAlone()
+        {
+            var node = new SpectrumMonitorNode("n1");
+            var spec = (IInlineSpectrum)node;
+            var initial = spec.SpectrumVersion;
+
+            node.SetLevel(0.5f);
+
+            Assert.AreEqual(initial, spec.SpectrumVersion,
+                "SetLevel のみでは spectrum version は進まない");
         }
 
         // ---------- helpers ----------

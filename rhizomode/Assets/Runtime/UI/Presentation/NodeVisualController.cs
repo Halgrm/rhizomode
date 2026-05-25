@@ -37,9 +37,11 @@ namespace Rhizomode.UI
         private IInlineWaveform? _waveform;
         private VisualElement? _waveformElement;
         private Label? _waveformLabel;
+        private int _lastWaveformVersion = int.MinValue;
         private IInlineSpectrum? _spectrum;
         private VisualElement? _spectrumElement;
         private Label? _spectrumLabel;
+        private int _lastSpectrumVersion = int.MinValue;
         private bool _needsBind;
         private int _bindRetryCount;
         private const int MaxBindRetries = 10;
@@ -197,18 +199,30 @@ namespace Rhizomode.UI
                 }
             }
 
+            // P2-B: data version 不変なら MarkDirtyRepaint を skip して UI Toolkit 再描画コストを削減。
+            // AudioDriverHost が monitor push を 30Hz に間引いた場合、本側も連動して repaint が止まる。
             if (_waveform != null && _waveformElement != null)
             {
-                _waveformElement.MarkDirtyRepaint();
-                if (_waveformLabel != null)
-                    _waveformLabel.text = _waveform.WaveformLabel;
+                var v = _waveform.WaveformVersion;
+                if (v != _lastWaveformVersion)
+                {
+                    _lastWaveformVersion = v;
+                    _waveformElement.MarkDirtyRepaint();
+                    if (_waveformLabel != null)
+                        _waveformLabel.text = _waveform.WaveformLabel;
+                }
             }
 
             if (_spectrum != null && _spectrumElement != null)
             {
-                _spectrumElement.MarkDirtyRepaint();
-                if (_spectrumLabel != null)
-                    _spectrumLabel.text = _spectrum.SpectrumLabel;
+                var v = _spectrum.SpectrumVersion;
+                if (v != _lastSpectrumVersion)
+                {
+                    _lastSpectrumVersion = v;
+                    _spectrumElement.MarkDirtyRepaint();
+                    if (_spectrumLabel != null)
+                        _spectrumLabel.text = _spectrum.SpectrumLabel;
+                }
             }
         }
 

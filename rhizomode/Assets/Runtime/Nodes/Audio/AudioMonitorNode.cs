@@ -22,6 +22,7 @@ namespace Rhizomode.Nodes.Audio
         private readonly float[] _waveform = new float[BufferSize];
         private int _writeIndex;
         private float _currentLevel;
+        private int _waveformVersion;
 
         public AudioMonitorNode(string id) : base(id, "AudioMonitor")
         {
@@ -43,6 +44,7 @@ namespace Rhizomode.Nodes.Audio
             var len = Mathf.Min(data.Length, BufferSize);
             Array.Copy(data, 0, _waveform, 0, len);
             _writeIndex = len % BufferSize;
+            unchecked { _waveformVersion++; } // P2-B: NodeVisualController が MarkDirtyRepaint 判定に使う
         }
 
         /// <summary>
@@ -62,5 +64,6 @@ namespace Rhizomode.Nodes.Audio
         int IInlineWaveform.WaveformLength => BufferSize;
         int IInlineWaveform.WaveformWriteIndex => _writeIndex;
         string IInlineWaveform.WaveformLabel => _currentLevel.ToString("F3");
+        int IInlineWaveform.WaveformVersion => _waveformVersion;
     }
 }

@@ -21,5 +21,14 @@ namespace Rhizomode.UI.Contracts
 
         /// <summary>表示用ラベル（例: "Level: 0.42"）。</summary>
         string WaveformLabel { get; }
+
+        /// <summary>
+        /// データ更新の世代番号 (実装側でデータ書き込みごとに increment)。
+        /// </summary>
+        /// <remarks>
+        /// P2-B: NodeVisualController.LateUpdate が version 不変なら MarkDirtyRepaint を
+        /// skip する。AudioDriverHost の throttle (30Hz) と連動して、実際の UI 再描画も間引かれる。
+        /// </remarks>
+        int WaveformVersion { get; }
     }
 }

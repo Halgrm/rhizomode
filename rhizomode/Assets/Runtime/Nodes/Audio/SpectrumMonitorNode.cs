@@ -21,6 +21,7 @@ namespace Rhizomode.Nodes.Audio
         private readonly OutputPort<float> _levelOut;
         private readonly float[] _spectrum = new float[BufferSize];
         private float _currentLevel;
+        private int _spectrumVersion;
 
         public SpectrumMonitorNode(string id) : base(id, "SpectrumMonitor")
         {
@@ -42,6 +43,7 @@ namespace Rhizomode.Nodes.Audio
             Array.Copy(data, 0, _spectrum, 0, len);
             for (var i = len; i < BufferSize; i++)
                 _spectrum[i] = 0f;
+            unchecked { _spectrumVersion++; } // P2-B: NodeVisualController が MarkDirtyRepaint 判定に使う
         }
 
         /// <summary>
@@ -59,5 +61,6 @@ namespace Rhizomode.Nodes.Audio
         float[]? IInlineSpectrum.SpectrumBuffer => _spectrum;
         int IInlineSpectrum.SpectrumLength => BufferSize;
         string IInlineSpectrum.SpectrumLabel => _currentLevel.ToString("F3");
+        int IInlineSpectrum.SpectrumVersion => _spectrumVersion;
     }
 }
