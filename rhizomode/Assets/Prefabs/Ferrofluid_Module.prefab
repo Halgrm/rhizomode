@@ -1,0 +1,70 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!1 &2904721731575263982
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 3184360462357080866}
+  - component: {fileID: 5090575847266771003}
+  - component: {fileID: 3631865910513797400}
+  m_Layer: 0
+  m_Name: Ferrofluid_Module
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &3184360462357080866
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2904721731575263982}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &5090575847266771003
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2904721731575263982}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0846adf56e29eec48b7ed585c8faeb40, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Rhizomode.Modules.Runtime::Rhizomode.Modules.Ferrofluid.FerrofluidModule
+  definition: {fileID: 0}
+  spawner: {fileID: 3631865910513797400}
+--- !u!114 &3631865910513797400
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2904721731575263982}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e063410ffa1b83641918b522f24f289c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Rhizomode.Modules.Runtime::Rhizomode.Modules.Ferrofluid.FerrofluidBallSpawner
+  count: 8
+  sphereMesh: {fileID: 0}
+  ballMaterial: {fileID: 2100000, guid: 4ab20246f0bbe724f995e7c1ec01e185, type: 2}
+  spawnRadius: 3
+  minBallSize: 0.4
+  maxBallSize: 1.2
+  randomSeed: 42
+  attractorTarget: {fileID: 0}
+  randomMoveSpeed: 5

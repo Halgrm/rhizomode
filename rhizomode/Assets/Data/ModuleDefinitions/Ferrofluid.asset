@@ -1,0 +1,50 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3390c342213d5dd4585d6d2aab36e607, type: 3}
+  m_Name: Ferrofluid
+  m_EditorClassIdentifier: Rhizomode.Modules.Runtime::Rhizomode.Modules.ModuleDefinition
+  moduleName: Ferrofluid
+  prefab: {fileID: 2904721731575263982, guid: c829109551b5339429cf5580876de72f, type: 3}
+  parameters:
+  - name: Count
+    type: 0
+    defaultFloat: 12
+    minFloat: 1
+    maxFloat: 100
+    defaultColor: {r: 0, g: 0, b: 0, a: 0}
+    defaultBool: 1
+    isEvent: 0
+  - name: WaveTrigger
+    type: 2
+    defaultFloat: 0
+    minFloat: 0
+    maxFloat: 1
+    defaultColor: {r: 0, g: 0, b: 0, a: 0}
+    defaultBool: 0
+    isEvent: 1
+  - name: MoveTrigger
+    type: 2
+    defaultFloat: 0
+    minFloat: 0
+    maxFloat: 1
+    defaultColor: {r: 0, g: 0, b: 0, a: 0}
+    defaultBool: 0
+    isEvent: 1
+  - name: OutlineTrigger
+    type: 2
+    defaultFloat: 0
+    minFloat: 0
+    maxFloat: 1
+    defaultColor: {r: 0, g: 0, b: 0, a: 0}
+    defaultBool: 0
+    isEvent: 1
+  events: []
