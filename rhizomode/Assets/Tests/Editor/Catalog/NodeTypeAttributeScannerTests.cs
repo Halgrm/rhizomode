@@ -29,6 +29,8 @@ namespace Rhizomode.Catalog.Tests
             "ConstFloat", "ConstColor", "Trigger",
             // Nodes.Standard / Math (4)
             "Multiply", "Add", "Remap", "Smooth",
+            // Nodes.Standard / Math.Conversion (6)
+            "HzToNote", "NoteToHz", "BpmToSec", "SecToBpm", "LinearToDb", "DbToLinear",
             // Nodes.Standard / Time (3)
             "Time", "Timer", "Delay",
             // Nodes.Standard / Generators (2)
