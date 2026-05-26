@@ -1,11 +1,98 @@
 using Rhizomode.Modules.Ferrofluid;
+using Rhizomode.Scene.Runtime;
 using UnityEditor;
+using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
+using UnityEngine.SceneManagement;
 
 public static class FerrofluidSandboxSetup
 {
+    [MenuItem("Rhizomode/Ferrofluid/Debug: List Module Type Registrations")]
+    public static void DebugListModuleTypes()
+    {
+        // GraphState の factory リストをリフレクションで覗いて Ferrofluid 関連 typeName を出力。
+        var lifetimeScope = Object.FindFirstObjectByType<VContainer.Unity.LifetimeScope>();
+        if (lifetimeScope == null)
+        {
+            Debug.LogError("[FerrofluidDebug] No LifetimeScope found — must be in Play mode.");
+            return;
+        }
+        try
+        {
+            var graphState = (Rhizomode.Graph.Model.GraphState)lifetimeScope.Container.Resolve(typeof(Rhizomode.Graph.Model.GraphState));
+            var factoriesField = typeof(Rhizomode.Graph.Model.GraphState).GetField(
+                "_nodeFactories",
+                System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+            var factories = factoriesField?.GetValue(graphState) as System.Collections.IDictionary;
+            if (factories == null) { Debug.LogError("[FerrofluidDebug] factories dict not found"); return; }
+
+            var keys = new System.Collections.Generic.List<string>();
+            foreach (var k in factories.Keys) keys.Add(k.ToString());
+            keys.Sort();
+            var ferro = keys.FindAll(k => k.Contains("Ferro", System.StringComparison.OrdinalIgnoreCase));
+            Debug.Log($"[FerrofluidDebug] Total factory keys: {keys.Count}. Ferrofluid related: [{string.Join(", ", ferro)}]");
+            var modules = keys.FindAll(k => k.StartsWith("Module_"));
+            Debug.Log($"[FerrofluidDebug] All Module_* keys: [{string.Join(", ", modules)}]");
+        }
+        catch (System.Exception ex)
+        {
+            Debug.LogError($"[FerrofluidDebug] {ex.Message}");
+        }
+    }
+
+    [MenuItem("Rhizomode/Scenes/Add SceneEnvironment to casle")]
+    public static void AddSceneEnvironmentToCasle()
+    {
+        const string scenePath = "Assets/Scenes/casle.unity";
+        var scene = EditorSceneManager.OpenScene(scenePath, OpenSceneMode.Single);
+        if (!scene.IsValid())
+        {
+            Debug.LogError($"[FerrofluidSandboxSetup] Failed to open scene: {scenePath}");
+            return;
+        }
+
+        // 既存の SceneEnvironment があれば早期 return
+        foreach (var root in scene.GetRootGameObjects())
+        {
+            var existing = root.GetComponentInChildren<SceneEnvironment>(true);
+            if (existing != null)
+            {
+                Debug.Log($"[FerrofluidSandboxSetup] casle scene already has SceneEnvironment: {existing.gameObject.name}");
+                return;
+            }
+        }
+
+        // 現在の RenderSettings を SceneEnvironment SerializedField に直接書き込む。
+        // SceneEnvironment の public Apply() で逆方向 (SO→RenderSettings) は実装済みだが、
+        // 逆 (RenderSettings → SO) は無いので SerializedObject 経由で書く。
+        var go = new GameObject("_SceneEnvironment_casle");
+        SceneManager.MoveGameObjectToScene(go, scene);
+        var env = go.AddComponent<SceneEnvironment>();
+
+        var so = new SerializedObject(env);
+        so.FindProperty("skyboxMaterial").objectReferenceValue = RenderSettings.skybox;
+        so.FindProperty("ambientMode").enumValueIndex = (int)RenderSettings.ambientMode;
+        so.FindProperty("ambientSkyColor").colorValue = RenderSettings.ambientSkyColor;
+        so.FindProperty("ambientEquatorColor").colorValue = RenderSettings.ambientEquatorColor;
+        so.FindProperty("ambientGroundColor").colorValue = RenderSettings.ambientGroundColor;
+        so.FindProperty("ambientIntensity").floatValue = RenderSettings.ambientIntensity;
+        so.FindProperty("fogEnabled").boolValue = RenderSettings.fog;
+        so.FindProperty("fogColor").colorValue = RenderSettings.fogColor;
+        so.FindProperty("fogMode").enumValueIndex = (int)RenderSettings.fogMode;
+        so.FindProperty("fogDensity").floatValue = RenderSettings.fogDensity;
+        so.FindProperty("fogStartDistance").floatValue = RenderSettings.fogStartDistance;
+        so.FindProperty("fogEndDistance").floatValue = RenderSettings.fogEndDistance;
+        so.FindProperty("reflectionMode").enumValueIndex = (int)RenderSettings.defaultReflectionMode;
+        so.FindProperty("reflectionIntensity").floatValue = RenderSettings.reflectionIntensity;
+        so.ApplyModifiedPropertiesWithoutUndo();
+
+        EditorSceneManager.MarkSceneDirty(scene);
+        EditorSceneManager.SaveScene(scene);
+        Debug.Log($"[FerrofluidSandboxSetup] Added SceneEnvironment to casle scene at root.");
+    }
+
     [MenuItem("Rhizomode/Ferrofluid/Create Module Prefab + Definition")]
     public static void CreateModuleAssets()
     {

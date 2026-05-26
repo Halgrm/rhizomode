@@ -20,6 +20,15 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Scenes/Forest.unity
     guid: d87112e36e02f1a4b886184b77b6cae5
+  - enabled: 1
+    path: Assets/Scenes/Ruins.unity
+    guid: 98ec13f3f9747664fafc8499d8e06aa2
+  - enabled: 1
+    path: Assets/Scenes/casle.unity
+    guid: 457e0625dea97fa4090a71207d03ec1d
+  - enabled: 1
+    path: Assets/Scenes/Sandbox_Ferrofluid.unity
+    guid: 470a2ea8eae6d0e4582f1c55d906f6b0
   m_configObjects:
     Unity.XR.Oculus.Settings: {fileID: 11400000, guid: f979f9391cdcd4a4cb2c23be868677b7, type: 2}
     com.unity.input.settings.actions: {fileID: -944628639613478452, guid: 052faaac586de48259a63d0c4782560b, type: 3}

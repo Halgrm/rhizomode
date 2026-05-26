@@ -1,8 +1,12 @@
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
-using UnityEngine.SceneManagement;
 using UnityEngine.Rendering;
+using UnityEngine.SceneManagement;
+
+// Disambiguate: Rhizomode.Editor namespace の中では bare "Scene" が Rhizomode.Scene
+// namespace を指してしまう。Unity の SceneManagement.Scene 型を別名で確保。
+using UnityScene = UnityEngine.SceneManagement.Scene;
 
 namespace Rhizomode.Editor
 {
@@ -65,7 +69,7 @@ namespace Rhizomode.Editor
             Debug.Log("[SetupNatureScene] Nature scene setup complete! 3x3 terrain tiles + environment.");
         }
 
-        private static void CreateTerrainGroup(Scene scene)
+        private static void CreateTerrainGroup(UnityScene scene)
         {
             var parent = new GameObject("Terrain");
             // デモのTerrain親(-2000,-40,-2000) + VR原点オフセット
@@ -118,7 +122,7 @@ namespace Rhizomode.Editor
             }
         }
 
-        private static void CreateDirectionalLight(Scene scene)
+        private static void CreateDirectionalLight(UnityScene scene)
         {
             var go = new GameObject("Directional Light");
             SceneManager.MoveGameObjectToScene(go, scene);
@@ -131,7 +135,7 @@ namespace Rhizomode.Editor
             go.transform.rotation = Quaternion.Euler(22.8f, 217.5f, 0f);
         }
 
-        private static void CreatePostProcessVolume(Scene scene)
+        private static void CreatePostProcessVolume(UnityScene scene)
         {
             var go = new GameObject("PostProcess Volume");
             SceneManager.MoveGameObjectToScene(go, scene);
@@ -160,7 +164,7 @@ namespace Rhizomode.Editor
             return null;
         }
 
-        private static void CreateWindZone(Scene scene)
+        private static void CreateWindZone(UnityScene scene)
         {
             var go = new GameObject("Wind");
             SceneManager.MoveGameObjectToScene(go, scene);
