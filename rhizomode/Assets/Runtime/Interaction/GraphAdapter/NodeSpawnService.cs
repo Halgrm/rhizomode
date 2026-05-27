@@ -91,6 +91,7 @@ namespace Rhizomode.Interaction.GraphAdapter
             foreach (var kvp in inputPorts)
             {
                 if (targetNode.IsInputPortEvent(kvp.Key)) continue;
+                if (!targetNode.ShouldAutoSpawnInputSource(kvp.Key)) continue;
                 portCount++;
             }
             if (portCount == 0) return results;
@@ -107,6 +108,7 @@ namespace Rhizomode.Interaction.GraphAdapter
                 var portType = kvp.Value.Type;
 
                 if (targetNode.IsInputPortEvent(portName)) continue;
+                if (!targetNode.ShouldAutoSpawnInputSource(portName)) continue;
 
                 var descriptor = ParamTypeNodeMap.GetSourceDescriptor(portType);
                 if (descriptor == null) continue;

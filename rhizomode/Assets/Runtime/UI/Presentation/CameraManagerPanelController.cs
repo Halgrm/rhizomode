@@ -111,6 +111,7 @@ namespace Rhizomode.UI
         private Label? _velFovMinValue;
         private Label? _velFovMaxValue;
         private Label? _velFovMaxVelValue;
+        private GameObject? _lookAtGizmo;
         private bool _initialized;
 
         /// <summary>
@@ -160,6 +161,7 @@ namespace Rhizomode.UI
             }
 
             SyncLookAtToggles();
+            SyncLookAtGizmo();
         }
 
         /// <summary>
@@ -291,6 +293,7 @@ namespace Rhizomode.UI
         {
             _progressSubscription?.Dispose();
             LookAtTargetMarker.OnRegistryChanged -= OnLookAtRegistryChanged;
+            if (_lookAtGizmo != null) Destroy(_lookAtGizmo);
 
             // F1 fix re-review (Codex, 2026-05-18): edit mode 中に panel が破棄されると
             // listener (NodeGrab/Object3DGrab/EdgeDrag/EdgeCut/NodeDelete の SetEnabled(false))

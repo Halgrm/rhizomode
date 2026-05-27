@@ -26,6 +26,9 @@ namespace Rhizomode.Nodes.Modules
         /// </summary>
         private readonly List<(string name, ParamType type)> _autoParams = new();
 
+        /// <summary>自動ポート名の集合。<see cref="ShouldAutoSpawnInputSource"/> の判定に使う。</summary>
+        private readonly HashSet<string> _autoParamNames = new();
+
         /// <summary>
         /// 旧 2-arg ctor (後方互換)。typeName は "VFX_{moduleName}" にフォールバック。
         /// 新規呼び出しは 3-arg 版を推奨 (M3 canonical typeName 対応)。
@@ -120,7 +123,20 @@ namespace Rhizomode.Nodes.Modules
                 case ParamType.Bool: RegisterInput<bool>(name, type); break;
             }
             _autoParams.Add((name, type));
+            _autoParamNames.Add(name);
         }
+
+        /// <summary>
+        /// 自動検出ポート (ModuleDefinition 未登録の VFX 公開プロパティ) では Const を自動 spawn しない。
+        /// </summary>
+        /// <remarks>
+        /// 自動 spawn される ConstFloat の汎用既定値 (0.5) が VFX 作者の設定値を上書きしてしまう。
+        /// 例: CubeLine の Vector3 プロパティ Angle=(0,1,0) が XYZ=各 0.5 で (0.5,0.5,0.5) に潰れ、
+        /// 回転が壊れる。未接続のままにすれば VFX 側の値が保たれ、ユーザが任意に source を繋いだ
+        /// 時だけ駆動する。ModuleDefinition 登録パラメータと "Active" は従来どおり自動 spawn する。
+        /// </remarks>
+        public override bool ShouldAutoSpawnInputSource(string portName)
+            => !_autoParamNames.Contains(portName);
 
         /// <inheritdoc />
         public override void Setup(GraphState context)

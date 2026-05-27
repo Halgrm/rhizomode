@@ -2,6 +2,7 @@
 
 using System.Collections.Generic;
 using Rhizomode.Cameras;
+using Rhizomode.Presentation.Layering;
 using Unity.Cinemachine;
 using UnityEngine;
 using UnityEngine.UIElements;
@@ -470,6 +471,64 @@ namespace Rhizomode.UI
             if (velFov == null) return;
             velFov.MaxVelocity = e.newValue;
             if (_velFovMaxVelValue != null) _velFovMaxVelValue.text = e.newValue.ToString("F2");
+        }
+
+        private const float LookAtGizmoDiameter = 0.12f;
+        // 注視点ギズモの色。VR 内で他の白系オブジェクト (panel / カメラフラスタム) と弁別しつつ
+        // 視覚的に主張しすぎない暖色オレンジを選定。
+        private static readonly Color LookAtGizmoColor = new(1f, 0.78f, 0.2f, 1f);
+        private static readonly int BaseColorId = Shader.PropertyToID("_BaseColor");
+
+        /// <summary>
+        /// 選択中カメラの LookAt 位置に注視点ギズモ (小球) を追従させる。LookAt 未設定なら隠す。
+        /// </summary>
+        /// <remarks>
+        /// カメラが VFX モジュールや CameraLookAtCenter など不可視のターゲットを見ているとき、
+        /// VR 内で「どこを狙っているか」を 1 個の目印で示す補助表示。MirrorHidden レイヤーに置くため
+        /// 配信出力 (Spout/NDI/Desktop) には映らない。Update から毎フレーム呼ばれ、ターゲットが
+        /// 移動 (HMD / VFX モジュール) しても追従する。
+        /// </remarks>
+        private void SyncLookAtGizmo()
+        {
+            var target = _selected != null ? _selected.LookAt : null;
+            if (target == null)
+            {
+                if (_lookAtGizmo != null) _lookAtGizmo.SetActive(false);
+                return;
+            }
+
+            EnsureLookAtGizmo();
+            if (_lookAtGizmo == null) return;
+            _lookAtGizmo.transform.position = target.position;
+            if (!_lookAtGizmo.activeSelf) _lookAtGizmo.SetActive(true);
+        }
+
+        /// <summary>注視点ギズモ (Collider 無しの小球) を遅延生成する。</summary>
+        private void EnsureLookAtGizmo()
+        {
+            if (_lookAtGizmo != null) return;
+
+            _lookAtGizmo = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+            _lookAtGizmo.name = "CameraLookAtGizmo";
+            _lookAtGizmo.transform.localScale = Vector3.one * LookAtGizmoDiameter;
+
+            // VR インタラクションの raycast に拾われないよう Collider を除去する。
+            var sphereCollider = _lookAtGizmo.GetComponent<Collider>();
+            if (sphereCollider != null) Destroy(sphereCollider);
+
+            var meshRenderer = _lookAtGizmo.GetComponent<MeshRenderer>();
+            if (meshRenderer != null)
+            {
+                meshRenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+                meshRenderer.receiveShadows = false;
+                var mpb = new MaterialPropertyBlock();
+                mpb.SetColor(BaseColorId, LookAtGizmoColor);
+                meshRenderer.SetPropertyBlock(mpb);
+            }
+
+            // 配信用 Mirror カメラには映さない (VR/プレビューのみに表示)。
+            MirrorHiddenLayer.ApplyRecursive(_lookAtGizmo);
+            _lookAtGizmo.SetActive(false);
         }
     }
 }

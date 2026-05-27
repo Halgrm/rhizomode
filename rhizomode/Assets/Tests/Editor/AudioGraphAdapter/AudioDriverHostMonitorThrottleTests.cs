@@ -143,7 +143,7 @@ namespace Rhizomode.Audio.GraphAdapter.Tests
         private AudioDriverHost CreateHost()
         {
             var analyzer = _analyzerGo!.GetComponent<AudioAnalyzer>();
-            return new AudioDriverHost(analyzer, _graphState!, () => _now);
+            return AudioDriverHost.CreateForTests(analyzer, _graphState!, () => _now);
         }
     }
 }

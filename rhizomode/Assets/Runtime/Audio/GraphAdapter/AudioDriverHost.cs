@@ -34,7 +34,7 @@ namespace Rhizomode.Audio.GraphAdapter
 
         private readonly AudioAnalyzer _analyzer;
         private readonly GraphState _graphState;
-        private readonly Func<float> _clock;
+        private Func<float> _clock;
         private readonly List<AudioTriggerNode> _audioNodeBuffer = new();
         private readonly List<AudioDeviceNode> _deviceNodeBuffer = new();
         private readonly List<AudioMonitorNode> _monitorNodeBuffer = new();
@@ -57,16 +57,21 @@ namespace Rhizomode.Audio.GraphAdapter
         }
 
         public AudioDriverHost(AudioAnalyzer analyzer, GraphState graphState)
-            : this(analyzer, graphState, () => Time.unscaledTime)
-        {
-        }
-
-        /// <summary>テスト用: 時刻ソースを差し替えられる ctor (deterministic な monitor throttle 検証)。</summary>
-        internal AudioDriverHost(AudioAnalyzer analyzer, GraphState graphState, Func<float> clock)
         {
             _analyzer = analyzer;
             _graphState = graphState;
-            _clock = clock;
+            _clock = () => Time.unscaledTime;
+        }
+
+        // テスト用 factory。clock を差し替えられる ctor を public/internal で並列に置くと
+        // VContainer の reflection injector が最多引数 ctor を greedy に選んで Func<float> 解決に失敗する
+        // (production scene の起動が壊れる)。ctor を 1 本に絞り、テスト時のみ static factory 経由で
+        // clock を差し替える。
+        internal static AudioDriverHost CreateForTests(AudioAnalyzer analyzer, GraphState graphState, Func<float> clock)
+        {
+            var host = new AudioDriverHost(analyzer, graphState);
+            host._clock = clock;
+            return host;
         }
 
         /// <summary>
