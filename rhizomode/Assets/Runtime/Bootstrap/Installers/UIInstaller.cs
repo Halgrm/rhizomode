@@ -47,8 +47,10 @@ namespace Rhizomode.Bootstrap.Installers
             // UI.Presentation / Interaction の MonoBehaviour は [Inject] を持たず静的 context
             // 経由で依存を受ける。本 wirer が container resolve → context push を担う
             // (Plan v5.4 §15 補遺、2026-05-27)。
-            builder.Register<NdiContextWirer>(Lifetime.Singleton).AsImplementedInterfaces();
-            builder.Register<WindowInteractionContextWirer>(Lifetime.Singleton).AsImplementedInterfaces();
+            // RegisterEntryPoint で IInitializable.Initialize() を自動起動する
+            // (Register().AsImplementedInterfaces() だけでは EntryPointDispatcher が呼ばないため)。
+            builder.RegisterEntryPoint<NdiContextWirer>(Lifetime.Singleton);
+            builder.RegisterEntryPoint<WindowInteractionContextWirer>(Lifetime.Singleton);
         }
     }
 }

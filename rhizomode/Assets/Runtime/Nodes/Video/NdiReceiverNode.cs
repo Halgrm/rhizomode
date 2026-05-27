@@ -26,7 +26,7 @@ namespace Rhizomode.Nodes.Video
     /// 拡張時に検討。
     /// </remarks>
     [NodeType("NdiReceiver", "NDI Receiver", NodeCategory.Input)]
-    public class NdiReceiverNode : NodeBase, INdiReceiverNode, INdiViewWindowState, IInlineMonitor
+    public class NdiReceiverNode : NodeBase, INdiReceiverNode, INdiViewWindowState, IInlineMonitor, IInlineButton
     {
         private string _sourceName = "";
 
@@ -46,6 +46,19 @@ namespace Rhizomode.Nodes.Video
 
         /// <inheritdoc/>
         public event Action<string>? OnSourceNameChanged;
+
+        /// <inheritdoc/>
+        public event Action? OnNextSourceRequested;
+
+        /// <inheritdoc cref="IInlineButton.ButtonLabel"/>
+        /// <remarks>
+        /// presenter が enumerate ロジックを持つため node 側は固定ラベル。auto-pick 中
+        /// (sourceName 空) でも「次へ」を許す (Klak.Ndi 側が見つけている候補へジャンプできる)。
+        /// </remarks>
+        public string ButtonLabel => "Next Source";
+
+        /// <inheritdoc cref="IInlineButton.OnButtonPressed"/>
+        public void OnButtonPressed() => RequestNextSource();
 
         /// <inheritdoc cref="IInlineMonitor.MonitorType"/>
         public ParamType MonitorType => ParamType.Float;
@@ -88,6 +101,16 @@ namespace Rhizomode.Nodes.Video
 
         /// <inheritdoc cref="INdiViewWindowState.OnWindowTransformChanged"/>
         public event Action? OnWindowTransformChanged;
+
+        /// <inheritdoc/>
+        public void RequestNextSource()
+        {
+            try { OnNextSourceRequested?.Invoke(); }
+            catch (Exception e)
+            {
+                Debug.LogWarning($"[NdiReceiverNode] OnNextSourceRequested handler threw: {e.Message}");
+            }
+        }
 
         /// <inheritdoc/>
         public void SetSourceName(string sourceName)

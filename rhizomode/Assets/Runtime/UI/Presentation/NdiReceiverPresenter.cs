@@ -88,6 +88,7 @@ namespace Rhizomode.UI
             _nodeId = nodeView.NodeId;
 
             _node.OnSourceNameChanged += HandleSourceNameChanged;
+            _node.OnNextSourceRequested += HandleNextSourceRequested;
             _windowState.OnWindowTransformChanged += HandleWindowTransformChanged;
 
             CreateWindow();
@@ -110,7 +111,11 @@ namespace Rhizomode.UI
         public void Detach()
         {
             // 1. unsubscribe (presenter は inert 化)
-            if (_node != null) _node.OnSourceNameChanged -= HandleSourceNameChanged;
+            if (_node != null)
+            {
+                _node.OnSourceNameChanged -= HandleSourceNameChanged;
+                _node.OnNextSourceRequested -= HandleNextSourceRequested;
+            }
             if (_windowState != null) _windowState.OnWindowTransformChanged -= HandleWindowTransformChanged;
 
             ReleaseClaim();
@@ -169,6 +174,39 @@ namespace Rhizomode.UI
             else Claim(sanitized);
 #if KLAK_NDI
             ApplySourceNameToReceiver(sanitized);
+#endif
+        }
+
+        /// <summary>
+        /// ユーザーが node UI の "Next Source" ボタンを押した経路。
+        /// 現 source の「次」を Klak.NDI source 一覧から選び、auto-pick の collision を回避するため
+        /// 一旦 Release してから新 source を Claim + SetSourceName する。候補ゼロなら no-op。
+        /// </summary>
+        private void HandleNextSourceRequested()
+        {
+            if (_node == null) return;
+#if KLAK_NDI
+            var current = _node.SourceName;
+            // Codex review hint: 自 source が既に claimed 集合に居ると "未 claim" 候補が
+            // 全部除外され「自分自身」も候補に残せなくなる。enumerate 前に 1 度 release し、
+            // 失敗 fallback で claim を戻す (auto-pick との race を最小化)。
+            var prevClaim = _claimedSourceName;
+            ReleaseClaim();
+
+            var next = PickNextSourceAfter(current);
+            if (string.IsNullOrEmpty(next))
+            {
+                // 候補ゼロ: 直前 claim を復元して終了 (state を壊さない)。
+                if (!string.IsNullOrEmpty(prevClaim)) Claim(prevClaim);
+                _health?.ReportSourceMissing(GetInstanceID(), "(no NDI sources found)");
+                return;
+            }
+
+            // SetSourceName → HandleSourceNameChanged → Claim + ApplySourceNameToReceiver が
+            // 全部一連で走るので claim 重ねがけしない。
+            _node.SetSourceName(next!);
+#else
+            _health?.ReportReceiverUnavailable("KLAK_NDI define not set");
 #endif
         }
 
@@ -344,6 +382,50 @@ namespace Rhizomode.UI
                 Debug.LogWarning($"[NdiReceiverPresenter] NdiFinder enumeration failed: {e.Message}");
             }
             return null;
+        }
+
+        /// <summary>
+        /// <paramref name="current"/> の「次」の sanitized source を返す。
+        /// 候補が <paramref name="current"/> 自身しかなければそのまま再 claim、
+        /// 一覧が空なら null。一覧の wrap-around は許容 (一周しても見つからなければ最初へ戻る)。
+        /// </summary>
+        private static string? PickNextSourceAfter(string current)
+        {
+            var ordered = new List<string>();
+            try
+            {
+                foreach (var src in Klak.Ndi.NdiFinder.sourceNames)
+                {
+                    if (string.IsNullOrEmpty(src)) continue;
+                    var sanitized = SanitizeSourceName(src);
+                    if (string.IsNullOrEmpty(sanitized)) continue;
+                    ordered.Add(sanitized);
+                }
+            }
+            catch (Exception e)
+            {
+                Debug.LogWarning($"[NdiReceiverPresenter] NdiFinder enumeration failed: {e.Message}");
+                return null;
+            }
+            if (ordered.Count == 0) return null;
+
+            // 現 source の index を見つけて +1 から走査。自分自身を skip しつつ、
+            // 他 presenter が claim 済の source は除外。全 claim 済なら自分の現値に戻る。
+            int startIdx = 0;
+            if (!string.IsNullOrEmpty(current))
+            {
+                var idx = ordered.IndexOf(current);
+                if (idx >= 0) startIdx = idx + 1;
+            }
+            for (int i = 0; i < ordered.Count; i++)
+            {
+                var candidate = ordered[(startIdx + i) % ordered.Count];
+                if (candidate == current) continue;
+                if (_claimedSources.Contains(candidate)) continue;
+                return candidate;
+            }
+            // 全候補が他 presenter に claim されている → 現値そのまま (no-op を呼ぶ側で扱う)
+            return string.IsNullOrEmpty(current) ? ordered[0] : null;
         }
 #endif
 

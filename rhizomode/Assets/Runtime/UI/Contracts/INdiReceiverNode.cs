@@ -22,5 +22,18 @@ namespace Rhizomode.UI.Contracts
 
         /// <summary>presenter が auto-pick / ユーザー操作で source を変更する経路。</summary>
         void SetSourceName(string sourceName);
+
+        /// <summary>
+        /// ユーザーがノード UI で「次のソースに切り替えて」を要求したとき発火する。
+        /// presenter が Klak.NDI 側で enumerate → 次の未使用 source を選び <see cref="SetSourceName"/> を呼ぶ。
+        /// </summary>
+        /// <remarks>
+        /// Nodes 層は Klak.NDI を参照しないため、enumerate ロジックは presenter に閉じ込め、
+        /// node からは「次が欲しい」の信号のみ event で流す non-circular 設計。
+        /// </remarks>
+        event Action? OnNextSourceRequested;
+
+        /// <summary>UI ボタン経由で「次のソース」を要求する (event を発火する thin trampoline)。</summary>
+        void RequestNextSource();
     }
 }

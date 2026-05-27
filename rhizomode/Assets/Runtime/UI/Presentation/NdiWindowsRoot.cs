@@ -51,9 +51,16 @@ namespace Rhizomode.UI
                 ? Instantiate(windowPrefab, transform)
                 : CreateDefaultWindow(transform);
             go.name = $"NdiViewWindow_{nodeId}";
-            // material 割当 (prefab に既にあれば上書き)
-            if (windowMaterial != null && go.Renderer != null)
-                go.Renderer.sharedMaterial = windowMaterial;
+
+            // material 割当の優先順位: (1) Inspector で指定された windowMaterial、
+            // (2) Klak.NDI が MaterialPropertyBlock 経由で _BaseMap を書き込めるよう、
+            //     runtime 生成の URP/Unlit ベース material をフォールバックで割当てる。
+            // material が null だと MeshRenderer が描画自体されない (pink / 透明) ため必須。
+            if (go.Renderer != null)
+            {
+                Material mat = windowMaterial != null ? windowMaterial : EnsureFallbackMaterial();
+                go.Renderer.sharedMaterial = mat;
+            }
 
             ApplyInitialPose(go, nodeId, state);
 
@@ -172,6 +179,25 @@ namespace Rhizomode.UI
             go.AddComponent<MeshRenderer>();
             go.AddComponent<BoxCollider>();
             return go.AddComponent<NdiViewWindow>();
+        }
+
+        // runtime 生成 fallback material (URP/Unlit、_BaseColor=black)。Klak.NDI の
+        // MaterialPropertyBlock で _BaseMap を書き込めるよう base material を確保。
+        private static Material? _fallbackMaterial;
+
+        private static Material EnsureFallbackMaterial()
+        {
+            if (_fallbackMaterial != null) return _fallbackMaterial;
+            var shader = Shader.Find("Universal Render Pipeline/Unlit") ??
+                         Shader.Find("Unlit/Texture") ??
+                         Shader.Find("Hidden/InternalErrorShader");
+            _fallbackMaterial = new Material(shader) { name = "NdiWindow_FallbackMat" };
+            if (_fallbackMaterial.HasProperty("_BaseColor"))
+                _fallbackMaterial.SetColor("_BaseColor", new Color(0.02f, 0.02f, 0.02f, 1f));
+            // URP Unlit が _MainTex 経由 sampling する場合のフォールバック
+            if (_fallbackMaterial.HasProperty("_Color"))
+                _fallbackMaterial.SetColor("_Color", new Color(0.02f, 0.02f, 0.02f, 1f));
+            return _fallbackMaterial;
         }
     }
 }
