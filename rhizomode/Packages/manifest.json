@@ -20,6 +20,7 @@
     "com.unity.xr.management": "4.5.0",
     "com.unity.xr.oculus": "4.5.4",
     "com.unity.xr.openxr": "1.13.2",
+    "io.github.hatayama.uloopmcp": "https://github.com/hatayama/unity-cli-loop.git?path=/Packages/src",
     "jp.hadashikick.vcontainer": "1.16.9",
     "jp.keijiro.klak.ndi": "2.1.4",
     "jp.keijiro.klak.spout": "2.0.6",

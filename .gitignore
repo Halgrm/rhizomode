@@ -3,13 +3,25 @@
 /build/
 /build2/
 /build3/
+/build4/
 /builds/
+/My project/
+# Stray dump file
+/=
 
 # Local tool state
 .codex/
 .claude/scheduled_tasks.lock
 .claude/local/
 .claude/worktrees/
+
+# uloop (Unity Editor CLI) — auto-generated, machine-local
+.uloop/
+/rhizomode/.claude/skills/uloop-*/
+/rhizomode/.vscode/
+
+# Third-party Unity Asset Store packages — do not redistribute (paid)
+/rhizomode/Packages/dev.ameye.caustics/
 
 # Unity scene recovery
 /rhizomode/Assets/_Recovery/
