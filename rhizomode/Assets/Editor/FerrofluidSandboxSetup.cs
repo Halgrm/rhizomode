@@ -13,15 +13,30 @@ public static class FerrofluidSandboxSetup
     public static void DebugListModuleTypes()
     {
         // GraphState の factory リストをリフレクションで覗いて Ferrofluid 関連 typeName を出力。
-        var lifetimeScope = Object.FindFirstObjectByType<VContainer.Unity.LifetimeScope>();
-        if (lifetimeScope == null)
+        // VContainer の LifetimeScope.Container.Resolve は Rhizomode.Editor の asmdef 境界違反
+        // (Plan v5.4 §15「VContainer は Bootstrap 専用」) になるため、scene 上の GraphState を
+        // 持つ MonoBehaviour (GraphStateBehaviour 等) を Object.FindFirstObjectByType で拾う。
+        var scenes = UnityEngine.Object.FindObjectsByType<MonoBehaviour>(FindObjectsSortMode.None);
+        Rhizomode.Graph.Model.GraphState graphState = null;
+        foreach (var mb in scenes)
         {
-            Debug.LogError("[FerrofluidDebug] No LifetimeScope found — must be in Play mode.");
+            // GraphStateBehaviour に "GraphState" public field/property がある (旧 GameBootstrap 経由配線)
+            var t = mb.GetType();
+            var prop = t.GetProperty("GraphState",
+                System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
+            if (prop?.PropertyType == typeof(Rhizomode.Graph.Model.GraphState))
+            {
+                graphState = (Rhizomode.Graph.Model.GraphState)prop.GetValue(mb);
+                if (graphState != null) break;
+            }
+        }
+        if (graphState == null)
+        {
+            Debug.LogError("[FerrofluidDebug] GraphState not found — must be in Play mode and scene wired.");
             return;
         }
         try
         {
-            var graphState = (Rhizomode.Graph.Model.GraphState)lifetimeScope.Container.Resolve(typeof(Rhizomode.Graph.Model.GraphState));
             var factoriesField = typeof(Rhizomode.Graph.Model.GraphState).GetField(
                 "_nodeFactories",
                 System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);

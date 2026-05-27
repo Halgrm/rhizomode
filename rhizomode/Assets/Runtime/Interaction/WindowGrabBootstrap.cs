@@ -3,7 +3,6 @@
 using Rhizomode.Input.Contracts;
 using Rhizomode.UI;
 using UnityEngine;
-using VContainer;
 
 namespace Rhizomode.Interaction
 {
@@ -13,7 +12,9 @@ namespace Rhizomode.Interaction
     /// </summary>
     /// <remarks>
     /// <para>UI.Presentation → Interaction の参照を作らないための間接層。SampleScene に
-    /// 1 個配置し、VContainer から XR 系依存を [Inject] で受け取って各 window に push する。</para>
+    /// 1 個配置し、Bootstrap 側 wirer が <see cref="WindowInteractionContext"/> static に
+    /// XR / Window 依存を push したのを read する (Plan v5.4 §15 「VContainer は Bootstrap 専用」
+    /// 境界違反を避けるため、本クラスは [Inject] を使わない)。</para>
     ///
     /// <para>本 component は 1 シーン 1 instance を想定。多重配置すると同 window に handle が
     /// 重複 attach されるが <c>WindowGrabHandle</c> は <c>[DisallowMultipleComponent]</c> で
@@ -22,32 +23,11 @@ namespace Rhizomode.Interaction
     [DisallowMultipleComponent]
     public sealed class WindowGrabBootstrap : MonoBehaviour
     {
-        private IControllerInput? _input;
-        private IControllerPose? _pose;
-        private ILeftHandInput? _leftInput;
-        private ILeftHandRay? _leftRay;
-        private SharedRaycastService? _sharedRaycast;
         private NdiWindowsRoot? _windowsRoot;
-
-        [Inject]
-        public void Construct(
-            IControllerInput input,
-            IControllerPose pose,
-            ILeftHandInput leftInput,
-            ILeftHandRay leftRay,
-            SharedRaycastService sharedRaycast,
-            NdiWindowsRoot windowsRoot)
-        {
-            _input = input;
-            _pose = pose;
-            _leftInput = leftInput;
-            _leftRay = leftRay;
-            _sharedRaycast = sharedRaycast;
-            _windowsRoot = windowsRoot;
-        }
 
         private void OnEnable()
         {
+            _windowsRoot = WindowInteractionContext.WindowsRoot;
             if (_windowsRoot != null)
                 _windowsRoot.OnWindowSpawned += AttachHandle;
         }
@@ -56,20 +36,27 @@ namespace Rhizomode.Interaction
         {
             if (_windowsRoot != null)
                 _windowsRoot.OnWindowSpawned -= AttachHandle;
+            _windowsRoot = null;
         }
 
         private void AttachHandle(NdiViewWindow window)
         {
             if (window == null) return;
-            if (_input == null || _pose == null || _leftInput == null ||
-                _leftRay == null || _sharedRaycast == null)
+            var input = WindowInteractionContext.ControllerInput;
+            var pose = WindowInteractionContext.ControllerPose;
+            var leftInput = WindowInteractionContext.LeftInput;
+            var leftRay = WindowInteractionContext.LeftRay;
+            var sharedRaycast = WindowInteractionContext.SharedRaycast;
+            if (input == null || pose == null || leftInput == null ||
+                leftRay == null || sharedRaycast == null)
             {
-                Debug.LogWarning("[WindowGrabBootstrap] 依存未注入。grab handle attach をスキップ。");
+                Debug.LogWarning("[WindowGrabBootstrap] WindowInteractionContext 未注入。" +
+                                 "grab handle attach をスキップ (Bootstrap wirer が context を埋めるまで待機)。");
                 return;
             }
             var handle = window.GetComponent<WindowGrabHandle>();
             if (handle == null) handle = window.gameObject.AddComponent<WindowGrabHandle>();
-            handle.Initialize(_input, _pose, _leftInput, _leftRay, _sharedRaycast);
+            handle.Initialize(input, pose, leftInput, leftRay, sharedRaycast);
         }
     }
 }

@@ -1,6 +1,8 @@
 #nullable enable
 
 using Rhizomode.Bootstrap.Wiring;
+using Rhizomode.Input.Contracts;
+using Rhizomode.Interaction;
 using Rhizomode.Observability.Contracts;
 using Rhizomode.UI;
 using VContainer;
@@ -40,6 +42,13 @@ namespace Rhizomode.Bootstrap.Installers
             // RegisterComponentInHierarchy で scene 上の instance を Singleton 解決する。
             builder.RegisterComponentInHierarchy<NdiWindowsRoot>();
             builder.Register<VerticalSliceBootstrapWiring>(Lifetime.Singleton);
+
+            // BoundaryValidator Rule 7「VContainer は Bootstrap 専用」を満たすため、
+            // UI.Presentation / Interaction の MonoBehaviour は [Inject] を持たず静的 context
+            // 経由で依存を受ける。本 wirer が container resolve → context push を担う
+            // (Plan v5.4 §15 補遺、2026-05-27)。
+            builder.Register<NdiContextWirer>(Lifetime.Singleton).AsImplementedInterfaces();
+            builder.Register<WindowInteractionContextWirer>(Lifetime.Singleton).AsImplementedInterfaces();
         }
     }
 }

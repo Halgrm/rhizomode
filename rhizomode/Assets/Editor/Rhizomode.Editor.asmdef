@@ -10,9 +10,7 @@
         "Rhizomode.Presentation.Layering",
         "Unity.VisualEffectGraph.Runtime",
         "Unity.RenderPipelines.Core.Runtime",
-        "Unity.RenderPipelines.Universal.Runtime",
-        "VContainer",
-        "VContainer.Unity"
+        "Unity.RenderPipelines.Universal.Runtime"
     ],
     "includePlatforms": [
         "Editor"

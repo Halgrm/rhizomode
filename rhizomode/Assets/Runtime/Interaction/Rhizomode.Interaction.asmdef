@@ -26,7 +26,6 @@
         "Rhizomode.Ableton.Transport",
         "Rhizomode.Ableton.GraphAdapter",
         "R3.Unity",
-        "VContainer",
         "Unity.InputSystem",
         "Unity.XR.Interaction.Toolkit",
         "Unity.XR.CoreUtils"

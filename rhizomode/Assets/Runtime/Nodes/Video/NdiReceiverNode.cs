@@ -4,6 +4,7 @@ using System;
 using Rhizomode.Graph.Model;
 using Rhizomode.Graph.Serialization;
 using Rhizomode.NodeCatalog.Contracts;
+using Rhizomode.SharedKernel;
 using Rhizomode.UI.Contracts;
 using UnityEngine;
 
@@ -25,7 +26,7 @@ namespace Rhizomode.Nodes.Video
     /// 拡張時に検討。
     /// </remarks>
     [NodeType("NdiReceiver", "NDI Receiver", NodeCategory.Input)]
-    public class NdiReceiverNode : NodeBase, INdiReceiverNode, INdiViewWindowState
+    public class NdiReceiverNode : NodeBase, INdiReceiverNode, INdiViewWindowState, IInlineMonitor
     {
         private string _sourceName = "";
 
@@ -45,6 +46,30 @@ namespace Rhizomode.Nodes.Video
 
         /// <inheritdoc/>
         public event Action<string>? OnSourceNameChanged;
+
+        /// <inheritdoc cref="IInlineMonitor.MonitorType"/>
+        public ParamType MonitorType => ParamType.Float;
+
+        /// <inheritdoc cref="IInlineMonitor.MonitorDisplayValue"/>
+        /// <remarks>
+        /// node panel に source name + Active 状態を表示する property UI。
+        /// 空 source name の場合は "(searching)" を出して presenter の auto-pick 中であることを示す。
+        /// </remarks>
+        public string MonitorDisplayValue
+        {
+            get
+            {
+                if (string.IsNullOrEmpty(_sourceName))
+                    return "(searching)";
+                if (_hideFromMirror)
+                    return _sourceName + "  [hidden]";
+                return _sourceName;
+            }
+        }
+
+        /// <inheritdoc cref="IInlineMonitor.MonitorColor"/>
+        /// <remarks>Float monitor として使うので Color は未使用 (white 固定)。</remarks>
+        public Color MonitorColor => Color.white;
 
         /// <inheritdoc cref="INdiViewWindowState.WindowPosition"/>
         public Vector3 WindowPosition => _windowPosition;

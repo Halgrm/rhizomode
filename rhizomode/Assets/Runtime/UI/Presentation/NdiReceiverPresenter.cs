@@ -4,8 +4,6 @@ using System;
 using System.Collections.Generic;
 using Rhizomode.UI.Contracts;
 using UnityEngine;
-using VContainer;
-using VContainer.Unity;
 
 namespace Rhizomode.UI
 {
@@ -54,11 +52,13 @@ namespace Rhizomode.UI
         private float _nextSourceHealthAt;
         private string _claimedSourceName = "";
 
-        [Inject]
-        private void Construct(NdiReceiverHealth health, NdiWindowsRoot windowsRoot)
+        // Plan v5.4 §15 「VContainer は Bootstrap 専用」境界規則のため、本クラスは [Inject]
+        // を使わない。Bootstrap 側 wirer が <see cref="NdiPresentationContext"/> static フィールドに
+        // 注入し、<see cref="TryPullFromContext"/> で取得する。</summary>
+        private void TryPullFromContext()
         {
-            _health = health;
-            _windowsRoot = windowsRoot;
+            if (_health == null) _health = NdiPresentationContext.Health;
+            if (_windowsRoot == null) _windowsRoot = NdiPresentationContext.WindowsRoot;
         }
 
         /// <summary>
@@ -82,7 +82,7 @@ namespace Rhizomode.UI
             var windowState = nodeView.AsNdiViewWindowState();
             if (windowState == null) throw new ArgumentException("node is not INdiViewWindowState", nameof(nodeView));
 
-            TryInjectDependencies();
+            TryPullFromContext();
             _node = receiver;
             _windowState = windowState;
             _nodeId = nodeView.NodeId;
@@ -138,7 +138,7 @@ namespace Rhizomode.UI
             _nodeId = "";
         }
 
-        private void Awake() => TryInjectDependencies();
+        private void Awake() => TryPullFromContext();
         private void OnDestroy() => Detach();
 
         private void Update()
@@ -346,20 +346,6 @@ namespace Rhizomode.UI
             return null;
         }
 #endif
-
-        private void TryInjectDependencies()
-        {
-            if (_health != null && _windowsRoot != null) return;
-
-            var scope = GetComponentInParent<LifetimeScope>() ?? LifetimeScope.Find<LifetimeScope>();
-            if (scope?.Container == null) return;
-
-            try { scope.Container.Inject(this); }
-            catch (Exception e)
-            {
-                Debug.LogWarning($"[NdiReceiverPresenter] VContainer injection failed: {e.Message}");
-            }
-        }
 
         private void ReportReceiverReady()
         {
