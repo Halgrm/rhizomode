@@ -37,6 +37,17 @@ namespace Rhizomode.Scene.Runtime
         [SerializeField] private DefaultReflectionMode reflectionMode = DefaultReflectionMode.Skybox;
         [SerializeField, Range(0f, 1f)] private float reflectionIntensity = 1f;
 
+        [Header("Base Scene Lighting Toggles")]
+        [Tooltip("true にすると、env load 中だけ base (SampleScene) の " +
+                 "EnvOverridableDirectionalLight marker を持つ Directional Light を一時 disable する。" +
+                 "屋内 env (concrete 等) で太陽光をカットしたいとき使う。")]
+        [SerializeField] private bool disableBaseDirectionalLight = false;
+
+        /// <summary>
+        /// <see cref="disableBaseDirectionalLight"/> の getter (loader が参照する)。
+        /// </summary>
+        internal bool DisableBaseDirectionalLight => disableBaseDirectionalLight;
+
         /// <summary>
         /// このコンポーネントの設定でRenderSettingsを上書きする。
         /// </summary>

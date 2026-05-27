@@ -7,7 +7,9 @@
         "Rhizomode.NodeCatalog.Contracts",
         "Rhizomode.NodeCatalog.Runtime",
         "Rhizomode.Input.Contracts",
-        "Rhizomode.Graph.Model"
+        "Rhizomode.Graph.Model",
+        "Unity.RenderPipelines.Universal.Runtime",
+        "Unity.RenderPipelines.Core.Runtime"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

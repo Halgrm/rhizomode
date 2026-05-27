@@ -1,0 +1,26 @@
+{
+    "name": "Rhizomode.Scene.Tests",
+    "rootNamespace": "Rhizomode.Scene.Tests",
+    "references": [
+        "Rhizomode.SharedKernel",
+        "Rhizomode.Scene.Contracts",
+        "Rhizomode.Scene.Runtime",
+        "Unity.RenderPipelines.Core.Runtime",
+        "Unity.RenderPipelines.Universal.Runtime"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": true,
+    "precompiledReferences": [
+        "nunit.framework.dll"
+    ],
+    "autoReferenced": false,
+    "defineConstraints": [
+        "UNITY_INCLUDE_TESTS"
+    ],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

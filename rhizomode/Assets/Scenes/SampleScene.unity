@@ -132,6 +132,7 @@ GameObject:
   - component: {fileID: 51798896}
   - component: {fileID: 51798893}
   - component: {fileID: 51798895}
+  - component: {fileID: 51798898}
   m_Layer: 0
   m_Name: MirrorOutput
   m_TagString: Untagged
@@ -294,6 +295,18 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &51798898
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 51798892}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d3f5fe88dabdd0c47a592f020da0d8fa, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Rhizomode.Scene.Runtime::Rhizomode.Scene.Runtime.EnvOverridableCamera
 --- !u!1 &55709427
 GameObject:
   m_ObjectHideFlags: 0
@@ -1739,6 +1752,7 @@ GameObject:
   - component: {fileID: 410087041}
   - component: {fileID: 410087040}
   - component: {fileID: 410087042}
+  - component: {fileID: 410087043}
   m_Layer: 0
   m_Name: Directional Light
   m_TagString: Untagged
@@ -1855,6 +1869,18 @@ MonoBehaviour:
   m_ShadowLayerMask: 1
   m_RenderingLayers: 1
   m_ShadowRenderingLayers: 1
+--- !u!114 &410087043
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 410087039}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a413b8e9247d6754691533c97d862897, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Rhizomode.Scene.Runtime::Rhizomode.Scene.Runtime.EnvOverridableDirectionalLight
 --- !u!1 &463111288
 GameObject:
   m_ObjectHideFlags: 0
@@ -2244,6 +2270,7 @@ MonoBehaviour:
   fogEndDistance: 300
   reflectionMode: 0
   reflectionIntensity: 1
+  disableBaseDirectionalLight: 0
 --- !u!4 &654588760
 Transform:
   m_ObjectHideFlags: 0
@@ -4239,6 +4266,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 1767192433, guid: f6336ac4ac8b4d34bc5072418cdc62a0, type: 3}
       insertIndex: -1
       addedObject: {fileID: 1432822258}
+    - targetCorrespondingSourceObject: {fileID: 1767192433, guid: f6336ac4ac8b4d34bc5072418cdc62a0, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1432822259}
     - targetCorrespondingSourceObject: {fileID: 202364687, guid: f6336ac4ac8b4d34bc5072418cdc62a0, type: 3}
       insertIndex: -1
       addedObject: {fileID: 1213701925}
@@ -4394,6 +4424,7 @@ MonoBehaviour:
   - Forest
   - Ruins
   - casle
+  - concrete
   baseSceneEnvironment: {fileID: 654588759}
 --- !u!114 &1213701953
 MonoBehaviour:
@@ -4850,6 +4881,18 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Rhizomode.Cameras::Rhizomode.Cameras.LookAtTargetMarker
   displayName: Performer
+--- !u!114 &1432822259
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1432822253}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d3f5fe88dabdd0c47a592f020da0d8fa, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Rhizomode.Scene.Runtime::Rhizomode.Scene.Runtime.EnvOverridableCamera
 --- !u!1 &1487005010
 GameObject:
   m_ObjectHideFlags: 0
