@@ -9,6 +9,7 @@
         "Rhizomode.NodeCatalog.Runtime",
         "Rhizomode.Input.Contracts",
         "Rhizomode.Cameras",
+        "Rhizomode.Observability.Contracts",
         "Rhizomode.Presentation.Layering",
         "Rhizomode.Ableton.Transport",
         "Rhizomode.Ableton.Session",
@@ -18,6 +19,8 @@
         "Unity.InputSystem",
         "Unity.RenderPipelines.Universal.Runtime",
         "Unity.TextMeshPro",
+        "VContainer",
+        "VContainer.Unity",
         "GUID:7cdfac5ef1f961d4ebfe51361a2020bd",
         "GUID:b59f669f136310547b59ad72df53b42f"
     ],

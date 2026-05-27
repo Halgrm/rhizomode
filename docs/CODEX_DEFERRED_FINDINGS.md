@@ -455,3 +455,15 @@ Bootstrap.Services / Bootstrap.Wiring に移送。Codex review (`ad3f33ebd5fdf11
 - **指摘内容**: VFX に Vector3 "Foo" と scalar "Foo X" が同居すると軸ポート名 "Foo X" が衝突し、SetUndefinedParam の HasFloat 先行判定で誤ルーティング/片方が駆動不能になる
 - **実害評価**: 軽微/理論。Vector3 "Foo" と float "Foo X" を同一 VFX に共存させる命名は病的ケース。ユーザの実アセット (Angle / _Position / _Target / _Center) では衝突なし。AddAutoPort の ContainsKey 重複ガードで crash はせず、最悪「片方の軸が駆動不能」に留まる。完全解決は SetParam(string,object) contract (Breaking Change 禁止) を変えずには side-channel が要る
 - **将来 trigger**: 実 VFX で軸名衝突が報告されたら scalar 先行登録の 2-pass 化 + escaped suffix を検討
+
+---
+
+## NDI receiver hardening series (2026-05-27)
+
+### F-NDI.1: Presenter sanitization 経路の EditMode test 不足
+- **検出**: Codex review loop round 4 (NIT、`a9594ec4ba17d6777`)
+- **対象**: `Assets/Runtime/UI/Presentation/NdiReceiverPresenter.cs` の `SanitizeSourceName` / `PickFreeSource` / `Attach` 初期 Claim
+- **指摘内容**: health-side の `SanitizeForMessage` / `ClampMessage` は 4 件の EditMode test でカバー済だが、presenter 側の sanitize → claim 集合 → PickFreeSource skip 経路は test fixture が無い
+- **実害評価**: PickFreeSource / TryAutoPickSource は `Klak.Ndi.NdiFinder.sourceNames` 依存で EditMode から決定論的に走らせるには KlakNDI runtime のスタブが要る。Claim 集合は `static private` なので reflection か `[InternalsVisibleTo]` 追加が要る。挙動は Codex review で 2 ラウンド精査済、production の単一 source / 2 presenter 衝突シナリオで手動再現も難しい
+- **将来 trigger**: NDI presenter spawn を多数同時に行うシナリオ (V-Tuber 配信向け multi-source 切替等) が要件化されたら、Klak.Ndi.NdiFinder のスタブを切って presenter-level integration test を追加
+

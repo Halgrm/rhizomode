@@ -2,7 +2,9 @@
 
 using NUnit.Framework;
 using Rhizomode.Nodes.Video;
+using Rhizomode.UI;
 using Rhizomode.UI.Contracts;
+using UnityEngine;
 
 namespace Rhizomode.Core.Tests
 {
@@ -11,6 +13,16 @@ namespace Rhizomode.Core.Tests
     /// </summary>
     public class NdiReceiverNodeTests
     {
+        private GameObject? _testHost;
+
+        [TearDown]
+        public void TearDown()
+        {
+            if (_testHost != null)
+                Object.DestroyImmediate(_testHost);
+            _testHost = null;
+        }
+
         [Test]
         public void Construction_DefaultsToEmptySourceName()
         {
@@ -88,6 +100,23 @@ namespace Rhizomode.Core.Tests
             var node = new NdiReceiverNode("n1");
             Assert.DoesNotThrow(() => node.RestoreParamsFromJson("{not valid json"));
             Assert.AreEqual("", node.SourceName);
+        }
+
+        [Test]
+        public void PresenterPreviewQuad_CompensatesScaledHost()
+        {
+            _testHost = new GameObject("NdiReceiverPreviewHost");
+            _testHost.transform.localScale = new Vector3(0.20f, 0.12f, 1f);
+            var presenter = _testHost.AddComponent<NdiReceiverPresenter>();
+
+            presenter.Attach(new NdiReceiverNode("n1"));
+
+            var preview = _testHost.transform.Find("NdiReceiver_Preview");
+            Assert.NotNull(preview);
+            var previewTransform = preview!;
+            Assert.GreaterOrEqual(previewTransform.lossyScale.x, 0.2f);
+            Assert.GreaterOrEqual(previewTransform.lossyScale.y, 0.1f);
+            Assert.Less(previewTransform.position.y, _testHost.transform.position.y);
         }
     }
 }

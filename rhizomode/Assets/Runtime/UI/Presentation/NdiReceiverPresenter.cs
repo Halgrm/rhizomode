@@ -4,33 +4,36 @@ using System;
 using System.Collections.Generic;
 using Rhizomode.UI.Contracts;
 using UnityEngine;
+using VContainer;
+using VContainer.Unity;
 
 namespace Rhizomode.UI
 {
     /// <summary>
-    /// <c>INdiReceiverNode</c> に対応する VR visual presenter。
+    /// VR visual presenter for <see cref="INdiReceiverNode"/>.
     /// </summary>
     /// <remarks>
-    /// Klak.NDI 依存は本 class に閉じる (KLAK_NDI define で条件コンパイル)。NDI 未インストール時は
-    /// 何もせず壊さない。node の <see cref="INdiReceiverNode.SourceName"/> を観測し、
-    /// Klak.Ndi.NdiReceiver の ndiName を同期する。SourceName が空のときは <c>Klak.Ndi.NdiFinder</c>
-    /// から auto-pick (他 node と衝突しないよう process-static set で round-robin)。
-    ///
-    /// 表示: 子 GameObject に Quad mesh を生成し、Klak.Ndi.NdiReceiver.targetRenderer に
-    /// その MeshRenderer を流す。NdiReceiver の Update() が MaterialPropertyBlock で
-    /// 受信フレームを Quad のマテリアルに毎フレーム blit する。
+    /// Klak.NDI calls stay inside <c>KLAK_NDI</c>. When NDI is unavailable, the
+    /// presenter keeps the node visual alive and reports health feedback.
     /// </remarks>
     [DisallowMultipleComponent]
     public sealed class NdiReceiverPresenter : MonoBehaviour
     {
-        private const string MainTexProperty = "_BaseMap"; // URP Unlit の main texture property
+        private const string MainTexProperty = "_BaseMap";
         private const float PreviewWorldWidth = 0.32f;
-        private const float PreviewWorldHeight = 0.18f; // 16:9
-        private const float PreviewYOffset = -0.12f; // node panel の下に並べる
+        private const float PreviewWorldHeight = 0.18f;
+        private const float DefaultNodePanelWorldHeight = 0.12f;
+        private const float MinParentScale = 0.0001f;
+        private const float ColliderDepth = 0.01f;
         private const float SourceAutoPickPollSec = 1.5f;
+        private const string NdiResourcesPath = "KlakNdi/NdiResources";
 
-        // 全 presenter で共有: SourceName auto-pick 時に他 node と被らないようにするための予約 set。
-        // process-static (AppDomain 生存) — シーン遷移を跨いで生存するが、Disable/Destroy で release する。
+        // NDI source names arrive from `Klak.Ndi.NdiFinder.sourceNames`, which lists names
+        // broadcast over the LAN by remote senders — untrusted network input. We clamp
+        // length and strip control / DEL characters at every intake point before the value
+        // flows into KlakNDI's native side, the claim set, health messages, or paramsJson.
+        internal const int MaxSourceNameLength = 256;
+
         private static readonly HashSet<string> _claimedSources = new();
 
         private INdiReceiverNode? _node;
@@ -39,6 +42,7 @@ namespace Rhizomode.UI
         private Material? _previewMaterial;
         private BoxCollider? _previewCollider;
         private NodeVisualManager? _registeredManager;
+        private NdiReceiverHealth? _health;
 
 #if KLAK_NDI
         private Klak.Ndi.NdiReceiver? _receiver;
@@ -46,27 +50,48 @@ namespace Rhizomode.UI
 #endif
 
         private float _nextAutoPickAt;
+        private float _nextSourceHealthAt;
         private string _claimedSourceName = "";
         private static Shader? CachedUnlitShader;
         private static Mesh? SharedPreviewQuad;
 
-        /// <summary>presenter を起動。<see cref="Detach"/> されるまで receiver を維持する。</summary>
+        [Inject]
+        private void Construct(NdiReceiverHealth health)
+        {
+            _health = health;
+        }
+
+        /// <summary>
+        /// The node this presenter is currently bound to, or null when detached.
+        /// Used by <c>NodeVisualController</c> to detect a rebind to a different
+        /// receiver and trigger detach + reattach (instead of leaking the old binding).
+        /// </summary>
+        internal INdiReceiverNode? BoundNode => _node;
+
+        /// <summary>Attach this presenter to an NDI receiver node.</summary>
         public void Attach(INdiReceiverNode node)
         {
             if (_node != null) return;
+            TryInjectDependencies();
             _node = node ?? throw new ArgumentNullException(nameof(node));
             _node.OnSourceNameChanged += HandleSourceNameChanged;
 
             CreatePreviewQuad();
 #if KLAK_NDI
             CreateReceiver();
-            ApplySourceNameToReceiver(_node.SourceName);
 #else
             Debug.LogWarning("[NdiReceiverPresenter] KLAK_NDI define not set. NDI receive disabled.");
+            ReportReceiverUnavailable("KLAK_NDI define not set");
 #endif
+
+            // Seed claim set + receiver from any pre-populated SourceName (loaded graphs).
+            // Re-using HandleSourceNameChanged guarantees the same sanitize → Claim →
+            // apply pipeline as runtime changes, so loaded sources participate in
+            // collision avoidance instead of bypassing _claimedSources.
+            HandleSourceNameChanged(_node.SourceName);
         }
 
-        /// <summary>presenter を停止。receiver / preview Quad / Material / 補助 collider 登録を全破棄する。</summary>
+        /// <summary>Detach from the node and destroy runtime receiver objects.</summary>
         public void Detach()
         {
             if (_node != null)
@@ -76,14 +101,7 @@ namespace Rhizomode.UI
             }
 
             ReleaseClaim();
-
-            // 補助 collider 登録解除は visual 破棄より先に行う (dict に stale 参照を残さない)
-            if (_registeredManager != null && _previewCollider != null)
-            {
-                _registeredManager.UnregisterAuxiliaryCollider(_previewCollider);
-            }
-            _registeredManager = null;
-            _previewCollider = null;
+            UnregisterColliderWithVisualManager();
 
 #if KLAK_NDI
             if (_receiver != null)
@@ -92,45 +110,104 @@ namespace Rhizomode.UI
                 _receiver = null;
             }
 #endif
+            ReportReceiverStopped();
             if (_previewMaterial != null) { Destroy(_previewMaterial); _previewMaterial = null; }
             if (_previewQuad != null) { Destroy(_previewQuad); _previewQuad = null; }
             _previewRenderer = null;
         }
+
+        private void Awake() => TryInjectDependencies();
 
         private void OnDestroy() => Detach();
 
         private void Update()
         {
 #if KLAK_NDI
-            if (_node == null || _receiver == null) return;
-            if (!string.IsNullOrEmpty(_node.SourceName)) return; // user / load 指定済 → auto-pick しない
-            if (Time.unscaledTime < _nextAutoPickAt) return;
-            _nextAutoPickAt = Time.unscaledTime + SourceAutoPickPollSec;
-
-            var picked = PickFreeSource();
-            if (!string.IsNullOrEmpty(picked))
+            if (_node == null) return;
+            if (_receiver == null)
             {
-                Claim(picked);
-                _node.SetSourceName(picked); // event → HandleSourceNameChanged → receiver.ndiName
+                ReportReceiverUnavailable("Receiver component unavailable");
+                return;
             }
+
+            if (!string.IsNullOrEmpty(_node.SourceName))
+            {
+                PollSourceHealth(_node.SourceName);
+                return;
+            }
+
+            TryAutoPickSource();
 #endif
         }
 
         private void HandleSourceNameChanged(string newName)
         {
+            // Sanitize first (the value may have arrived from paramsJson load or a future UI),
+            // then re-claim so manual / loaded source names participate in the no-collision set
+            // alongside auto-picks. Empty name → release any prior claim.
+            var sanitized = SanitizeSourceName(newName);
+            if (string.IsNullOrEmpty(sanitized)) ReleaseClaim();
+            else Claim(sanitized);
 #if KLAK_NDI
-            ApplySourceNameToReceiver(newName);
+            ApplySourceNameToReceiver(sanitized);
 #endif
+        }
+
+        /// <summary>
+        /// Clamp length and strip control / DEL characters from an untrusted NDI source name.
+        /// Idempotent and allocation-free for already-clean input.
+        /// </summary>
+        internal static string SanitizeSourceName(string? name)
+        {
+            if (string.IsNullOrEmpty(name)) return "";
+            var src = name!;
+            var max = Math.Min(src.Length, MaxSourceNameLength);
+            // Fast-path: scan and only allocate if we find something to change.
+            var needsCleanup = src.Length > MaxSourceNameLength;
+            if (!needsCleanup)
+            {
+                for (int i = 0; i < max; i++)
+                {
+                    var c = src[i];
+                    if (c < 0x20 || c == 0x7F) { needsCleanup = true; break; }
+                }
+            }
+            if (!needsCleanup) return src;
+            var sb = new System.Text.StringBuilder(max);
+            for (int i = 0; i < max; i++)
+            {
+                var c = src[i];
+                if (c < 0x20 || c == 0x7F) continue;
+                sb.Append(c);
+            }
+            return sb.ToString();
+        }
+
+        private void UnregisterColliderWithVisualManager()
+        {
+            if (_registeredManager != null && _previewCollider != null)
+                _registeredManager.UnregisterAuxiliaryCollider(_previewCollider);
+            _registeredManager = null;
+            _previewCollider = null;
         }
 
 #if KLAK_NDI
         private void ApplySourceNameToReceiver(string name)
         {
             if (_receiver == null) return;
-            try { _receiver.ndiName = name ?? ""; }
+            // Belt + suspenders: even if upstream sanitized, re-sanitize at the native boundary
+            // so any future caller cannot bypass cleaning on its way to KlakNDI.
+            var clean = SanitizeSourceName(name);
+            try
+            {
+                _receiver.ndiName = clean;
+                _nextSourceHealthAt = 0f;
+                if (string.IsNullOrEmpty(clean)) ReportReceiverReady();
+            }
             catch (Exception e)
             {
                 Debug.LogWarning($"[NdiReceiverPresenter] ndiName set failed: {e.Message}");
+                ReportReceiverUnavailable($"ndiName set failed: {e.Message}");
             }
         }
 
@@ -140,29 +217,43 @@ namespace Rhizomode.UI
             if (_ndiResources == null)
             {
                 Debug.LogWarning("[NdiReceiverPresenter] NdiResources asset not found. NDI receive disabled.");
+                ReportReceiverUnavailable("NdiResources asset not found");
                 return;
             }
 
+            TryAddReceiverComponent();
+        }
+
+        private void TryAddReceiverComponent()
+        {
             try
             {
                 _receiver = gameObject.AddComponent<Klak.Ndi.NdiReceiver>();
                 _receiver.SetResources(_ndiResources);
-                if (_previewRenderer != null)
-                {
-                    _receiver.targetRenderer = _previewRenderer;
-                    _receiver.targetMaterialProperty = MainTexProperty;
-                }
+                BindReceiverTargetRenderer();
+                ReportReceiverReady();
             }
             catch (Exception e)
             {
                 Debug.LogWarning($"[NdiReceiverPresenter] AddComponent NdiReceiver failed: {e.Message}");
+                ReportReceiverUnavailable($"AddComponent failed: {e.Message}");
             }
+        }
+
+        private void BindReceiverTargetRenderer()
+        {
+            if (_receiver == null || _previewRenderer == null) return;
+            _receiver.targetRenderer = _previewRenderer;
+            _receiver.targetMaterialProperty = MainTexProperty;
         }
 
         private static Klak.Ndi.NdiResources? ResolveNdiResources()
         {
             var loaded = Resources.FindObjectsOfTypeAll<Klak.Ndi.NdiResources>();
             if (loaded.Length > 0) return loaded[0];
+
+            var runtime = Resources.Load<Klak.Ndi.NdiResources>(NdiResourcesPath);
+            if (runtime != null) return runtime;
 
 #if UNITY_EDITOR
             const string ndiResourcesGuid = "69304b86950074db7ba8caba75214004";
@@ -173,6 +264,45 @@ namespace Rhizomode.UI
             return null;
         }
 
+        private void TryAutoPickSource()
+        {
+            if (Time.unscaledTime < _nextAutoPickAt) return;
+            _nextAutoPickAt = Time.unscaledTime + SourceAutoPickPollSec;
+
+            // PickFreeSource now returns an already-sanitized value (or null/empty).
+            var picked = PickFreeSource();
+            if (string.IsNullOrEmpty(picked)) return;
+            // Claim inline so a same-frame second auto-pick on another presenter sees the
+            // source as claimed before the SetSourceName → HandleSourceNameChanged event round-trips.
+            Claim(picked);
+            _node?.SetSourceName(picked);
+        }
+
+        private void PollSourceHealth(string sourceName)
+        {
+            if (Time.unscaledTime < _nextSourceHealthAt) return;
+            _nextSourceHealthAt = Time.unscaledTime + SourceAutoPickPollSec;
+
+            if (IsSourceAvailable(sourceName))
+                ReportReceiverReady();
+            else
+                _health?.ReportSourceMissing(GetInstanceID(), sourceName);
+        }
+
+        private static bool IsSourceAvailable(string sourceName)
+        {
+            try
+            {
+                foreach (var src in Klak.Ndi.NdiFinder.sourceNames)
+                    if (src == sourceName) return true;
+            }
+            catch (Exception e)
+            {
+                Debug.LogWarning($"[NdiReceiverPresenter] NdiFinder health check failed: {e.Message}");
+            }
+            return false;
+        }
+
         private static string? PickFreeSource()
         {
             try
@@ -180,8 +310,12 @@ namespace Rhizomode.UI
                 foreach (var src in Klak.Ndi.NdiFinder.sourceNames)
                 {
                     if (string.IsNullOrEmpty(src)) continue;
-                    if (_claimedSources.Contains(src)) continue;
-                    return src;
+                    // Sanitize BEFORE the claim-set lookup so a raw variant like
+                    // "CAM\n" cannot bypass an existing claim on the sanitized "CAM".
+                    var sanitized = SanitizeSourceName(src);
+                    if (string.IsNullOrEmpty(sanitized)) continue;
+                    if (_claimedSources.Contains(sanitized)) continue;
+                    return sanitized;
                 }
             }
             catch (Exception e)
@@ -191,6 +325,35 @@ namespace Rhizomode.UI
             return null;
         }
 #endif
+
+        private void TryInjectDependencies()
+        {
+            if (_health != null) return;
+
+            var scope = GetComponentInParent<LifetimeScope>() ?? LifetimeScope.Find<LifetimeScope>();
+            if (scope?.Container == null) return;
+
+            try { scope.Container.Inject(this); }
+            catch (Exception e)
+            {
+                Debug.LogWarning($"[NdiReceiverPresenter] VContainer injection failed: {e.Message}");
+            }
+        }
+
+        private void ReportReceiverReady()
+        {
+            _health?.ReportReceiverReady(GetInstanceID(), _node?.SourceName);
+        }
+
+        private void ReportReceiverUnavailable(string reason)
+        {
+            _health?.ReportReceiverUnavailable(GetInstanceID(), reason);
+        }
+
+        private void ReportReceiverStopped()
+        {
+            _health?.ReportReceiverStopped(GetInstanceID());
+        }
 
         private void Claim(string sourceName)
         {
@@ -202,11 +365,9 @@ namespace Rhizomode.UI
 
         private void ReleaseClaim()
         {
-            if (!string.IsNullOrEmpty(_claimedSourceName))
-            {
-                _claimedSources.Remove(_claimedSourceName);
-                _claimedSourceName = "";
-            }
+            if (string.IsNullOrEmpty(_claimedSourceName)) return;
+            _claimedSources.Remove(_claimedSourceName);
+            _claimedSourceName = "";
         }
 
         private void CreatePreviewQuad()
@@ -214,34 +375,64 @@ namespace Rhizomode.UI
             if (_previewQuad != null) return;
             _previewQuad = new GameObject("NdiReceiver_Preview");
             _previewQuad.transform.SetParent(transform, worldPositionStays: false);
-            _previewQuad.transform.localPosition = new Vector3(0f, PreviewYOffset, 0f);
-            _previewQuad.transform.localRotation = Quaternion.identity;
-            _previewQuad.transform.localScale = new Vector3(PreviewWorldWidth, PreviewWorldHeight, 1f);
+            // inherit layer so MirrorHiddenScope and camera culling masks apply.
+            _previewQuad.layer = gameObject.layer;
+            ApplyPreviewTransform(_previewQuad.transform);
 
             var mf = _previewQuad.AddComponent<MeshFilter>();
             mf.sharedMesh = GetSharedPreviewQuad();
 
             _previewRenderer = _previewQuad.AddComponent<MeshRenderer>();
-            _previewMaterial = new Material(GetUnlitShader());
-            // 受信前のプレビューが真っ黒に見えないよう薄いグレーを下地に
-            _previewMaterial.SetColor("_BaseColor", new Color(0.08f, 0.08f, 0.10f, 1f));
+            if (!TryCreatePreviewMaterial()) return;
             _previewRenderer.sharedMaterial = _previewMaterial;
 
-            // grab 対応: preview quad を射しても親 NodeVisualController に解決されるよう補助 collider 登録。
-            // localScale は (PreviewWorldWidth, PreviewWorldHeight, 1) なので BoxCollider.size = (1,1,0.01) で
-            // ちょうどクワッドと同サイズの薄い板になる (WorldPanelHost と同 pattern)。
             _previewCollider = _previewQuad.AddComponent<BoxCollider>();
             _previewCollider.center = Vector3.zero;
-            _previewCollider.size = new Vector3(1f, 1f, 0.01f);
+            _previewCollider.size = new Vector3(1f, 1f, ColliderDepth);
 
             RegisterColliderWithVisualManager();
         }
 
-        /// <summary>
-        /// 親 GameObject の <see cref="NodeVisualController"/> と <see cref="NodeVisualManager"/> を解決し、
-        /// preview collider を補助 collider として登録する。manager が見つからない場合は静かに skip
-        /// (test 環境 / 単体配置時の壊れ防止)。
-        /// </summary>
+        private void ApplyPreviewTransform(Transform previewTransform)
+        {
+            var parentScale = transform.lossyScale;
+            var scaleX = SafeDivisor(parentScale.x);
+            var scaleY = SafeDivisor(parentScale.y);
+            var panelHeight = GetComponent<WorldPanelHost>()?.WorldHeight ?? DefaultNodePanelWorldHeight;
+            var yOffset = -(PreviewWorldHeight + panelHeight) * 0.5f;
+
+            // why: WorldPanelHost scales the node GameObject, so compensate here to keep
+            // the NDI preview at its intended world size and below the panel.
+            previewTransform.localPosition = new Vector3(0f, yOffset / scaleY, 0f);
+            previewTransform.localRotation = Quaternion.identity;
+            previewTransform.localScale = new Vector3(PreviewWorldWidth / scaleX, PreviewWorldHeight / scaleY, 1f);
+        }
+
+        private static float SafeDivisor(float scale)
+        {
+            return Mathf.Abs(scale) < MinParentScale ? 1f : scale;
+        }
+
+        private bool TryCreatePreviewMaterial()
+        {
+            var shader = GetUnlitShader();
+            if (shader == null)
+            {
+                Debug.LogError("[NdiReceiverPresenter] Preview material shader is null. NDI preview will not render.");
+                return false;
+            }
+
+            _previewMaterial = new Material(shader);
+            if (_previewMaterial == null || _previewMaterial.shader == null || !_previewMaterial.shader.isSupported)
+            {
+                Debug.LogError("[NdiReceiverPresenter] Preview material shader is missing or unsupported. NDI preview will not render.");
+                return false;
+            }
+
+            _previewMaterial.SetColor("_BaseColor", new Color(0.08f, 0.08f, 0.10f, 1f));
+            return true;
+        }
+
         private void RegisterColliderWithVisualManager()
         {
             if (_previewCollider == null) return;
@@ -249,8 +440,6 @@ namespace Rhizomode.UI
             var controller = GetComponent<NodeVisualController>();
             if (controller == null) return;
 
-            // NodeVisualController は NodeVisualManager の子として配置される (CreateNodeGameObject で SetParent)。
-            // GetComponentInParent で manager を辿る。
             var manager = GetComponentInParent<NodeVisualManager>();
             if (manager == null) return;
 
@@ -290,12 +479,20 @@ namespace Rhizomode.UI
             return SharedPreviewQuad;
         }
 
-        private static Shader GetUnlitShader()
+        private static Shader? GetUnlitShader()
         {
             if (CachedUnlitShader != null) return CachedUnlitShader;
-            CachedUnlitShader = Shader.Find("Universal Render Pipeline/Unlit")
-                                ?? Shader.Find("Unlit/Texture");
-            return CachedUnlitShader!;
+
+            // This shader must be in Always Included Shaders or referenced from a
+            // serialized config asset so player builds do not strip it.
+            CachedUnlitShader = Shader.Find("Universal Render Pipeline/Unlit");
+            if (CachedUnlitShader == null)
+            {
+                Debug.LogError("[NdiReceiverPresenter] Universal Render Pipeline/Unlit shader not found. It may be stripped from the player build.");
+                CachedUnlitShader = Shader.Find("Unlit/Color");
+            }
+
+            return CachedUnlitShader;
         }
     }
 }

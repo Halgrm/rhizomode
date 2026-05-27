@@ -1,6 +1,8 @@
 #nullable enable
 
 using Rhizomode.Bootstrap.Wiring;
+using Rhizomode.Observability.Contracts;
+using Rhizomode.UI;
 using VContainer;
 using VContainer.Unity;
 
@@ -31,6 +33,9 @@ namespace Rhizomode.Bootstrap.Installers
     {
         public void Install(IContainerBuilder builder)
         {
+            builder.Register<NdiReceiverHealth>(Lifetime.Singleton)
+                .AsSelf()
+                .As<IHealthMonitor>();
             builder.Register<VerticalSliceBootstrapWiring>(Lifetime.Singleton);
         }
     }

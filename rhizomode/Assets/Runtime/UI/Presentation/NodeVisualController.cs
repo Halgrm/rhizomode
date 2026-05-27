@@ -102,19 +102,39 @@ namespace Rhizomode.UI
 
         /// <summary>
         /// node が <c>INdiReceiverNode</c> なら <see cref="NdiReceiverPresenter"/> を attach する。
-        /// 二重 attach 抑止: 既に同じ node に bind 済なら no-op。
+        /// 同一 receiver なら no-op、別 receiver に rebind されたら detach + reattach、
+        /// receiver でなくなったら destroy。
         /// </summary>
+        /// <remarks>
+        /// 旧コードは <c>_ndiPresenter != null</c> で早期 return していたため、別 NDI node に
+        /// rebind しても古い node を参照したままになるリークが発生していた。
+        /// <c>Destroy</c> は deferred で <c>[DisallowMultipleComponent]</c> のため同 frame で
+        /// AddComponent が失敗する。同一 instance を Detach/Attach で再利用する。
+        /// </remarks>
         private void EnsureNdiReceiverPresenter(INodeView node)
         {
             var receiver = node.AsNdiReceiver();
             if (receiver == null)
             {
-                // 別 node に再 bind されたケースを考慮: 古い presenter は detach
-                if (_ndiPresenter != null) { Destroy(_ndiPresenter); _ndiPresenter = null; }
+                if (_ndiPresenter != null)
+                {
+                    // why: Destroy() is deferred to end-of-frame, so OnDestroy → Detach would
+                    // also fire late. Call Detach synchronously first to release event
+                    // subscriptions, claim entries, and the receiver component immediately.
+                    _ndiPresenter.Detach();
+                    Destroy(_ndiPresenter);
+                    _ndiPresenter = null;
+                }
                 return;
             }
 
-            if (_ndiPresenter != null) return; // 既に attach 済
+            if (_ndiPresenter != null)
+            {
+                if (ReferenceEquals(_ndiPresenter.BoundNode, receiver)) return;
+                _ndiPresenter.Detach();
+                _ndiPresenter.Attach(receiver);
+                return;
+            }
 
             _ndiPresenter = gameObject.AddComponent<NdiReceiverPresenter>();
             _ndiPresenter.Attach(receiver);
@@ -179,7 +199,7 @@ namespace Rhizomode.UI
                 _bindRetryCount++;
                 if (!TryBindInternal() && _bindRetryCount >= MaxBindRetries)
                 {
-                    Debug.LogWarning($"[NodeVisualController] Bind failed after {MaxBindRetries} retries for node {_node?.NodeId}");
+                    Debug.LogError($"[NodeVisualController] TryBindInternal gave up after {MaxBindRetries} retries for node {_node?.NodeId}. NdiReceiverPresenter may not have been created.");
                     _needsBind = false;
                 }
             }
