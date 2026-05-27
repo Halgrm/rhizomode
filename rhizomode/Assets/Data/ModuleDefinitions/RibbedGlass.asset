@@ -1,0 +1,114 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3390c342213d5dd4585d6d2aab36e607, type: 3}
+  m_Name: RibbedGlass
+  m_EditorClassIdentifier: Rhizomode.Modules.Runtime::Rhizomode.Modules.ModuleDefinition
+  moduleName: RibbedGlass
+  prefab: {fileID: 7261734829461782301, guid: f7d9f5fbec4084f7ef5bfaa216074c5d, type: 3}
+  parameters:
+  - name: Active
+    type: 2
+    defaultFloat: 0
+    minFloat: 0
+    maxFloat: 0
+    defaultColor: {r: 0, g: 0, b: 0, a: 0}
+    defaultBool: 0
+    isEvent: 0
+  - name: RibCount
+    type: 0
+    defaultFloat: 50
+    minFloat: 10
+    maxFloat: 100
+    defaultColor: {r: 0, g: 0, b: 0, a: 0}
+    defaultBool: 0
+    isEvent: 0
+  - name: Distortion
+    type: 0
+    defaultFloat: 0.03
+    minFloat: 0
+    maxFloat: 0.1
+    defaultColor: {r: 0, g: 0, b: 0, a: 0}
+    defaultBool: 0
+    isEvent: 0
+  - name: ChromaShift
+    type: 0
+    defaultFloat: 0.2
+    minFloat: 0
+    maxFloat: 1
+    defaultColor: {r: 0, g: 0, b: 0, a: 0}
+    defaultBool: 0
+    isEvent: 0
+  - name: EdgeDarken
+    type: 0
+    defaultFloat: 0.3
+    minFloat: 0
+    maxFloat: 1
+    defaultColor: {r: 0, g: 0, b: 0, a: 0}
+    defaultBool: 0
+    isEvent: 0
+  - name: FrostIntensity
+    type: 0
+    defaultFloat: 0.005
+    minFloat: 0
+    maxFloat: 0.02
+    defaultColor: {r: 0, g: 0, b: 0, a: 0}
+    defaultBool: 0
+    isEvent: 0
+  - name: FrostGrain
+    type: 0
+    defaultFloat: 200
+    minFloat: 10
+    maxFloat: 500
+    defaultColor: {r: 0, g: 0, b: 0, a: 0}
+    defaultBool: 0
+    isEvent: 0
+  - name: BlurSamples
+    type: 0
+    defaultFloat: 8
+    minFloat: 1
+    maxFloat: 16
+    defaultColor: {r: 0, g: 0, b: 0, a: 0}
+    defaultBool: 0
+    isEvent: 0
+  - name: BlurRadius
+    type: 0
+    defaultFloat: 0.003
+    minFloat: 0
+    maxFloat: 0.01
+    defaultColor: {r: 0, g: 0, b: 0, a: 0}
+    defaultBool: 0
+    isEvent: 0
+  - name: EdgeDistortion
+    type: 0
+    defaultFloat: 2
+    minFloat: 0
+    maxFloat: 5
+    defaultColor: {r: 0, g: 0, b: 0, a: 0}
+    defaultBool: 0
+    isEvent: 0
+  - name: EdgeFalloff
+    type: 0
+    defaultFloat: 2
+    minFloat: 1
+    maxFloat: 5
+    defaultColor: {r: 0, g: 0, b: 0, a: 0}
+    defaultBool: 0
+    isEvent: 0
+  - name: BarrelDistortion
+    type: 0
+    defaultFloat: 0.5
+    minFloat: -2
+    maxFloat: 2
+    defaultColor: {r: 0, g: 0, b: 0, a: 0}
+    defaultBool: 0
+    isEvent: 0
+  events: []
