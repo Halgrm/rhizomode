@@ -132,12 +132,12 @@ namespace Rhizomode.UI
             {
                 if (ReferenceEquals(_ndiPresenter.BoundNode, receiver)) return;
                 _ndiPresenter.Detach();
-                _ndiPresenter.Attach(receiver);
+                _ndiPresenter.Attach(node);  // F2: INodeView を渡す (nodeId 経由で window registry)
                 return;
             }
 
             _ndiPresenter = gameObject.AddComponent<NdiReceiverPresenter>();
-            _ndiPresenter.Attach(receiver);
+            _ndiPresenter.Attach(node);
         }
 
         private void OnLayoutReady(GeometryChangedEvent evt)

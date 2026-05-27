@@ -36,6 +36,9 @@ namespace Rhizomode.Bootstrap.Installers
             builder.Register<NdiReceiverHealth>(Lifetime.Singleton)
                 .AsSelf()
                 .As<IHealthMonitor>();
+            // NdiWindowsRoot は SampleScene 常設の MonoBehaviour として配置済。
+            // RegisterComponentInHierarchy で scene 上の instance を Singleton 解決する。
+            builder.RegisterComponentInHierarchy<NdiWindowsRoot>();
             builder.Register<VerticalSliceBootstrapWiring>(Lifetime.Singleton);
         }
     }

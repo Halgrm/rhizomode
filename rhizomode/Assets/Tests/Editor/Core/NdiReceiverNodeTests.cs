@@ -269,21 +269,9 @@ namespace Rhizomode.Core.Tests
             }
         }
 
-        [Test]
-        public void PresenterPreviewQuad_CompensatesScaledHost()
-        {
-            _testHost = new GameObject("NdiReceiverPreviewHost");
-            _testHost.transform.localScale = new Vector3(0.20f, 0.12f, 1f);
-            var presenter = _testHost.AddComponent<NdiReceiverPresenter>();
-
-            presenter.Attach(new NdiReceiverNode("n1"));
-
-            var preview = _testHost.transform.Find("NdiReceiver_Preview");
-            Assert.NotNull(preview);
-            var previewTransform = preview!;
-            Assert.GreaterOrEqual(previewTransform.lossyScale.x, 0.2f);
-            Assert.GreaterOrEqual(previewTransform.lossyScale.y, 0.1f);
-            Assert.Less(previewTransform.position.y, _testHost.transform.position.y);
-        }
+        // 旧 PresenterPreviewQuad_CompensatesScaledHost は preview Quad の scale 補正を
+        // 検証していたが、F2 で preview Quad 自体を撤去し独立 NdiViewWindow に置換した
+        // ため削除。Window の生成・配置検証は Rhizomode.UI.Tests の
+        // NdiWindowsRootTests に移行 (Phase F2 第 2 commit)。
     }
 }

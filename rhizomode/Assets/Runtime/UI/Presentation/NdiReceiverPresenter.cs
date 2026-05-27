@@ -13,18 +13,20 @@ namespace Rhizomode.UI
     /// VR visual presenter for <see cref="INdiReceiverNode"/>.
     /// </summary>
     /// <remarks>
-    /// Klak.NDI calls stay inside <c>KLAK_NDI</c>. When NDI is unavailable, the
-    /// presenter keeps the node visual alive and reports health feedback.
+    /// <para>Plan v0.3 Phase F2 で大幅 refactor: preview Quad を node から撤去し、
+    /// 独立 <see cref="NdiViewWindow"/> (scene root 配置、grabbable + scalable) に
+    /// targetRenderer を流す。node visual の panel には source name の表示のみ残す。</para>
+    ///
+    /// <para>flicker 回避規約: window spawn → renderer disabled → ApplyTransform →
+    /// receiver.targetRenderer assign → renderer enable の順を厳守する。</para>
+    ///
+    /// <para>Klak.NDI calls stay inside <c>KLAK_NDI</c>. When NDI is unavailable, the
+    /// presenter keeps the node visual alive and reports health feedback.</para>
     /// </remarks>
     [DisallowMultipleComponent]
     public sealed class NdiReceiverPresenter : MonoBehaviour
     {
         private const string MainTexProperty = "_BaseMap";
-        private const float PreviewWorldWidth = 0.32f;
-        private const float PreviewWorldHeight = 0.18f;
-        private const float DefaultNodePanelWorldHeight = 0.12f;
-        private const float MinParentScale = 0.0001f;
-        private const float ColliderDepth = 0.01f;
         private const float SourceAutoPickPollSec = 1.5f;
         private const string NdiResourcesPath = "KlakNdi/NdiResources";
 
@@ -37,11 +39,10 @@ namespace Rhizomode.UI
         private static readonly HashSet<string> _claimedSources = new();
 
         private INdiReceiverNode? _node;
-        private GameObject? _previewQuad;
-        private MeshRenderer? _previewRenderer;
-        private Material? _previewMaterial;
-        private BoxCollider? _previewCollider;
-        private NodeVisualManager? _registeredManager;
+        private INdiViewWindowState? _windowState;
+        private string _nodeId = "";
+        private NdiViewWindow? _window;
+        private NdiWindowsRoot? _windowsRoot;
         private NdiReceiverHealth? _health;
 
 #if KLAK_NDI
@@ -52,31 +53,45 @@ namespace Rhizomode.UI
         private float _nextAutoPickAt;
         private float _nextSourceHealthAt;
         private string _claimedSourceName = "";
-        private static Shader? CachedUnlitShader;
-        private static Mesh? SharedPreviewQuad;
 
         [Inject]
-        private void Construct(NdiReceiverHealth health)
+        private void Construct(NdiReceiverHealth health, NdiWindowsRoot windowsRoot)
         {
             _health = health;
+            _windowsRoot = windowsRoot;
         }
 
         /// <summary>
         /// The node this presenter is currently bound to, or null when detached.
         /// Used by <c>NodeVisualController</c> to detect a rebind to a different
-        /// receiver and trigger detach + reattach (instead of leaking the old binding).
+        /// receiver and trigger detach + reattach.
         /// </summary>
         internal INdiReceiverNode? BoundNode => _node;
 
-        /// <summary>Attach this presenter to an NDI receiver node.</summary>
-        public void Attach(INdiReceiverNode node)
+        /// <summary>spawn 済 window (test 検証用)。</summary>
+        internal NdiViewWindow? Window => _window;
+
+        /// <summary>node に attach する。
+        /// <paramref name="nodeId"/> は graph 一意 ID で window registry key として使われる。</summary>
+        public void Attach(INodeView nodeView)
         {
             if (_node != null) return;
-            TryInjectDependencies();
-            _node = node ?? throw new ArgumentNullException(nameof(node));
-            _node.OnSourceNameChanged += HandleSourceNameChanged;
+            if (nodeView == null) throw new ArgumentNullException(nameof(nodeView));
+            var receiver = nodeView.AsNdiReceiver();
+            if (receiver == null) throw new ArgumentException("node is not INdiReceiverNode", nameof(nodeView));
+            var windowState = nodeView.AsNdiViewWindowState();
+            if (windowState == null) throw new ArgumentException("node is not INdiViewWindowState", nameof(nodeView));
 
-            CreatePreviewQuad();
+            TryInjectDependencies();
+            _node = receiver;
+            _windowState = windowState;
+            _nodeId = nodeView.NodeId;
+
+            _node.OnSourceNameChanged += HandleSourceNameChanged;
+            _windowState.OnWindowTransformChanged += HandleWindowTransformChanged;
+
+            CreateWindow();
+
 #if KLAK_NDI
             CreateReceiver();
 #else
@@ -85,39 +100,45 @@ namespace Rhizomode.UI
 #endif
 
             // Seed claim set + receiver from any pre-populated SourceName (loaded graphs).
-            // Re-using HandleSourceNameChanged guarantees the same sanitize → Claim →
-            // apply pipeline as runtime changes, so loaded sources participate in
-            // collision avoidance instead of bypassing _claimedSources.
             HandleSourceNameChanged(_node.SourceName);
+
+            // flicker 回避規約の最終段: pose 適用 + receiver assign 完了後に renderer enable
+            _window?.SetRendererActive(true);
         }
 
         /// <summary>Detach from the node and destroy runtime receiver objects.</summary>
         public void Detach()
         {
-            if (_node != null)
-            {
-                _node.OnSourceNameChanged -= HandleSourceNameChanged;
-                _node = null;
-            }
+            // 1. unsubscribe (presenter は inert 化)
+            if (_node != null) _node.OnSourceNameChanged -= HandleSourceNameChanged;
+            if (_windowState != null) _windowState.OnWindowTransformChanged -= HandleWindowTransformChanged;
 
             ReleaseClaim();
-            UnregisterColliderWithVisualManager();
 
 #if KLAK_NDI
+            // 2. receiver teardown (targetRenderer を null にしてから Destroy で 1-frame 黒回避)
             if (_receiver != null)
             {
+                _receiver.targetRenderer = null;
                 Destroy(_receiver);
                 _receiver = null;
             }
 #endif
+
             ReportReceiverStopped();
-            if (_previewMaterial != null) { Destroy(_previewMaterial); _previewMaterial = null; }
-            if (_previewQuad != null) { Destroy(_previewQuad); _previewQuad = null; }
-            _previewRenderer = null;
+
+            // 3. window 破棄 (registry 経由)
+            if (_windowsRoot != null && !string.IsNullOrEmpty(_nodeId))
+                _windowsRoot.DestroyFor(_nodeId);
+            _window = null;
+
+            // 4. clear refs (idempotent 再呼出ガード)
+            _node = null;
+            _windowState = null;
+            _nodeId = "";
         }
 
         private void Awake() => TryInjectDependencies();
-
         private void OnDestroy() => Detach();
 
         private void Update()
@@ -129,13 +150,11 @@ namespace Rhizomode.UI
                 ReportReceiverUnavailable("Receiver component unavailable");
                 return;
             }
-
             if (!string.IsNullOrEmpty(_node.SourceName))
             {
                 PollSourceHealth(_node.SourceName);
                 return;
             }
-
             TryAutoPickSource();
 #endif
         }
@@ -153,6 +172,13 @@ namespace Rhizomode.UI
 #endif
         }
 
+        private void HandleWindowTransformChanged()
+        {
+            // node の paramsJson が外部 (cue load, UI 操作等) で更新されたとき window に追従させる
+            if (_window == null || _windowState == null) return;
+            _window.ApplyTransform(_windowState.WindowPosition, _windowState.WindowEulerAngles, _windowState.WindowScale);
+        }
+
         /// <summary>
         /// Clamp length and strip control / DEL characters from an untrusted NDI source name.
         /// Idempotent and allocation-free for already-clean input.
@@ -162,7 +188,6 @@ namespace Rhizomode.UI
             if (string.IsNullOrEmpty(name)) return "";
             var src = name!;
             var max = Math.Min(src.Length, MaxSourceNameLength);
-            // Fast-path: scan and only allocate if we find something to change.
             var needsCleanup = src.Length > MaxSourceNameLength;
             if (!needsCleanup)
             {
@@ -183,20 +208,25 @@ namespace Rhizomode.UI
             return sb.ToString();
         }
 
-        private void UnregisterColliderWithVisualManager()
+        private void CreateWindow()
         {
-            if (_registeredManager != null && _previewCollider != null)
-                _registeredManager.UnregisterAuxiliaryCollider(_previewCollider);
-            _registeredManager = null;
-            _previewCollider = null;
+            if (_window != null) return;
+            if (_windowsRoot == null || _node == null || _windowState == null) return;
+
+            _window = _windowsRoot.CreateFor(_nodeId, _node, _windowState);
+            // grab handle が pose 確定したら node に commit (cue save 経路に乗る)
+            _window.OnTransformChanged += HandleWindowGrabConfirmed;
+        }
+
+        private void HandleWindowGrabConfirmed(Vector3 pos, Vector3 euler, float scale)
+        {
+            _windowState?.SetWindowTransform(pos, euler, scale);
         }
 
 #if KLAK_NDI
         private void ApplySourceNameToReceiver(string name)
         {
             if (_receiver == null) return;
-            // Belt + suspenders: even if upstream sanitized, re-sanitize at the native boundary
-            // so any future caller cannot bypass cleaning on its way to KlakNDI.
             var clean = SanitizeSourceName(name);
             try
             {
@@ -220,7 +250,6 @@ namespace Rhizomode.UI
                 ReportReceiverUnavailable("NdiResources asset not found");
                 return;
             }
-
             TryAddReceiverComponent();
         }
 
@@ -242,8 +271,9 @@ namespace Rhizomode.UI
 
         private void BindReceiverTargetRenderer()
         {
-            if (_receiver == null || _previewRenderer == null) return;
-            _receiver.targetRenderer = _previewRenderer;
+            // targetRenderer = window の Renderer。preview Quad は廃止済。
+            if (_receiver == null || _window == null || _window.Renderer == null) return;
+            _receiver.targetRenderer = _window.Renderer;
             _receiver.targetMaterialProperty = MainTexProperty;
         }
 
@@ -251,10 +281,8 @@ namespace Rhizomode.UI
         {
             var loaded = Resources.FindObjectsOfTypeAll<Klak.Ndi.NdiResources>();
             if (loaded.Length > 0) return loaded[0];
-
             var runtime = Resources.Load<Klak.Ndi.NdiResources>(NdiResourcesPath);
             if (runtime != null) return runtime;
-
 #if UNITY_EDITOR
             const string ndiResourcesGuid = "69304b86950074db7ba8caba75214004";
             var path = UnityEditor.AssetDatabase.GUIDToAssetPath(ndiResourcesGuid);
@@ -268,12 +296,8 @@ namespace Rhizomode.UI
         {
             if (Time.unscaledTime < _nextAutoPickAt) return;
             _nextAutoPickAt = Time.unscaledTime + SourceAutoPickPollSec;
-
-            // PickFreeSource now returns an already-sanitized value (or null/empty).
             var picked = PickFreeSource();
             if (string.IsNullOrEmpty(picked)) return;
-            // Claim inline so a same-frame second auto-pick on another presenter sees the
-            // source as claimed before the SetSourceName → HandleSourceNameChanged event round-trips.
             Claim(picked);
             _node?.SetSourceName(picked);
         }
@@ -282,7 +306,6 @@ namespace Rhizomode.UI
         {
             if (Time.unscaledTime < _nextSourceHealthAt) return;
             _nextSourceHealthAt = Time.unscaledTime + SourceAutoPickPollSec;
-
             if (IsSourceAvailable(sourceName))
                 ReportReceiverReady();
             else
@@ -310,8 +333,6 @@ namespace Rhizomode.UI
                 foreach (var src in Klak.Ndi.NdiFinder.sourceNames)
                 {
                     if (string.IsNullOrEmpty(src)) continue;
-                    // Sanitize BEFORE the claim-set lookup so a raw variant like
-                    // "CAM\n" cannot bypass an existing claim on the sanitized "CAM".
                     var sanitized = SanitizeSourceName(src);
                     if (string.IsNullOrEmpty(sanitized)) continue;
                     if (_claimedSources.Contains(sanitized)) continue;
@@ -328,7 +349,7 @@ namespace Rhizomode.UI
 
         private void TryInjectDependencies()
         {
-            if (_health != null) return;
+            if (_health != null && _windowsRoot != null) return;
 
             var scope = GetComponentInParent<LifetimeScope>() ?? LifetimeScope.Find<LifetimeScope>();
             if (scope?.Container == null) return;
@@ -368,131 +389,6 @@ namespace Rhizomode.UI
             if (string.IsNullOrEmpty(_claimedSourceName)) return;
             _claimedSources.Remove(_claimedSourceName);
             _claimedSourceName = "";
-        }
-
-        private void CreatePreviewQuad()
-        {
-            if (_previewQuad != null) return;
-            _previewQuad = new GameObject("NdiReceiver_Preview");
-            _previewQuad.transform.SetParent(transform, worldPositionStays: false);
-            // inherit layer so MirrorHiddenScope and camera culling masks apply.
-            _previewQuad.layer = gameObject.layer;
-            ApplyPreviewTransform(_previewQuad.transform);
-
-            var mf = _previewQuad.AddComponent<MeshFilter>();
-            mf.sharedMesh = GetSharedPreviewQuad();
-
-            _previewRenderer = _previewQuad.AddComponent<MeshRenderer>();
-            if (!TryCreatePreviewMaterial()) return;
-            _previewRenderer.sharedMaterial = _previewMaterial;
-
-            _previewCollider = _previewQuad.AddComponent<BoxCollider>();
-            _previewCollider.center = Vector3.zero;
-            _previewCollider.size = new Vector3(1f, 1f, ColliderDepth);
-
-            RegisterColliderWithVisualManager();
-        }
-
-        private void ApplyPreviewTransform(Transform previewTransform)
-        {
-            var parentScale = transform.lossyScale;
-            var scaleX = SafeDivisor(parentScale.x);
-            var scaleY = SafeDivisor(parentScale.y);
-            var panelHeight = GetComponent<WorldPanelHost>()?.WorldHeight ?? DefaultNodePanelWorldHeight;
-            var yOffset = -(PreviewWorldHeight + panelHeight) * 0.5f;
-
-            // why: WorldPanelHost scales the node GameObject, so compensate here to keep
-            // the NDI preview at its intended world size and below the panel.
-            previewTransform.localPosition = new Vector3(0f, yOffset / scaleY, 0f);
-            previewTransform.localRotation = Quaternion.identity;
-            previewTransform.localScale = new Vector3(PreviewWorldWidth / scaleX, PreviewWorldHeight / scaleY, 1f);
-        }
-
-        private static float SafeDivisor(float scale)
-        {
-            return Mathf.Abs(scale) < MinParentScale ? 1f : scale;
-        }
-
-        private bool TryCreatePreviewMaterial()
-        {
-            var shader = GetUnlitShader();
-            if (shader == null)
-            {
-                Debug.LogError("[NdiReceiverPresenter] Preview material shader is null. NDI preview will not render.");
-                return false;
-            }
-
-            _previewMaterial = new Material(shader);
-            if (_previewMaterial == null || _previewMaterial.shader == null || !_previewMaterial.shader.isSupported)
-            {
-                Debug.LogError("[NdiReceiverPresenter] Preview material shader is missing or unsupported. NDI preview will not render.");
-                return false;
-            }
-
-            _previewMaterial.SetColor("_BaseColor", new Color(0.08f, 0.08f, 0.10f, 1f));
-            return true;
-        }
-
-        private void RegisterColliderWithVisualManager()
-        {
-            if (_previewCollider == null) return;
-
-            var controller = GetComponent<NodeVisualController>();
-            if (controller == null) return;
-
-            var manager = GetComponentInParent<NodeVisualManager>();
-            if (manager == null) return;
-
-            manager.RegisterAuxiliaryCollider(_previewCollider, controller);
-            _registeredManager = manager;
-        }
-
-        private static Mesh GetSharedPreviewQuad()
-        {
-            if (SharedPreviewQuad != null) return SharedPreviewQuad;
-            SharedPreviewQuad = new Mesh
-            {
-                name = "NdiReceiver_PreviewQuad",
-                vertices = new[]
-                {
-                    new Vector3(-0.5f, -0.5f, 0f),
-                    new Vector3(0.5f, -0.5f, 0f),
-                    new Vector3(0.5f, 0.5f, 0f),
-                    new Vector3(-0.5f, 0.5f, 0f)
-                },
-                uv = new[]
-                {
-                    new Vector2(0f, 0f),
-                    new Vector2(1f, 0f),
-                    new Vector2(1f, 1f),
-                    new Vector2(0f, 1f)
-                },
-                triangles = new[] { 0, 2, 1, 0, 3, 2 },
-                normals = new[]
-                {
-                    -Vector3.forward,
-                    -Vector3.forward,
-                    -Vector3.forward,
-                    -Vector3.forward
-                }
-            };
-            return SharedPreviewQuad;
-        }
-
-        private static Shader? GetUnlitShader()
-        {
-            if (CachedUnlitShader != null) return CachedUnlitShader;
-
-            // This shader must be in Always Included Shaders or referenced from a
-            // serialized config asset so player builds do not strip it.
-            CachedUnlitShader = Shader.Find("Universal Render Pipeline/Unlit");
-            if (CachedUnlitShader == null)
-            {
-                Debug.LogError("[NdiReceiverPresenter] Universal Render Pipeline/Unlit shader not found. It may be stripped from the player build.");
-                CachedUnlitShader = Shader.Find("Unlit/Color");
-            }
-
-            return CachedUnlitShader;
         }
     }
 }

@@ -7,6 +7,8 @@
         "Rhizomode.Graph.Serialization",
         "Rhizomode.NodeCatalog.Contracts",
         "Rhizomode.NodeCatalog.Runtime",
+        "Rhizomode.Nodes.Video",
+        "Rhizomode.UI.Contracts",
         "Rhizomode.Observability.Contracts",
         "Rhizomode.UI",
         "Rhizomode.UI.Presentation",
