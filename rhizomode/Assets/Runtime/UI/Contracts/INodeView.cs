@@ -53,5 +53,8 @@ namespace Rhizomode.UI.Contracts
 
         /// <summary>INdiReceiverNode 実装なら取得、未実装なら null。</summary>
         INdiReceiverNode? AsNdiReceiver();
+
+        /// <summary>INdiViewWindowState 実装なら取得、未実装なら null (window transform side-channel)。</summary>
+        INdiViewWindowState? AsNdiViewWindowState();
     }
 }

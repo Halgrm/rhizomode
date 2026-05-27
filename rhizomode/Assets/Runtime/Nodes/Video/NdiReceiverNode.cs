@@ -25,9 +25,16 @@ namespace Rhizomode.Nodes.Video
     /// 拡張時に検討。
     /// </remarks>
     [NodeType("NdiReceiver", "NDI Receiver", NodeCategory.Input)]
-    public class NdiReceiverNode : NodeBase, INdiReceiverNode
+    public class NdiReceiverNode : NodeBase, INdiReceiverNode, INdiViewWindowState
     {
         private string _sourceName = "";
+
+        // window transform side-channel (paramsJson に乗る、Plan v0.3)
+        private Vector3 _windowPosition;
+        private Vector3 _windowEulerAngles;
+        private float _windowScale = 1.0f;
+        private bool _hasExplicitWindowTransform;
+        private bool _hideFromMirror;
 
         public NdiReceiverNode(string id) : base(id, "NdiReceiver")
         {
@@ -38,6 +45,24 @@ namespace Rhizomode.Nodes.Video
 
         /// <inheritdoc/>
         public event Action<string>? OnSourceNameChanged;
+
+        /// <inheritdoc cref="INdiViewWindowState.WindowPosition"/>
+        public Vector3 WindowPosition => _windowPosition;
+
+        /// <inheritdoc cref="INdiViewWindowState.WindowEulerAngles"/>
+        public Vector3 WindowEulerAngles => _windowEulerAngles;
+
+        /// <inheritdoc cref="INdiViewWindowState.WindowScale"/>
+        public float WindowScale => _windowScale;
+
+        /// <inheritdoc cref="INdiViewWindowState.HasExplicitWindowTransform"/>
+        public bool HasExplicitWindowTransform => _hasExplicitWindowTransform;
+
+        /// <inheritdoc cref="INdiViewWindowState.HideFromMirror"/>
+        public bool HideFromMirror => _hideFromMirror;
+
+        /// <inheritdoc cref="INdiViewWindowState.OnWindowTransformChanged"/>
+        public event Action? OnWindowTransformChanged;
 
         /// <inheritdoc/>
         public void SetSourceName(string sourceName)
@@ -52,6 +77,34 @@ namespace Rhizomode.Nodes.Video
             }
         }
 
+        /// <inheritdoc cref="INdiViewWindowState.SetWindowTransform"/>
+        public void SetWindowTransform(Vector3 position, Vector3 eulerAngles, float scale)
+        {
+            // NaN/Inf 防御 (Klak.NDI / grab handle のバグで Infinity が来てもグラフ全体を壊さない)
+            if (!IsFinite(position) || !IsFinite(eulerAngles) || !float.IsFinite(scale)) return;
+            _windowPosition = position;
+            _windowEulerAngles = eulerAngles;
+            _windowScale = scale;
+            _hasExplicitWindowTransform = true;
+            try { OnWindowTransformChanged?.Invoke(); }
+            catch (Exception e)
+            {
+                Debug.LogWarning($"[NdiReceiverNode] OnWindowTransformChanged handler threw: {e.Message}");
+            }
+        }
+
+        /// <inheritdoc cref="INdiViewWindowState.SetHideFromMirror"/>
+        public void SetHideFromMirror(bool hide)
+        {
+            if (_hideFromMirror == hide) return;
+            _hideFromMirror = hide;
+            try { OnWindowTransformChanged?.Invoke(); }
+            catch (Exception e)
+            {
+                Debug.LogWarning($"[NdiReceiverNode] OnWindowTransformChanged handler threw: {e.Message}");
+            }
+        }
+
         public override void Setup(GraphState context)
         {
             // output port なし → 何もしない。Klak.NDI 受信は presenter (UI 側) が担当する。
@@ -62,7 +115,12 @@ namespace Rhizomode.Nodes.Video
             var data = base.ToNodeData();
             data.paramsJson = JsonUtility.ToJson(new NdiReceiverParams
             {
-                sourceName = _sourceName
+                sourceName = _sourceName,
+                windowPosition = _windowPosition,
+                windowEulerAngles = _windowEulerAngles,
+                windowScale = _windowScale,
+                hasExplicitWindowTransform = _hasExplicitWindowTransform,
+                hideFromMirror = _hideFromMirror,
             });
             return data;
         }
@@ -73,19 +131,37 @@ namespace Rhizomode.Nodes.Video
             try
             {
                 var p = JsonUtility.FromJson<NdiReceiverParams>(paramsJson);
-                if (p != null && p.sourceName != null)
-                    _sourceName = p.sourceName;
+                if (p == null) return;
+                if (p.sourceName != null) _sourceName = p.sourceName;
+                // 旧 cue (sourceName のみ) は hasExplicitWindowTransform=false で初期化済みのまま →
+                // factory が HMD-forward + cascade fallback を採用する (Plan v0.3 §paramsJson)。
+                _windowPosition = p.windowPosition;
+                _windowEulerAngles = p.windowEulerAngles;
+                _windowScale = p.windowScale > 0f ? p.windowScale : 1f;
+                _hasExplicitWindowTransform = p.hasExplicitWindowTransform;
+                _hideFromMirror = p.hideFromMirror;
             }
             catch (Exception)
             {
-                // 破損 JSON は無視して default ("") のまま
+                // 破損 JSON は無視して default のまま
             }
         }
+
+        private static bool IsFinite(Vector3 v)
+            => float.IsFinite(v.x) && float.IsFinite(v.y) && float.IsFinite(v.z);
 
         [Serializable]
         private class NdiReceiverParams
         {
             public string sourceName = "";
+            // Plan v0.3 で追加。旧 cue では欠落 → JsonUtility が default 値を入れる:
+            //  Vector3 = (0,0,0)、float = 0、bool = false。これを presenter が
+            //  HasExplicitWindowTransform で見分けて fallback を適用する。
+            public Vector3 windowPosition;
+            public Vector3 windowEulerAngles;
+            public float windowScale = 1.0f;
+            public bool hasExplicitWindowTransform;
+            public bool hideFromMirror;
         }
     }
 }

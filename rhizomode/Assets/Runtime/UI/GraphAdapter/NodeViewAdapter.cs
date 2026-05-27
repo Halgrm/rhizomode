@@ -59,5 +59,6 @@ namespace Rhizomode.UI
         public IInlineSpectrum? AsSpectrum() => _node as IInlineSpectrum;
         public IInlineColorPicker? AsColorPicker() => _node as IInlineColorPicker;
         public INdiReceiverNode? AsNdiReceiver() => _node as INdiReceiverNode;
+        public INdiViewWindowState? AsNdiViewWindowState() => _node as INdiViewWindowState;
     }
 }
