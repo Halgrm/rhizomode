@@ -29,6 +29,13 @@ namespace Rhizomode.UI
         private readonly Dictionary<string, NdiViewWindow> _windows = new();
 
         /// <summary>
+        /// 新 window が生成された直後に発火。Interaction 層 (WindowGrabBootstrap) が subscribe
+        /// して <c>WindowGrabHandle</c> を attach する経路。UI.Presentation が
+        /// Interaction を参照しないよう、event を介した non-circular wiring。
+        /// </summary>
+        public event Action<NdiViewWindow>? OnWindowSpawned;
+
+        /// <summary>
         /// node 用 window を生成 (既にあれば既存を返す)。<paramref name="nodeId"/> は
         /// graph 一意の ID で window registry の key として使う (presenter から渡される)。
         /// </summary>
@@ -51,6 +58,11 @@ namespace Rhizomode.UI
             ApplyInitialPose(go, nodeId, state);
 
             _windows[nodeId] = go;
+            try { OnWindowSpawned?.Invoke(go); }
+            catch (Exception e)
+            {
+                Debug.LogWarning($"[NdiWindowsRoot] OnWindowSpawned subscriber threw: {e.Message}");
+            }
             return go;
         }
 

@@ -13,6 +13,8 @@
         "Rhizomode.Interaction.GraphAdapter",
         "Rhizomode.NodeCatalog.Contracts",
         "Rhizomode.UI.GraphAdapter",
+        "Rhizomode.UI.Presentation",
+        "Rhizomode.Interaction",
         "R3.Unity"
     ],
     "includePlatforms": [
