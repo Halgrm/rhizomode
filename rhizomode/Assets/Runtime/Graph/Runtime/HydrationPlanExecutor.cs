@@ -1,7 +1,9 @@
 #nullable enable
 
+using System.Collections.Generic;
 using Rhizomode.Graph.CatalogBridge;
 using Rhizomode.Graph.Events;
+using Rhizomode.Graph.Model;
 using Rhizomode.Graph.Serialization;
 using Rhizomode.SharedKernel;
 using UnityEngine;
@@ -50,6 +52,8 @@ namespace Rhizomode.Graph.Runtime
         {
             using var scope = new GraphMutationScope(_runtime.EventBus);
 
+            var createdNodes = new List<NodeBase>();
+
             foreach (var entry in plan.Nodes)
             {
                 // Codex re-review #5 fix (2026-05-16): paramsJson を factory に渡し、constructor 依存
@@ -87,6 +91,7 @@ namespace Rhizomode.Graph.Runtime
                 }
 
                 _runtime.RegisterNode(node, NodeInitMode.Deserialize);
+                createdNodes.Add(node);
                 scope.RecordNodeAdded(entry.NodeId);
             }
 
@@ -106,6 +111,22 @@ namespace Rhizomode.Graph.Runtime
             }
 
             _runtime.NotifyAfterDeserialize();
+
+            // cue ロードで「保存値が UI には出るが downstream に流れない」バグの修正:
+            // ノードの Setup() は上の loop で edge 接続 *前* に走るため、source ノード
+            // (ConstFloat / ConstColor 等) が Setup で emit した初期値は購読者ゼロで失われる
+            // (R3 Subject は late subscriber にリプレイしない)。edge 接続が完了した今、
+            // 各ノードの PrimeInitialEmission() で復元値を再発行し downstream へ伝播させる。
+            // NodeSpawnService (メニュー spawn 経路) と同じ "接続後 re-emit" パターン。
+            // PrimeInitialEmission は NodeBase で no-op、値を持つ source ノードのみ override。
+            foreach (var node in createdNodes)
+            {
+                try { node.PrimeInitialEmission(); }
+                catch (System.Exception ex)
+                {
+                    Debug.LogWarning($"[HydrationPlanExecutor] PrimeInitialEmission failed: {node.Id} — {ex.Message}");
+                }
+            }
 
             // scope.Dispose() (using) で OnGraphChanged を 1 回発火
         }
