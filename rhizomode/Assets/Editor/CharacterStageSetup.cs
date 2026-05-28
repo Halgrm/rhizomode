@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using Rhizomode.UI.Presentation.Character;
 using UnityEditor;
+using UnityEditor.Animations;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -21,6 +22,10 @@ namespace Rhizomode.Editor.Character
         private const int CharacterRtWidth = 1920;
         private const int CharacterRtHeight = 1080;
         private const string MenuPath = "Rhizomode/Character/Setup Stage";
+        private const string MaryciaMenuPath = "Rhizomode/Character/Setup Marycia Avatar";
+        private const string MaryciaPrefabPath = "Assets/BeroarN/bn0010_Marycia/Prefab/bn0010_Marycia_Mobile_2P.prefab";
+        private const string AnimatorDirectory = "Assets/Data/Animators";
+        private const string IkControllerPath = AnimatorDirectory + "/VrHumanoidIK.controller";
         private const string CameraOffsetName = "Camera Offset";
         private const string MainCameraName = "Main Camera";
 
@@ -70,6 +75,226 @@ namespace Rhizomode.Editor.Character
             CreateCharacterCamera(character.transform);
             EditorSceneManager.MarkSceneDirty(SceneManager.GetActiveScene());
             Debug.Log($"Character stage setup complete. Body: {body != null}, attachments: {attachments.Length}");
+        }
+
+        [MenuItem(MaryciaMenuPath)]
+        public static void SetupMaryciaAvatar()
+        {
+            GameObject? prefab = AssetDatabase.LoadAssetAtPath<GameObject>(MaryciaPrefabPath);
+            if (prefab == null)
+            {
+                Debug.LogError($"Marycia prefab not found: {MaryciaPrefabPath}");
+                return;
+            }
+
+            RemoveLowPolyPlaceholder();
+
+            // Idempotent: reuse an already-spawned Marycia (has VrHumanoidBinder) if present.
+            VrHumanoidBinder? existing = UnityEngine.Object.FindFirstObjectByType<VrHumanoidBinder>(
+                FindObjectsInactive.Include);
+            GameObject avatar;
+            if (existing != null)
+            {
+                avatar = existing.gameObject;
+            }
+            else
+            {
+                avatar = (GameObject)PrefabUtility.InstantiatePrefab(prefab);
+                avatar.name = prefab.name;
+                Undo.RegisterCreatedObjectUndo(avatar, "Create Marycia Avatar");
+            }
+
+            FixAvatarMaterials(avatar);
+
+            Animator? animator = avatar.GetComponent<Animator>();
+            if (animator == null || !animator.isHuman)
+            {
+                Debug.LogError("Marycia avatar has no Humanoid Animator. Aborting VR bind.");
+                return;
+            }
+
+            // Humanoid IK requires a controller whose layer 0 has IK Pass enabled.
+            animator.runtimeAnimatorController = LoadOrCreateIkController();
+
+            VrHumanoidBinder binder = avatar.GetComponent<VrHumanoidBinder>()
+                ?? avatar.AddComponent<VrHumanoidBinder>();
+            WireHumanoidXrRig(binder);
+
+            // 3rd-person camera follows the avatar head (RT output, never the HMD display).
+            Transform headBone = animator.GetBoneTransform(HumanBodyBones.Head);
+            CreateCharacterCamera(headBone != null ? headBone : avatar.transform);
+
+            EditorSceneManager.MarkSceneDirty(SceneManager.GetActiveScene());
+            Debug.Log("Marycia avatar VR setup complete (materials + humanoid IK bind + head-follow camera).");
+        }
+
+        // The Marycia Mobile package ships with a VRChat toon shader that is absent from this
+        // URP project, so every material falls back to Hidden/InternalErrorShader (pink). We
+        // re-home them onto URP/Lit. Only the CosA color map shipped with the package; skin and
+        // hair maps are missing, so those get sensible solid fallback colors. Idempotent.
+        private static readonly Color SkinFallbackColor = new Color(0.96f, 0.82f, 0.74f, 1f);
+        private static readonly Color HairFallbackColor = new Color(0.20f, 0.14f, 0.12f, 1f);
+
+        private static void FixAvatarMaterials(GameObject avatar)
+        {
+            Shader? urpLit = Shader.Find("Universal Render Pipeline/Lit");
+            if (urpLit == null)
+            {
+                Debug.LogWarning("URP/Lit shader not found; avatar materials left as-is.");
+                return;
+            }
+
+            var seen = new HashSet<Material>();
+            foreach (Renderer renderer in avatar.GetComponentsInChildren<Renderer>(true))
+            {
+                foreach (Material material in renderer.sharedMaterials)
+                {
+                    if (material == null || !seen.Add(material))
+                    {
+                        continue;
+                    }
+
+                    bool brokenShader = material.shader == null ||
+                                        material.shader.name == "Hidden/InternalErrorShader";
+                    if (!brokenShader && material.shader.name.StartsWith("Universal Render Pipeline"))
+                    {
+                        continue; // already healthy URP material
+                    }
+
+                    Texture? mainTex = ReadSavedMainTex(material);
+                    material.shader = urpLit;
+
+                    string lowerName = material.name.ToLowerInvariant();
+                    if (mainTex != null && material.HasProperty("_BaseMap"))
+                    {
+                        material.SetTexture("_BaseMap", mainTex);
+                        if (material.HasProperty("_BaseColor")) material.SetColor("_BaseColor", Color.white);
+                    }
+                    else if (lowerName.Contains("hair"))
+                    {
+                        SetBaseColor(material, HairFallbackColor);
+                    }
+                    else if (lowerName.Contains("skin") || lowerName.Contains("face") || lowerName.Contains("body"))
+                    {
+                        SetBaseColor(material, SkinFallbackColor);
+                    }
+                    else
+                    {
+                        SetBaseColor(material, Color.white);
+                    }
+
+                    if (material.HasProperty("_Smoothness")) material.SetFloat("_Smoothness", 0.1f);
+                    if (material.HasProperty("_Metallic")) material.SetFloat("_Metallic", 0f);
+                    EditorUtility.SetDirty(material);
+                }
+            }
+
+            AssetDatabase.SaveAssets();
+        }
+
+        private static void SetBaseColor(Material material, Color color)
+        {
+            if (material.HasProperty("_BaseColor")) material.SetColor("_BaseColor", color);
+        }
+
+        // Reads the legacy _MainTex still present in m_SavedProperties even when the current
+        // shader is the error shader (which exposes no properties through Material.GetTexture).
+        private static Texture? ReadSavedMainTex(Material material)
+        {
+            var so = new SerializedObject(material);
+            SerializedProperty? texEnvs = so.FindProperty("m_SavedProperties.m_TexEnvs");
+            if (texEnvs == null || !texEnvs.isArray)
+            {
+                return null;
+            }
+
+            for (int i = 0; i < texEnvs.arraySize; i++)
+            {
+                SerializedProperty entry = texEnvs.GetArrayElementAtIndex(i);
+                SerializedProperty? first = entry?.FindPropertyRelative("first");
+                SerializedProperty? nameProp = first?.FindPropertyRelative("name");
+                if (nameProp == null || nameProp.stringValue != "_MainTex")
+                {
+                    continue;
+                }
+
+                SerializedProperty? second = entry!.FindPropertyRelative("second");
+                SerializedProperty? texProp = second?.FindPropertyRelative("m_Texture");
+                return texProp?.objectReferenceValue as Texture;
+            }
+
+            return null;
+        }
+
+        private static void RemoveLowPolyPlaceholder()
+        {
+            VrCharacterBinder[] placeholders = UnityEngine.Object.FindObjectsByType<VrCharacterBinder>(
+                FindObjectsInactive.Include, FindObjectsSortMode.None);
+            foreach (VrCharacterBinder placeholder in placeholders)
+            {
+                Undo.DestroyObjectImmediate(placeholder.gameObject);
+            }
+        }
+
+        private static void WireHumanoidXrRig(VrHumanoidBinder binder)
+        {
+            Transform? xrOrigin = FindXrOriginTransform();
+            if (xrOrigin == null)
+            {
+                Debug.LogWarning("XROrigin not found. Marycia tracking fields left empty.");
+                return;
+            }
+
+            Transform? cameraOffset = FindChildRecursive(xrOrigin, CameraOffsetName);
+            Transform searchRoot = cameraOffset != null ? cameraOffset : xrOrigin;
+            SetObjectReference(binder, "hmd", FindChildRecursive(searchRoot, MainCameraName));
+            SetObjectReference(binder, "leftController", FindChildByNameContains(searchRoot, "Left"));
+            SetObjectReference(binder, "rightController", FindChildByNameContains(searchRoot, "Right"));
+        }
+
+        private static RuntimeAnimatorController LoadOrCreateIkController()
+        {
+            AnimatorController? existing = AssetDatabase.LoadAssetAtPath<AnimatorController>(IkControllerPath);
+            if (existing != null)
+            {
+                EnsureIkPass(existing);
+                return existing;
+            }
+
+            EnsureAnimatorDirectory();
+            AnimatorController controller = AnimatorController.CreateAnimatorControllerAtPath(IkControllerPath);
+            EnsureIkPass(controller);
+            return controller;
+        }
+
+        private static void EnsureIkPass(AnimatorController controller)
+        {
+            AnimatorControllerLayer[] layers = controller.layers;
+            if (layers.Length == 0)
+            {
+                return;
+            }
+
+            if (!layers[0].iKPass)
+            {
+                layers[0].iKPass = true;
+                controller.layers = layers; // reassign so Unity serializes the change
+                EditorUtility.SetDirty(controller);
+                AssetDatabase.SaveAssets();
+            }
+        }
+
+        private static void EnsureAnimatorDirectory()
+        {
+            if (!AssetDatabase.IsValidFolder("Assets/Data"))
+            {
+                AssetDatabase.CreateFolder("Assets", "Data");
+            }
+
+            if (!AssetDatabase.IsValidFolder(AnimatorDirectory))
+            {
+                AssetDatabase.CreateFolder("Assets/Data", "Animators");
+            }
         }
 
         private static Material? LoadOrCreateMaterial()
