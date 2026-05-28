@@ -197,10 +197,20 @@ namespace Rhizomode.UI
             return EnsureFallbackMaterial();
         }
 
+        // URP/Unlit (and Lit) は [Enum(CullMode)] _Cull を持ち、0 = Off (両面描画)。
+        // NDI window を裏表両方で表示するため per-instance material で両面化する。
+        // (mesh quad は単面なので、両面化すると裏面は texture が左右反転して見える。
+        //  window を「両面から見える板」として使う用途では許容範囲。)
+        private const float CullOff = 0f;
+
         private Material CreateWindowMaterialInstance()
         {
             var source = ResolveWindowMaterial();
-            return new Material(source) { name = source.name };
+            var instance = new Material(source) { name = source.name };
+            if (instance.HasProperty("_Cull")) instance.SetFloat("_Cull", CullOff);
+            if (instance.HasProperty("_RenderFace")) instance.SetFloat("_RenderFace", CullOff);
+            instance.doubleSidedGI = true;
+            return instance;
         }
 
         private static Material EnsureFallbackMaterial()
