@@ -23,8 +23,8 @@ namespace Rhizomode.Catalog.Tests
             "OscReceiver", "MidiCC",
             // Nodes.Ableton (4)
             "AbletonTempo", "AbletonTransport", "AbletonTrackVolume", "AbletonClipFire",
-            // Nodes.Scene (1, SceneTrigger* は動的のため除外)
-            "SceneSwitch",
+            // Nodes.Scene (2, SceneTrigger* は動的のため除外)
+            "SceneSwitch", "CameraSwitch",
             // Nodes.Standard / Generators (3)
             "ConstFloat", "ConstColor", "Trigger",
             // Nodes.Standard / Math (4)
@@ -35,9 +35,9 @@ namespace Rhizomode.Catalog.Tests
             "Time", "Timer", "Delay",
             // Nodes.Standard / Generators (2)
             "LFO", "Noise",
-            // Nodes.Standard / Utility (9)
+            // Nodes.Standard / Utility (10)
             "Threshold", "Toggle", "FloatMonitor", "BoolMonitor", "ColorMonitor",
-            "ColorToFloats", "FloatsToColor", "ColorToHSV", "HSVToColor",
+            "ColorToFloats", "FloatsToColor", "ColorToHSV", "HSVToColor", "Count",
             // Nodes.Video (1)
             "NdiReceiver"
         };

@@ -36,6 +36,7 @@
         "Rhizomode.OscMidi.Transport",
         "Rhizomode.OscMidi.GraphAdapter",
         "Rhizomode.Cameras",
+        "Rhizomode.Cameras.GraphAdapter",
         "Rhizomode.Scene.Contracts",
         "Rhizomode.Scene.Runtime",
         "Rhizomode.Scene.GraphAdapter",

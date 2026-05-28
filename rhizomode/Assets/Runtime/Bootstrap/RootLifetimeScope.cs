@@ -95,6 +95,7 @@ namespace Rhizomode.Bootstrap
             new XRInstaller().Install(builder);
             new RhizomodeSettingsInstaller(sceneRefs).Install(builder);
             new EntryPointsInstaller(includeAudioDriver: sceneRefs.AudioAnalyzer != null).Install(builder);
+            new CamerasGraphAdapterInstaller().Install(builder);
         }
 
         /// <summary>

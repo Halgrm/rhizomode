@@ -6,6 +6,7 @@
         "Rhizomode.NodeCatalog.Contracts",
         "Rhizomode.Graph.Model",
         "Rhizomode.Graph.Serialization",
+        "Rhizomode.UI.Contracts",
         "Rhizomode.Scene.Contracts",
         "Rhizomode.Graph.CatalogBridge",
         "R3.Unity"
