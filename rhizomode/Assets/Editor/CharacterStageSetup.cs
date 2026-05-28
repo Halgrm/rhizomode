@@ -124,6 +124,11 @@ namespace Rhizomode.Editor.Character
             Transform headBone = animator.GetBoneTransform(HumanBodyBones.Head);
             CreateCharacterCamera(headBone != null ? headBone : avatar.transform);
 
+            // The avatar head/hair sits at the HMD, so the player's eyes are inside the mesh and
+            // see the inside of the hair. Hide the whole avatar from the HMD (and HMD-mirroring
+            // cameras) while keeping it visible to the 3rd-person Character Camera.
+            HideAvatarFromHmd(avatar);
+
             EditorSceneManager.MarkSceneDirty(SceneManager.GetActiveScene());
             Debug.Log("Marycia avatar VR setup complete (materials + humanoid IK bind + head-follow camera).");
         }
@@ -224,6 +229,82 @@ namespace Rhizomode.Editor.Character
             }
 
             return null;
+        }
+
+        private const string AvatarHiddenLayerName = "AvatarHidden";
+
+        // Put the avatar on a dedicated layer that HMD-facing cameras cull, so the player's eyes
+        // (inside the avatar head at the HMD) never render the inside of the hair/face. The
+        // 3rd-person Character Camera keeps the layer in its mask so the avatar still shows there.
+        private static void HideAvatarFromHmd(GameObject avatar)
+        {
+            int layer = EnsureLayer(AvatarHiddenLayerName);
+            if (layer < 0)
+            {
+                Debug.LogWarning("No free layer slot for AvatarHidden; avatar stays visible to HMD.");
+                return;
+            }
+
+            SetLayerRecursive(avatar.transform, layer);
+            int layerBit = 1 << layer;
+
+            // Exclude the layer from every HMD / HMD-mirroring camera...
+            foreach (Camera cam in UnityEngine.Object.FindObjectsByType<Camera>(
+                         FindObjectsInactive.Include, FindObjectsSortMode.None))
+            {
+                bool isCharacterCam = cam.GetComponent<CharacterCameraController>() != null;
+                if (isCharacterCam)
+                {
+                    cam.cullingMask |= layerBit; // ...but the 3rd-person cam keeps it visible.
+                }
+                else
+                {
+                    cam.cullingMask &= ~layerBit;
+                }
+            }
+        }
+
+        private static int EnsureLayer(string layerName)
+        {
+            for (int i = 0; i < 32; i++)
+            {
+                if (LayerMask.LayerToName(i) == layerName)
+                {
+                    return i;
+                }
+            }
+
+            UnityEngine.Object[] assets = AssetDatabase.LoadAllAssetsAtPath("ProjectSettings/TagManager.asset");
+            if (assets.Length == 0)
+            {
+                return -1;
+            }
+
+            var tagManager = new SerializedObject(assets[0]);
+            SerializedProperty layers = tagManager.FindProperty("layers");
+            // User layers start at index 8; find the first empty slot.
+            for (int i = 8; i < layers.arraySize; i++)
+            {
+                SerializedProperty slot = layers.GetArrayElementAtIndex(i);
+                if (string.IsNullOrEmpty(slot.stringValue))
+                {
+                    slot.stringValue = layerName;
+                    tagManager.ApplyModifiedProperties();
+                    AssetDatabase.SaveAssets();
+                    return i;
+                }
+            }
+
+            return -1;
+        }
+
+        private static void SetLayerRecursive(Transform root, int layer)
+        {
+            root.gameObject.layer = layer;
+            foreach (Transform child in root)
+            {
+                SetLayerRecursive(child, layer);
+            }
         }
 
         private static void RemoveLowPolyPlaceholder()
