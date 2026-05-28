@@ -21,6 +21,9 @@ namespace Rhizomode.Nodes.Scene
     {
         private ISceneLoader? _loader;
         private int _currentIndex = -1;
+        // cue ロードで復元したい env index。RestoreParamsFromJson で saved 値を受け取り、
+        // Setup で additive ロードを再発火するために保持する (fresh spawn 時は -1 のまま)。
+        private int _restoredIndex = -1;
 
         /// <summary>
         /// 実行時にGameBootstrapから注入されるシーンローダー。
@@ -74,6 +77,25 @@ namespace Rhizomode.Nodes.Scene
                             Debug.LogError($"[SceneSwitchNode] UnloadScene failed: {e.Message}");
                         }
                     }));
+
+            // cue ロード復元: 保存済 env index を additive で再ロードする。
+            // Index 入力の再 emit はグラフロード時の reactive 順序に依存して取りこぼし得る
+            // (env が出ない原因) ため、ここで明示的に駆動する。Loader は
+            // SceneLoaderLifecycleProcessor.BeforeSetup で Setup 前に注入済。
+            // AdditiveSceneLoader.LoadScene は同名 no-op なので Index 入力経路と二重実行に
+            // なっても安全。fresh spawn 時は _restoredIndex = -1 で何もしない。
+            if (_restoredIndex >= 0 && _loader != null)
+            {
+                try
+                {
+                    _loader.LoadScene(_restoredIndex);
+                    _currentIndex = _restoredIndex;
+                }
+                catch (Exception e)
+                {
+                    Debug.LogError($"[SceneSwitchNode] Restore LoadScene({_restoredIndex}) failed: {e.Message}");
+                }
+            }
         }
 
         public override NodeData ToNodeData()
@@ -89,12 +111,20 @@ namespace Rhizomode.Nodes.Scene
         public override void RestoreParamsFromJson(string paramsJson)
         {
             // cue ロード直後は additive env シーンが 1 つもロードされていない (base のみ)。
-            // 保存済み currentIndex をそのまま復元すると、Index 入力が同じ値を再 emit しても
-            // 「変化なし」と判定されて env が additive ロードされず、環境が出ない。
-            // _currentIndex は常に -1 (= 未ロード) にリセットし、Setup 後の Index 入力 emit で
-            // env を additive ロードし直す。AdditiveSceneLoader.LoadScene は同名なら no-op の
-            // ため二重ロードにはならない。
+            // _currentIndex は -1 (= 未ロード) に保ち、保存済 index は _restoredIndex に退避して
+            // Setup で additive ロードを再発火する (env を確実に復元する)。
             _currentIndex = -1;
+            _restoredIndex = -1;
+            if (string.IsNullOrEmpty(paramsJson)) return;
+            try
+            {
+                var p = JsonUtility.FromJson<SceneSwitchParams>(paramsJson);
+                _restoredIndex = p.currentIndex;
+            }
+            catch (Exception)
+            {
+                // 破損 JSON は無視 (env 復元はスキップ、グラフロードは続行)。
+            }
         }
 
         [Serializable]
