@@ -35,10 +35,10 @@ namespace Rhizomode.Catalog.Tests
             "Time", "Timer", "Delay",
             // Nodes.Standard / Generators (2)
             "LFO", "Noise",
-            // Nodes.Standard / Utility (12)
+            // Nodes.Standard / Utility (13)
             "Threshold", "Toggle", "FloatMonitor", "BoolMonitor", "ColorMonitor",
             "ColorToFloats", "FloatsToColor", "ColorToHSV", "HSVToColor",
-            "Count", "Count8", "Count16",
+            "Count", "Count8", "Count16", "Glitch",
             // Nodes.Video (1)
             "NdiReceiver"
         };

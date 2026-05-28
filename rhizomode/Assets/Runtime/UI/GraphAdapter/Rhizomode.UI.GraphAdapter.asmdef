@@ -18,6 +18,7 @@
         "Rhizomode.Graph.CatalogBridge",
         "Rhizomode.Persistence.Contracts",
         "Rhizomode.Observability.Contracts",
+        "Rhizomode.Nodes.Scene",
         "Rhizomode.Cameras",
         "Unity.Cinemachine",
         "Unity.Splines",

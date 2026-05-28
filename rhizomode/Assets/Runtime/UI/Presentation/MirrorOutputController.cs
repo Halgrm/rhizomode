@@ -1,6 +1,7 @@
 #nullable enable
 
 using UnityEngine;
+using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
 
 using Rhizomode.Presentation.Layering;
@@ -28,6 +29,11 @@ namespace Rhizomode.UI
         [SerializeField] private Camera? mirrorCamera;
 
         private RenderTexture? _outputTexture;
+        private RenderTexture? _cameraRt;
+        private Material? _glitchMaterial;
+        private bool _isEndCameraRenderingSubscribed;
+        private bool _warnedMissingGlitchShader;
+        private float _glitchAmount;
 
         // 起動時 (Activate) に最初に観測した cullingMask。
         // SetUIVisible(true) で復元するための baseline。Inspector で UI layer を含めて
@@ -37,6 +43,9 @@ namespace Rhizomode.UI
 
         /// <summary>ミラー出力用のRenderTexture。Activate後に有効。</summary>
         public RenderTexture? OutputTexture => _outputTexture;
+
+        /// <summary>現在のグリッチポストエフェクト強度。</summary>
+        public float GlitchAmount => _glitchAmount;
 
         /// <summary>ミラー出力が有効かどうか。</summary>
         public bool IsActive { get; private set; }
@@ -72,7 +81,11 @@ namespace Rhizomode.UI
             };
             _outputTexture.Create();
 
-            mirrorCamera.targetTexture = _outputTexture;
+            CreateCameraRenderTexture();
+            CreateGlitchMaterialIfNeeded();
+            SubscribeEndCameraRendering();
+
+            mirrorCamera.targetTexture = _cameraRt;
             mirrorCamera.enabled = true;
             ConfigureUrpCamera(mirrorCamera);
 
@@ -111,12 +124,15 @@ namespace Rhizomode.UI
         {
             if (!IsActive) return;
 
+            UnsubscribeEndCameraRendering();
+
             if (mirrorCamera != null)
             {
                 mirrorCamera.enabled = false;
                 mirrorCamera.targetTexture = null;
             }
 
+            ReleaseCameraRenderTexture();
             ReleaseOutputTexture();
             IsActive = false;
         }
@@ -124,6 +140,21 @@ namespace Rhizomode.UI
         private void OnDestroy()
         {
             Deactivate();
+            ReleaseGlitchMaterial();
+        }
+
+        /// <summary>
+        /// グリッチポストエフェクト強度を設定する。NaN/Infinity は 0 として扱う。
+        /// </summary>
+        public void SetGlitchAmount(float amount)
+        {
+            if (float.IsNaN(amount) || float.IsInfinity(amount))
+            {
+                _glitchAmount = 0f;
+                return;
+            }
+
+            _glitchAmount = Mathf.Clamp01(amount);
         }
 
         /// <summary>
@@ -181,6 +212,94 @@ namespace Rhizomode.UI
 
             // Bloom / Vignette / Tonemapping + BloomModule / MonochromeModule の有効化
             Rhizomode.Cameras.CameraPostFxConfigurator.EnablePostProcessing(camera);
+        }
+
+        private void CreateCameraRenderTexture()
+        {
+            if (_outputTexture == null) return;
+
+            var descriptor = _outputTexture.descriptor;
+            _cameraRt = new RenderTexture(descriptor)
+            {
+                name = "MirrorCamera_RT"
+            };
+            _cameraRt.Create();
+        }
+
+        private void CreateGlitchMaterialIfNeeded()
+        {
+            if (_glitchMaterial != null) return;
+
+            var shader = Shader.Find("Rhizomode/GlitchFullscreen");
+            if (shader == null)
+            {
+                WarnMissingGlitchShader();
+                return;
+            }
+
+            _glitchMaterial = new Material(shader)
+            {
+                name = "MirrorOutput_GlitchMaterial"
+            };
+        }
+
+        private void WarnMissingGlitchShader()
+        {
+            if (_warnedMissingGlitchShader) return;
+
+            Debug.LogWarning(
+                "[MirrorOutput] Shader 'Rhizomode/GlitchFullscreen' was not found. Glitch uses passthrough.");
+            _warnedMissingGlitchShader = true;
+        }
+
+        private void SubscribeEndCameraRendering()
+        {
+            if (_isEndCameraRenderingSubscribed) return;
+
+            RenderPipelineManager.endCameraRendering += OnEndCameraRendering;
+            _isEndCameraRenderingSubscribed = true;
+        }
+
+        private void UnsubscribeEndCameraRendering()
+        {
+            if (!_isEndCameraRenderingSubscribed) return;
+
+            RenderPipelineManager.endCameraRendering -= OnEndCameraRendering;
+            _isEndCameraRenderingSubscribed = false;
+        }
+
+        private void OnEndCameraRendering(ScriptableRenderContext context, Camera camera)
+        {
+            _ = context;
+            if (camera != mirrorCamera) return;
+            if (_cameraRt == null || _outputTexture == null) return;
+
+            if (_glitchAmount <= 0f || _glitchMaterial == null)
+            {
+                Graphics.Blit(_cameraRt, _outputTexture);
+                return;
+            }
+
+            _glitchMaterial.SetFloat("_GlitchAmount", _glitchAmount);
+            _glitchMaterial.SetFloat("_TimeSeed", Time.unscaledTime);
+            Graphics.Blit(_cameraRt, _outputTexture, _glitchMaterial);
+        }
+
+        private void ReleaseCameraRenderTexture()
+        {
+            if (_cameraRt == null) return;
+
+            _cameraRt.Release();
+            Destroy(_cameraRt);
+            _cameraRt = null;
+        }
+
+        private void ReleaseGlitchMaterial()
+        {
+            if (_glitchMaterial == null) return;
+
+            Destroy(_glitchMaterial);
+            _glitchMaterial = null;
         }
 
         private void ReleaseOutputTexture()

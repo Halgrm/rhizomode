@@ -1,6 +1,7 @@
 #nullable enable
 
 using Rhizomode.Bootstrap.Wiring;
+using Rhizomode.Bootstrap.EntryPoints;
 using Rhizomode.UI;
 using VContainer;
 using VContainer.Unity;
@@ -28,6 +29,8 @@ namespace Rhizomode.Bootstrap.Installers
             builder.Register<MenuNodeSpawnCoordinator>(Lifetime.Singleton);
             builder.Register<CameraStatePersistenceService>(Lifetime.Singleton)
                 .As<ICameraStatePersistence>();
+            builder.Register<GlitchDriverHost>(Lifetime.Singleton);
+            builder.RegisterEntryPoint<GlitchDriverHostTickAdapter>(Lifetime.Singleton);
             builder.Register<GraphSaveLoadBootstrapWiring>(Lifetime.Singleton);
         }
     }
