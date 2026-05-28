@@ -433,11 +433,22 @@ namespace Rhizomode.Editor.Character
             CharacterCameraController controller =
                 cameraObject.GetComponent<CharacterCameraController>()
                 ?? cameraObject.AddComponent<CharacterCameraController>();
+            Vector3 camOffset = new Vector3(0f, 0.3f, -2.0f);
             SerializedObject serializedController = new SerializedObject(controller);
             serializedController.FindProperty("cam").objectReferenceValue = camera;
             serializedController.FindProperty("target").objectReferenceValue = target;
-            serializedController.FindProperty("offset").vector3Value = new Vector3(0f, 1.6f, -2.5f);
+            serializedController.FindProperty("offset").vector3Value = camOffset;
             serializedController.ApplyModifiedPropertiesWithoutUndo();
+
+            // Place the camera at its follow position immediately so it is never left at the
+            // spawn origin (which sits inside the avatar mesh in Edit mode → "camera clipping").
+            if (target != null)
+            {
+                float yaw = target.eulerAngles.y;
+                cameraObject.transform.position =
+                    target.position + Quaternion.Euler(0f, yaw, 0f) * camOffset;
+                cameraObject.transform.LookAt(target.position);
+            }
         }
 
         private static RenderTexture LoadOrCreateCharacterRenderTexture()
