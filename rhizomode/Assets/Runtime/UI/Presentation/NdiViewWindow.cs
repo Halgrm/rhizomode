@@ -30,7 +30,7 @@ namespace Rhizomode.UI
         private BoxCollider? _collider;
         private bool _hasLoggedInvalidTransform;
 
-        /// <summary>Renderer assigned to Klak.NDI as the receiver target.</summary>
+        /// <summary>Renderer that displays this window's NDI target texture.</summary>
         public MeshRenderer Renderer => _renderer!;
 
         /// <summary>Collider used by VR ray and grab interaction.</summary>

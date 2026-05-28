@@ -57,6 +57,22 @@ namespace Rhizomode.UI.Tests
         }
 
         [Test]
+        public void CreateFor_MultipleWindows_UseDistinctMaterialInstances()
+        {
+            var nodeA = new NdiReceiverNode("ndi-1");
+            var nodeB = new NdiReceiverNode("ndi-2");
+
+            var windowA = _root!.CreateFor("ndi-1", nodeA, (INdiViewWindowState)nodeA);
+            var windowB = _root.CreateFor("ndi-2", nodeB, (INdiViewWindowState)nodeB);
+            var materialA = windowA.GetComponent<MeshRenderer>().sharedMaterial;
+            var materialB = windowB.GetComponent<MeshRenderer>().sharedMaterial;
+
+            Assert.NotNull(materialA);
+            Assert.NotNull(materialB);
+            Assert.AreNotSame(materialA, materialB);
+        }
+
+        [Test]
         public void CreateFor_IsIdempotent_SameNodeIdReturnsExistingWindow()
         {
             var node = new NdiReceiverNode("ndi-1");

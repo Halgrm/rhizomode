@@ -13,10 +13,10 @@ namespace Rhizomode.UI
     /// <remarks>
     /// <para>Plan v0.3 Phase F2 で大幅 refactor: preview Quad を node から撤去し、
     /// 独立 <see cref="NdiViewWindow"/> (scene root 配置、grabbable + scalable) に
-    /// targetRenderer を流す。node visual の panel には source name の表示のみ残す。</para>
+    /// RenderTexture を流す。node visual の panel には source name の表示のみ残す。</para>
     ///
     /// <para>flicker 回避規約: window spawn → renderer disabled → ApplyTransform →
-    /// receiver.targetRenderer assign → renderer enable の順を厳守する。</para>
+    /// receiver.targetTexture assign → renderer enable の順を厳守する。</para>
     ///
     /// <para>Klak.NDI calls stay inside <c>KLAK_NDI</c>. When NDI is unavailable, the
     /// presenter keeps the node visual alive and reports health feedback.</para>
@@ -25,6 +25,8 @@ namespace Rhizomode.UI
     public sealed class NdiReceiverPresenter : MonoBehaviour
     {
         private const string MainTexProperty = "_BaseMap";
+        private const int DefaultTextureWidth = 1920;
+        private const int DefaultTextureHeight = 1080;
         private const float SourceAutoPickPollSec = 1.5f;
         private const string NdiResourcesPath = "KlakNdi/NdiResources";
         private const int ContextRetryFrames = 3;
@@ -43,6 +45,7 @@ namespace Rhizomode.UI
         private NdiViewWindow? _window;
         private NdiWindowsRoot? _windowsRoot;
         private NdiReceiverHealth? _health;
+        private RenderTexture? _renderTexture;
 
 #if KLAK_NDI
         private Klak.Ndi.NdiReceiver? _receiver;
@@ -100,6 +103,8 @@ namespace Rhizomode.UI
 
 #if KLAK_NDI
             CreateReceiver();
+            EnsureRenderTexture();
+            BindReceiverTargetTexture();
 #else
             Debug.LogWarning("[NdiReceiverPresenter] KLAK_NDI define not set. NDI receive disabled.");
             ReportReceiverUnavailable("KLAK_NDI define not set");
@@ -126,14 +131,15 @@ namespace Rhizomode.UI
             ReleaseClaim();
 
 #if KLAK_NDI
-            // 2. receiver teardown (targetRenderer を null にしてから Destroy で 1-frame 黒回避)
+            // 2. receiver teardown (targetTexture を null にしてから Destroy で 1-frame 黒回避)
             if (_receiver != null)
             {
-                _receiver.targetRenderer = null;
+                _receiver.targetTexture = null;
                 Destroy(_receiver);
                 _receiver = null;
             }
 #endif
+            DestroyRenderTexture();
 
             ReportReceiverStopped();
 
@@ -161,6 +167,7 @@ namespace Rhizomode.UI
                 ReportReceiverUnavailable("Receiver component unavailable");
                 return;
             }
+            RecreateRenderTextureIfSourceSizeChanged();
             if (!string.IsNullOrEmpty(_node.SourceName))
             {
                 PollSourceHealth(_node.SourceName);
@@ -276,7 +283,8 @@ namespace Rhizomode.UI
 
             CreateWindow();
 #if KLAK_NDI
-            BindReceiverTargetRenderer();
+            EnsureRenderTexture();
+            BindReceiverTargetTexture();
 #endif
             _window?.SetRendererActive(true);
             _contextRetryFramesRemaining = 0;
@@ -323,7 +331,6 @@ namespace Rhizomode.UI
             {
                 _receiver = gameObject.AddComponent<Klak.Ndi.NdiReceiver>();
                 _receiver.SetResources(_ndiResources);
-                BindReceiverTargetRenderer();
                 ReportReceiverReady();
             }
             catch (Exception e)
@@ -333,28 +340,52 @@ namespace Rhizomode.UI
             }
         }
 
-        private void BindReceiverTargetRenderer()
-        {
-            if (_receiver == null || _window == null || _window.Renderer == null) return;
-            TryClearTargetTexture();
-            // targetRenderer = window の Renderer。preview Quad は廃止済。
-            if (_receiver == null || _window == null || _window.Renderer == null) return;
-            _receiver.targetRenderer = _window.Renderer;
-            _receiver.targetMaterialProperty = MainTexProperty;
-        }
-
-        private void TryClearTargetTexture()
+        private void BindReceiverTargetTexture()
         {
             if (_receiver == null) return;
-            try
+            EnsureRenderTexture();
+            if (_renderTexture == null) return;
+
+            _receiver.targetTexture = _renderTexture;
+            if (_window == null || _window.Renderer == null) return;
+            _window.Renderer.material.SetTexture(MainTexProperty, _renderTexture);
+        }
+
+        private void EnsureRenderTexture()
+        {
+            if (_renderTexture != null) return;
+            _renderTexture = CreateRenderTexture(DefaultTextureWidth, DefaultTextureHeight);
+        }
+
+        private void RecreateRenderTextureIfSourceSizeChanged()
+        {
+            if (_receiver == null || _receiver.texture == null) return;
+            var source = _receiver.texture;
+            if (source.width <= 0 || source.height <= 0) return;
+            if (_renderTexture != null &&
+                _renderTexture.width == source.width &&
+                _renderTexture.height == source.height) return;
+
+            DestroyRenderTexture();
+            _renderTexture = CreateRenderTexture(source.width, source.height);
+            BindReceiverTargetTexture();
+        }
+
+        private static RenderTexture CreateRenderTexture(int width, int height)
+        {
+            var rt = new RenderTexture(
+                width,
+                height,
+                0,
+                RenderTextureFormat.ARGB32,
+                RenderTextureReadWrite.sRGB)
             {
-                var prop = typeof(Klak.Ndi.NdiReceiver).GetProperty("targetTexture");
-                if (prop != null && prop.CanWrite) prop.SetValue(_receiver, null);
-            }
-            catch (Exception e)
-            {
-                Debug.LogWarning($"[NdiReceiverPresenter] targetTexture clear failed: {e.Message}");
-            }
+                name = "NdiReceiverPresenter_Target",
+                filterMode = FilterMode.Bilinear,
+                wrapMode = TextureWrapMode.Clamp
+            };
+            rt.Create();
+            return rt;
         }
 
         private static Klak.Ndi.NdiResources? ResolveNdiResources()
@@ -485,6 +516,14 @@ namespace Rhizomode.UI
             }
         }
 #endif
+
+        private void DestroyRenderTexture()
+        {
+            if (_renderTexture == null) return;
+            if (Application.isPlaying) Destroy(_renderTexture);
+            else DestroyImmediate(_renderTexture);
+            _renderTexture = null;
+        }
 
         private void ReportReceiverReady()
         {

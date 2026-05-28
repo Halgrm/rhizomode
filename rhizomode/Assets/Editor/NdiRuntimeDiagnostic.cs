@@ -97,12 +97,10 @@ namespace Rhizomode.Editor
                         if (recv != null)
                         {
                             var ndiNameProp = recvType.GetProperty("ndiName");
-                            var tgtRendProp = recvType.GetProperty("targetRenderer");
-                            var tgtPropProp = recvType.GetProperty("targetMaterialProperty");
+                            var tgtTexProp = recvType.GetProperty("targetTexture");
                             var nm = ndiNameProp?.GetValue(recv) as string;
-                            var tr = tgtRendProp?.GetValue(recv) as Renderer;
-                            var tp = tgtPropProp?.GetValue(recv) as string;
-                            sb.AppendLine($"      receiver ndiName='{nm}' tgtRenderer={(tr != null ? tr.name : "null")} tgtProp='{tp}'");
+                            var tt = tgtTexProp?.GetValue(recv) as Texture;
+                            sb.AppendLine($"      receiver ndiName='{nm}' tgtTexture={(tt != null ? tt.name : "null")} size={FormatTextureSize(tt)}");
                         }
                         else
                         {
@@ -161,6 +159,11 @@ namespace Rhizomode.Editor
             System.IO.File.WriteAllText(outPath, sb.ToString());
             Debug.Log($"[NDI PROBE] wrote {outPath}");
             Debug.LogError($"[NDI PROBE] {sb}");
+        }
+
+        private static string FormatTextureSize(Texture tex)
+        {
+            return tex == null ? "null" : $"{tex.width}x{tex.height}";
         }
     }
 }

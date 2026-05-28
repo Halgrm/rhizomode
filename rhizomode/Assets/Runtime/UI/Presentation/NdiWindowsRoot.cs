@@ -44,7 +44,7 @@ namespace Rhizomode.UI
 
             var renderer = window.GetComponent<MeshRenderer>();
             if (renderer != null)
-                renderer.sharedMaterial = ResolveWindowMaterial();
+                renderer.material = CreateWindowMaterialInstance();
 
             ApplyInitialPose(window, nodeId, state);
 
@@ -168,6 +168,12 @@ namespace Rhizomode.UI
                 return windowMaterial;
 
             return EnsureFallbackMaterial();
+        }
+
+        private Material CreateWindowMaterialInstance()
+        {
+            var source = ResolveWindowMaterial();
+            return new Material(source) { name = source.name };
         }
 
         private static Material EnsureFallbackMaterial()
