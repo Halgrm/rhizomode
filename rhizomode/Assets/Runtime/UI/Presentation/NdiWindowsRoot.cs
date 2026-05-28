@@ -16,6 +16,12 @@ namespace Rhizomode.UI
         [SerializeField] private NdiViewWindow? windowPrefab;
         [SerializeField] private Material? windowMaterial;
 
+        [Header("Window Scale Limits (2-hand scale)")]
+        [Tooltip("最小スケール (1.0 = 1m 幅)。2 手スケールの下限。")]
+        [SerializeField, Min(0.01f)] private float minWindowScale = NdiViewWindow.DefaultMinScale;
+        [Tooltip("最大スケール (1.0 = 1m 幅、16:9)。例: 8 = 最大 8m 幅 × 4.5m 高。2 手スケールの上限。")]
+        [SerializeField, Min(0.1f)] private float maxWindowScale = 8.0f;
+
         private const float DefaultForwardDistance = 1.5f;
         private const float DefaultVerticalOffset = 0.2f;
         private const float HmdForwardMinSqrMagnitude = 1e-4f;
@@ -97,6 +103,27 @@ namespace Rhizomode.UI
         }
 
         internal int Count => _windows.Count;
+
+        private void Awake()
+        {
+            ApplyScaleLimits();
+        }
+
+        private void OnValidate()
+        {
+            // Inspector で値を変えたら即反映 (Play 中も). 静的 limit は domain reload で既定に
+            // 戻るため Awake でも適用する。
+            ApplyScaleLimits();
+        }
+
+        /// <summary>Inspector の min/max を <see cref="NdiViewWindow"/> の静的 scale limit に反映する。</summary>
+        private void ApplyScaleLimits()
+        {
+            float min = Mathf.Max(0.01f, minWindowScale);
+            float max = Mathf.Max(min, maxWindowScale);
+            NdiViewWindow.MinScale = min;
+            NdiViewWindow.MaxScale = max;
+        }
 
         private void OnDestroy()
         {

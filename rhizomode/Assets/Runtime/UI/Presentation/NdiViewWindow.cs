@@ -18,11 +18,23 @@ namespace Rhizomode.UI
         /// <summary>Base width in meters when scale is 1.</summary>
         public const float BaseWidth = 1.0f;
 
-        /// <summary>Minimum persisted window scale.</summary>
-        public const float MinScale = 0.1f;
+        /// <summary>Default minimum window scale (0.1 = 0.1m wide).</summary>
+        public const float DefaultMinScale = 0.1f;
 
-        /// <summary>Maximum persisted window scale.</summary>
-        public const float MaxScale = 4.0f;
+        /// <summary>Default maximum window scale (4.0 = 4m wide / 2.25m tall at 16:9).</summary>
+        public const float DefaultMaxScale = 4.0f;
+
+        /// <summary>
+        /// Minimum window scale (1.0 = <see cref="BaseWidth"/> m). Mutable so the limit can be
+        /// tuned from <c>NdiWindowsRoot</c> Inspector without recompiling. Global to all windows.
+        /// </summary>
+        public static float MinScale = DefaultMinScale;
+
+        /// <summary>
+        /// Maximum window scale (1.0 = <see cref="BaseWidth"/> m). Tune via <c>NdiWindowsRoot</c>.
+        /// At scale N the window is N×16:9 meters (N=4 → 4m × 2.25m). Global to all windows.
+        /// </summary>
+        public static float MaxScale = DefaultMaxScale;
 
         private static Mesh? _sharedQuadMesh;
 

@@ -20,8 +20,11 @@ namespace Rhizomode.Interaction
         /// <summary>Maximum distance for the left-hand raycast.</summary>
         public const float LeftRayMaxDistance = 3f;
 
-        private const float MinFiniteScale = 0.05f;
-        private const float MaxFiniteScale = 10f;
+        // Defensive NaN/Inf outer bounds only — the authoritative window-size limit is
+        // NdiViewWindow.MinScale / MaxScale (tunable via NdiWindowsRoot). Keep this ceiling
+        // generous so a raised MaxScale isn't pre-clamped here.
+        private const float MinFiniteScale = 0.01f;
+        private const float MaxFiniteScale = 64f;
         private const float MinScaleBaselineDistance = 0.01f;
 
         [SerializeField] private NdiViewWindow? window;
