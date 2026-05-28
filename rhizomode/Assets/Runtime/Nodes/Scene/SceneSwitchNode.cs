@@ -88,16 +88,13 @@ namespace Rhizomode.Nodes.Scene
 
         public override void RestoreParamsFromJson(string paramsJson)
         {
-            if (string.IsNullOrEmpty(paramsJson)) return;
-            try
-            {
-                var p = JsonUtility.FromJson<SceneSwitchParams>(paramsJson);
-                _currentIndex = p.currentIndex;
-            }
-            catch (Exception)
-            {
-                // 破損したJSONは無視
-            }
+            // cue ロード直後は additive env シーンが 1 つもロードされていない (base のみ)。
+            // 保存済み currentIndex をそのまま復元すると、Index 入力が同じ値を再 emit しても
+            // 「変化なし」と判定されて env が additive ロードされず、環境が出ない。
+            // _currentIndex は常に -1 (= 未ロード) にリセットし、Setup 後の Index 入力 emit で
+            // env を additive ロードし直す。AdditiveSceneLoader.LoadScene は同名なら no-op の
+            // ため二重ロードにはならない。
+            _currentIndex = -1;
         }
 
         [Serializable]

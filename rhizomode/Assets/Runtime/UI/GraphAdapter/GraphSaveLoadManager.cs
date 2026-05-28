@@ -292,58 +292,69 @@ namespace Rhizomode.UI
         }
 
         /// <summary>
-        /// data.sceneName が active scene と異なる場合、cue 名を <see cref="PendingCueLoad"/> に
-        /// 予約してシーン切替を発行し、true を返す (caller は graph mutation を skip する)。
+        /// cue が別の base シーンを要求する場合のみ、cue 名を <see cref="PendingCueLoad"/> に
+        /// 予約してシーン切替を発行し true を返す (caller は graph mutation を skip する)。
+        /// env-isolation 構成では env は additive 管理のため通常は false を返す。
         /// </summary>
         /// <remarks>
-        /// 旧形式 cue (sceneName 空) は常に false を返し従来の同一シーンロードに流れる。
-        /// シーン切替自体は <see cref="SceneManager.LoadSceneAsync(string)"/> で非同期に行うため、
-        /// 本メソッドは即座に戻る。シーン切替完了後、新 bootstrap の wire が
-        /// <see cref="PendingCueLoad.TryConsume"/> を呼んで LoadGraph を再発火する。
-        /// 失敗 (例: scene が build settings に無い) しても video は止めない (fail-open)。
+        /// <para><b>env-scene-isolation との整合 (2026-05-28 fix):</b> env シーンは
+        /// <c>AdditiveSceneLoader</c> が additive ロードし、Skybox/GI 計算のため
+        /// <see cref="SceneManager.SetActiveScene"/> で「active scene」に設定する。そのため
+        /// 旧来の「active scene を保存 → load 時に Single ロード」方式だと env 名 (例 "concrete")
+        /// が保存され、ロード時に base シーン (起動シーン = index 0、XR rig / cameras / bootstrap
+        /// を保持) ごと Single ロードで破棄してしまう ("cue ロードでカメラが消える" の原因)。</para>
+        ///
+        /// <para>対策として base シーン (index 0) を基準に判定し、env / 既ロード scene への
+        /// Single 切替は抑止して base を保護する。env 切替は SceneSwitch ノードが additive に担う。</para>
         /// </remarks>
         private static bool TryScheduleSceneSwitch(string resolvedFileName, GraphData data)
         {
             if (string.IsNullOrEmpty(data.sceneName)) return false;
 
-            string activeName;
-            try
-            {
-                activeName = SceneManager.GetActiveScene().name ?? "";
-            }
+            // base シーン = 起動シーン (ロード順 index 0)。env シーンは additive で index>0 に載る。
+            string baseName;
+            try { baseName = SceneManager.GetSceneAt(0).name ?? ""; }
             catch (Exception e)
             {
-                Debug.LogWarning($"[GraphSaveLoadManager] Active scene query failed: {e.Message}");
+                Debug.LogWarning($"[GraphSaveLoadManager] Base scene query failed: {e.Message}");
                 return false;
             }
 
-            if (string.Equals(data.sceneName, activeName, StringComparison.Ordinal)) return false;
+            // 既に同じ base シーン上 → 切替不要 (in-place ロード)。
+            if (string.Equals(data.sceneName, baseName, StringComparison.Ordinal)) return false;
 
-            try
-            {
-                PendingCueLoad.Schedule(resolvedFileName);
-                SceneManager.LoadSceneAsync(data.sceneName);
-                Debug.Log($"[GraphSaveLoadManager] Scene switch scheduled: '{activeName}' → '{data.sceneName}' (cue '{resolvedFileName}' will reload after).");
-                return true;
-            }
-            catch (Exception e)
-            {
-                Debug.LogError($"[GraphSaveLoadManager] Scene switch failed: '{data.sceneName}' — {e.Message}");
-                PendingCueLoad.Clear();
-                return false;
-            }
+            // cue.sceneName が現在ロード済 (= env が additive で載っている) → Single ロードしない。
+            // Single ロードは base シーンごと巻き込み cameras / XR rig / bootstrap を破棄する。
+            var alreadyLoaded = SceneManager.GetSceneByName(data.sceneName);
+            if (alreadyLoaded.IsValid() && alreadyLoaded.isLoaded) return false;
+
+            // base と異なり未ロードの scene 名。旧形式 cue は active scene (= env 名) を保存して
+            // いるため Single ロードすると base を破壊する。base 保護のため切替を抑止し in-place
+            // ロードへ倒す (fail-safe)。env は SceneSwitch ノード / env パネルで切替える。
+            Debug.LogWarning(
+                $"[GraphSaveLoadManager] Cue scene '{data.sceneName}' は base '{baseName}' と異なり未ロード " +
+                "(旧形式 cue の env 名と推定)。base シーン (cameras/XR rig) 保護のため Single 切替を抑止し " +
+                "in-place ロードします。env は SceneSwitch ノード / env パネルで切替えてください。");
+            return false;
         }
 
-        /// <summary>active scene 名を GraphData に書き込む (cue scene 切替用)。失敗時は空のまま。</summary>
+        /// <summary>
+        /// base シーン名 (起動シーン = index 0) を GraphData に書き込む。失敗時は空のまま。
+        /// </summary>
+        /// <remarks>
+        /// env-isolation では env シーンが additive で active scene になるため、active scene を
+        /// 保存すると env 名が記録され load 時に base ごと Single ロードで破棄してしまう。
+        /// base シーン (index 0) を記録することで cue は常に正しい base を指す。
+        /// </remarks>
         private static void CaptureActiveSceneName(GraphData data)
         {
             try
             {
-                data.sceneName = SceneManager.GetActiveScene().name ?? "";
+                data.sceneName = SceneManager.GetSceneAt(0).name ?? "";
             }
             catch (Exception e)
             {
-                Debug.LogWarning($"[GraphSaveLoadManager] Active scene name capture failed: {e.Message}");
+                Debug.LogWarning($"[GraphSaveLoadManager] Base scene name capture failed: {e.Message}");
                 data.sceneName = "";
             }
         }
