@@ -19,7 +19,7 @@ namespace Rhizomode.UI
         private const float DefaultForwardDistance = 1.5f;
         private const float DefaultVerticalOffset = 0.2f;
         private const float HmdForwardMinSqrMagnitude = 1e-4f;
-        private static readonly Color FallbackColor = new(0.02f, 0.02f, 0.02f, 1f);
+        private static readonly Color FallbackColor = new(1f, 1f, 1f, 1f);
 
         private readonly Dictionary<string, NdiViewWindow> _windows = new();
 

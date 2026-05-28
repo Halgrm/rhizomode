@@ -2,6 +2,7 @@
 
 using Rhizomode.Input.Desktop;
 using Rhizomode.Input.XR;
+using Rhizomode.Interaction;
 using VContainer;
 using VContainer.Unity;
 
@@ -34,6 +35,8 @@ namespace Rhizomode.Bootstrap.Installers
                 builder.RegisterInstance(_sceneRefs.ControllerInput);
             if (_sceneRefs.DesktopInput != null)
                 builder.RegisterInstance(_sceneRefs.DesktopInput);
+            if (_sceneRefs.SharedRaycastService != null)
+                builder.RegisterInstance(_sceneRefs.SharedRaycastService);
         }
     }
 }

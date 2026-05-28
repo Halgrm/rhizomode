@@ -24,19 +24,47 @@ namespace Rhizomode.Interaction
     public sealed class WindowGrabBootstrap : MonoBehaviour
     {
         private NdiWindowsRoot? _windowsRoot;
+        private bool _isSubscribed;
 
         private void OnEnable()
         {
-            _windowsRoot = WindowInteractionContext.WindowsRoot;
-            if (_windowsRoot != null)
-                _windowsRoot.OnWindowSpawned += AttachHandle;
+            TrySubscribe();
+        }
+
+        private void Update()
+        {
+            if (!_isSubscribed)
+                TrySubscribe();
         }
 
         private void OnDisable()
         {
-            if (_windowsRoot != null)
+            if (_isSubscribed && _windowsRoot != null)
                 _windowsRoot.OnWindowSpawned -= AttachHandle;
             _windowsRoot = null;
+            _isSubscribed = false;
+        }
+
+        private bool TrySubscribe()
+        {
+            if (_isSubscribed) return true;
+            if (!HasRequiredContext()) return false;
+
+            _windowsRoot = WindowInteractionContext.WindowsRoot;
+            if (_windowsRoot == null) return false;
+
+            _windowsRoot.OnWindowSpawned += AttachHandle;
+            _isSubscribed = true;
+            return true;
+        }
+
+        private static bool HasRequiredContext()
+        {
+            return WindowInteractionContext.ControllerInput != null &&
+                   WindowInteractionContext.ControllerPose != null &&
+                   WindowInteractionContext.LeftInput != null &&
+                   WindowInteractionContext.LeftRay != null &&
+                   WindowInteractionContext.SharedRaycast != null;
         }
 
         private void AttachHandle(NdiViewWindow window)
