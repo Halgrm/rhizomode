@@ -54,9 +54,12 @@ namespace Rhizomode.UI
         /// UIDocument が一度も描画していない RT が targetTexture から外され空のまま残り、
         /// quad が透明描画になる。LOD は本フラグが true になるまで deactivate を保留する。
         /// </remarks>
-        private const int FramesBeforeFirstRender = 2;
+        private const int FallbackFramesBeforeFirstRender = 120;
+        private const int SentinelSizePixels = 1;
         private int _initFrame = -1;
         private bool _hasRenderedAtLeastOnce;
+        private VisualElement? _paintSentinel;
+        private Action<MeshGenerationContext>? _paintSentinelHandler;
 
         /// <inheritdoc cref="_hasRenderedAtLeastOnce"/>
         public bool HasRenderedAtLeastOnce => _hasRenderedAtLeastOnce;
@@ -90,6 +93,8 @@ namespace Rhizomode.UI
             CreateRenderTexture(textureWidth, textureHeight);
             CreatePanelSettings();
             CreateUIDocument(uxml, styleSheet);
+            // IsInitialized guard above keeps this subscription single-shot per host.
+            CreatePaintSentinel();
             SetupQuad();
             _initFrame = Time.frameCount;
 
@@ -182,6 +187,34 @@ namespace Rhizomode.UI
             _uiDocument.visualTreeAsset = uxml;
 
             _pendingStyleSheet = styleSheet;
+        }
+
+        private void CreatePaintSentinel()
+        {
+            var root = _uiDocument?.rootVisualElement;
+            if (root == null) return;
+
+            _paintSentinel = new VisualElement
+            {
+                pickingMode = PickingMode.Ignore
+            };
+            _paintSentinel.style.position = Position.Absolute;
+            _paintSentinel.style.left = 0;
+            _paintSentinel.style.top = 0;
+            _paintSentinel.style.width = SentinelSizePixels;
+            _paintSentinel.style.height = SentinelSizePixels;
+            _paintSentinel.style.backgroundColor = Color.clear;
+
+            _paintSentinelHandler = _ => OnSentinelPainted();
+            _paintSentinel.generateVisualContent += _paintSentinelHandler;
+            root.Add(_paintSentinel);
+        }
+
+        private void OnSentinelPainted()
+        {
+            if (_panelSettings?.targetTexture == null) return;
+
+            _hasRenderedAtLeastOnce = true;
         }
 
         private void SetupQuad()
@@ -280,6 +313,7 @@ namespace Rhizomode.UI
                 if (_panelSettings.targetTexture != _renderTexture)
                     _panelSettings.targetTexture = _renderTexture;
                 _uiDocument?.rootVisualElement?.MarkDirtyRepaint();
+                _paintSentinel?.MarkDirtyRepaint();
             }
             else
             {
@@ -299,12 +333,11 @@ namespace Rhizomode.UI
                 _styleSheetApplied = true;
             }
 
-            // 初回 layout + paint 完了判定 (sticky flag)。targetTexture が active な状態で
-            // FramesBeforeFirstRender フレーム経過したら、UIToolkit の repaint pass を経た想定。
-            // LOD が deactivate した状態ではカウントしない (RT に新規描画されないため)。
+            // Sentinel paint is the real readiness signal. This fallback only prevents a permanently
+            // active panel if UIToolkit never invokes generateVisualContent while the RT is assigned.
             if (!_hasRenderedAtLeastOnce && _initFrame >= 0 &&
                 _panelSettings != null && _panelSettings.targetTexture != null &&
-                Time.frameCount - _initFrame >= FramesBeforeFirstRender)
+                Time.frameCount - _initFrame >= FallbackFramesBeforeFirstRender)
             {
                 _hasRenderedAtLeastOnce = true;
             }
@@ -312,6 +345,10 @@ namespace Rhizomode.UI
 
         private void OnDestroy()
         {
+            if (_paintSentinel != null && _paintSentinelHandler != null)
+            {
+                _paintSentinel.generateVisualContent -= _paintSentinelHandler;
+            }
             if (_renderTexture != null)
             {
                 _renderTexture.Release();
