@@ -180,7 +180,7 @@ namespace Rhizomode.Nodes.Video
             {
                 var p = JsonUtility.FromJson<NdiReceiverParams>(paramsJson);
                 if (p == null) return;
-                if (p.sourceName != null) _sourceName = p.sourceName;
+                if (p.sourceName != null) SetSourceName(p.sourceName);
                 // 旧 cue (sourceName のみ) は hasExplicitWindowTransform=false で初期化済みのまま →
                 // factory が HMD-forward + cascade fallback を採用する (Plan v0.3 §paramsJson)。
                 _windowPosition = p.windowPosition;

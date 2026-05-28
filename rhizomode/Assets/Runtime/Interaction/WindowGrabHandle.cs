@@ -9,36 +9,24 @@ using UnityEngine;
 namespace Rhizomode.Interaction
 {
     /// <summary>
-    /// <see cref="NdiViewWindow"/> を VR で grab + 2-hand scale するハンドラ。
+    /// Handles one-hand grab and two-hand scale for an <see cref="NdiViewWindow"/>.
     /// </summary>
-    /// <remarks>
-    /// <para>Plan v0.3 §WindowGrabHandle 実装 (Phase F3)。</para>
-    /// <para>仕組み:</para>
-    /// <list type="bullet">
-    ///   <item>1-hand grab (右 Grip + window collider 上で raycast hit):
-    ///         controller の pose offset を保存し、リリースまで 1:1 で追従。
-    ///         roll は 0 lock、pitch は ±60° clamp。</item>
-    ///   <item>2-hand grab (右 + 左の両 Grip + 両 ray が window collider hit):
-    ///         両 controller の距離比で uniform scale。translate / rotate は
-    ///         凍結 (現案、Plan §2-hand scale translate suppression)。
-    ///         scale clamp は MinScale=0.1 / MaxScale=4.0。</item>
-    ///   <item>grab end (両手 release): <see cref="NdiViewWindow.RaiseTransformChanged"/>
-    ///         を呼んで presenter → node.SetWindowTransform に commit (cue save 経路)。</item>
-    /// </list>
-    /// </remarks>
     [DisallowMultipleComponent]
     public sealed class WindowGrabHandle : MonoBehaviour
     {
-        /// <summary>roll lock + pitch clamp の上限 (Codex review §lock policy 準拠)。</summary>
+        /// <summary>Maximum pitch applied during roll-locked window grab.</summary>
         public const float MaxPitchDeg = 60f;
 
-        /// <summary>左手 raycast の最大距離 (NodeGrabHandler と揃え)。</summary>
+        /// <summary>Maximum distance for the left-hand raycast.</summary>
         public const float LeftRayMaxDistance = 3f;
+
+        private const float MinFiniteScale = 0.05f;
+        private const float MaxFiniteScale = 10f;
+        private const float MinScaleBaselineDistance = 0.01f;
 
         [SerializeField] private NdiViewWindow? window;
         [SerializeField] private BoxCollider? boxCollider;
 
-        // injected deps (NdiWindowsRoot から Initialize で push される)
         private IControllerInput? _input;
         private IControllerPose? _pose;
         private ILeftHandInput? _leftInput;
@@ -46,17 +34,13 @@ namespace Rhizomode.Interaction
         private SharedRaycastService? _sharedRaycast;
         private IDisposable? _subscriptions;
 
-        // grab state
         private bool _rightGrabbing;
         private bool _leftGrabbing;
-        // 1-hand offset (controller frame で window pose を保持 → 毎フレーム再計算)
         private Vector3 _grabOffsetPosLocal;
-        private Quaternion _grabOffsetRotLocal;
-        // 2-hand scale baseline (両手の距離 + 当時の uniform scale)
+        private Quaternion _grabOffsetRotLocal = Quaternion.identity;
         private float _scaleBaselineDist;
-        private float _scaleBaselineValue;
+        private float _scaleBaselineValue = 1f;
 
-        /// <summary>NdiWindowsRoot から呼ばれる。VContainer 経由で取得した依存を受け取る。</summary>
         internal void Initialize(
             IControllerInput input,
             IControllerPose pose,
@@ -101,15 +85,12 @@ namespace Rhizomode.Interaction
                     CacheOneHandOffset();
                     if (_leftGrabbing) StartTwoHandScale();
                 }
+                return;
             }
-            else
-            {
-                if (_rightGrabbing)
-                {
-                    _rightGrabbing = false;
-                    CommitTransform();
-                }
-            }
+
+            if (!_rightGrabbing) return;
+            _rightGrabbing = false;
+            CommitTransform();
         }
 
         private void OnLeftGrab(bool pressed)
@@ -117,22 +98,20 @@ namespace Rhizomode.Interaction
             if (window == null || boxCollider == null) return;
             if (pressed)
             {
-                // 左手 ray は SharedRaycastService に乗っていない (右手専用) ため Physics.Raycast 直叩き。
                 if (_leftRay == null) return;
+                if (!IsFinite(_leftRay.LeftRayOrigin) || !IsFinite(_leftRay.LeftRayDirection)) return;
                 if (!Physics.Raycast(_leftRay.LeftRayOrigin, _leftRay.LeftRayDirection,
                         out var hit, LeftRayMaxDistance)) return;
                 if (hit.collider != boxCollider) return;
+
                 _leftGrabbing = true;
                 if (_rightGrabbing) StartTwoHandScale();
+                return;
             }
-            else
-            {
-                if (_leftGrabbing)
-                {
-                    _leftGrabbing = false;
-                    CommitTransform();
-                }
-            }
+
+            if (!_leftGrabbing) return;
+            _leftGrabbing = false;
+            CommitTransform();
         }
 
         private void Update()
@@ -145,36 +124,58 @@ namespace Rhizomode.Interaction
         private void CacheOneHandOffset()
         {
             if (_pose == null || window == null) return;
+            if (!IsFinite(_pose.RayOrigin) || !IsFinite(_pose.ControllerRotation)) return;
+            if (!IsFinite(window.transform.position) || !IsFinite(window.transform.rotation)) return;
+
             var invRot = Quaternion.Inverse(_pose.ControllerRotation);
+            if (!IsFinite(invRot)) return;
+
             _grabOffsetPosLocal = invRot * (window.transform.position - _pose.RayOrigin);
             _grabOffsetRotLocal = invRot * window.transform.rotation;
+            if (!IsFinite(_grabOffsetPosLocal)) _grabOffsetPosLocal = Vector3.zero;
+            if (!IsFinite(_grabOffsetRotLocal)) _grabOffsetRotLocal = Quaternion.identity;
         }
 
         private void UpdateOneHandGrab()
         {
             if (_pose == null || window == null) return;
+            if (!IsFinite(_pose.RayOrigin) || !IsFinite(_pose.ControllerRotation)) return;
+
             var newPos = _pose.RayOrigin + _pose.ControllerRotation * _grabOffsetPosLocal;
             var newRot = _pose.ControllerRotation * _grabOffsetRotLocal;
+            if (!IsFinite(newPos) || !IsFinite(newRot)) return;
+
             var euler = LockRollClampPitch(newRot.eulerAngles);
-            var currentScale = CurrentUniformScale();
+            if (!IsFinite(euler)) euler = window.transform.eulerAngles;
+            var currentScale = ClampScaleForApply(CurrentUniformScale());
             window.ApplyTransform(newPos, euler, currentScale);
         }
 
         private void StartTwoHandScale()
         {
             if (_pose == null || _leftRay == null || window == null) return;
-            _scaleBaselineDist = Mathf.Max(0.01f, Vector3.Distance(_pose.RayOrigin, _leftRay.LeftRayOrigin));
-            _scaleBaselineValue = CurrentUniformScale();
+            if (!IsFinite(_pose.RayOrigin) || !IsFinite(_leftRay.LeftRayOrigin)) return;
+
+            var dist = Vector3.Distance(_pose.RayOrigin, _leftRay.LeftRayOrigin);
+            if (!float.IsFinite(dist)) return;
+
+            _scaleBaselineDist = Mathf.Max(MinScaleBaselineDistance, dist);
+            _scaleBaselineValue = ClampScaleForApply(CurrentUniformScale());
         }
 
         private void UpdateTwoHandScale()
         {
             if (_pose == null || _leftRay == null || window == null) return;
+            if (!IsFinite(_pose.RayOrigin) || !IsFinite(_leftRay.LeftRayOrigin)) return;
+
             var cur = Vector3.Distance(_pose.RayOrigin, _leftRay.LeftRayOrigin);
-            var raw = _scaleBaselineValue * (cur / _scaleBaselineDist);
-            var newScale = Mathf.Clamp(raw, NdiViewWindow.MinScale, NdiViewWindow.MaxScale);
-            // 2-hand scale 中は translate / rotate を凍結 (Plan §UX 判断)
-            window.ApplyTransform(window.transform.position, window.transform.eulerAngles, newScale);
+            var newScale = ComputeTwoHandScale(_scaleBaselineDist, cur, _scaleBaselineValue);
+            if (!IsScaleFiniteForApply(newScale)) return;
+
+            var position = window.transform.position;
+            var euler = window.transform.eulerAngles;
+            if (!IsFinite(position) || !IsFinite(euler)) return;
+            window.ApplyTransform(position, euler, newScale);
         }
 
         private void CommitTransform()
@@ -183,39 +184,66 @@ namespace Rhizomode.Interaction
             var p = window.transform.position;
             var e = window.transform.eulerAngles;
             var s = CurrentUniformScale();
+            if (!IsFinite(p) || !IsFinite(e) || !IsScaleFiniteForApply(s)) return;
             window.RaiseTransformChanged(p, e, s);
         }
 
         private float CurrentUniformScale()
         {
             if (window == null) return 1f;
-            return window.transform.localScale.x / NdiViewWindow.BaseWidth;
+            var value = window.transform.localScale.x / NdiViewWindow.BaseWidth;
+            return float.IsFinite(value) ? value : 1f;
         }
 
-        /// <summary>roll を 0 にし、pitch を ±<see cref="MaxPitchDeg"/> に clamp する。yaw は自由。</summary>
+        /// <summary>Locks roll to zero and clamps pitch to the supported window range.</summary>
         internal static Vector3 LockRollClampPitch(Vector3 euler)
         {
-            // Unity の eulerAngles は [0, 360)。clamp は signed (-180, 180] で行う。
+            if (!IsFinite(euler)) return Vector3.zero;
             var x = NormalizeToSigned(euler.x);
             x = Mathf.Clamp(x, -MaxPitchDeg, MaxPitchDeg);
-            return new Vector3(x, euler.y, 0f);
+            var y = float.IsFinite(euler.y) ? euler.y : 0f;
+            return new Vector3(x, y, 0f);
         }
 
         private static float NormalizeToSigned(float deg)
         {
+            if (!float.IsFinite(deg)) return 0f;
             deg %= 360f;
             if (deg > 180f) deg -= 360f;
             else if (deg < -180f) deg += 360f;
             return deg;
         }
 
-        /// <summary>2-hand scale formula (test 用 pure func)。
-        /// baseline=0 ガード + MinScale/MaxScale clamp 込み。</summary>
+        /// <summary>Pure two-hand scale formula used by EditMode tests.</summary>
         internal static float ComputeTwoHandScale(float baselineDist, float currentDist, float baselineValue)
         {
-            var safeBaseline = Mathf.Max(0.01f, baselineDist);
+            if (!float.IsFinite(currentDist)) return ClampScaleForApply(baselineValue);
+
+            var safeBaseline = float.IsFinite(baselineDist)
+                ? Mathf.Max(MinScaleBaselineDistance, baselineDist)
+                : MinScaleBaselineDistance;
+            var safeBaselineValue = ClampScaleForApply(baselineValue);
             var ratio = currentDist / safeBaseline;
-            return Mathf.Clamp(baselineValue * ratio, NdiViewWindow.MinScale, NdiViewWindow.MaxScale);
+            if (!float.IsFinite(ratio)) return safeBaselineValue;
+
+            return ClampScaleForApply(safeBaselineValue * ratio);
+        }
+
+        internal static bool IsFinite(Vector3 v)
+            => float.IsFinite(v.x) && float.IsFinite(v.y) && float.IsFinite(v.z);
+
+        internal static bool IsFinite(Quaternion q)
+            => float.IsFinite(q.x) && float.IsFinite(q.y) &&
+               float.IsFinite(q.z) && float.IsFinite(q.w);
+
+        private static bool IsScaleFiniteForApply(float scale)
+            => float.IsFinite(scale) && scale >= MinFiniteScale && scale <= MaxFiniteScale;
+
+        private static float ClampScaleForApply(float scale)
+        {
+            if (!float.IsFinite(scale)) return 1f;
+            var bounded = Mathf.Clamp(scale, MinFiniteScale, MaxFiniteScale);
+            return Mathf.Clamp(bounded, NdiViewWindow.MinScale, NdiViewWindow.MaxScale);
         }
     }
 }

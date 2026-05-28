@@ -27,6 +27,7 @@ namespace Rhizomode.UI
         private const string MainTexProperty = "_BaseMap";
         private const float SourceAutoPickPollSec = 1.5f;
         private const string NdiResourcesPath = "KlakNdi/NdiResources";
+        private const int ContextRetryFrames = 3;
 
         // NDI source names arrive from `Klak.Ndi.NdiFinder.sourceNames`, which lists names
         // broadcast over the LAN by remote senders — untrusted network input. We clamp
@@ -51,14 +52,17 @@ namespace Rhizomode.UI
         private float _nextAutoPickAt;
         private float _nextSourceHealthAt;
         private string _claimedSourceName = "";
+        private int _contextRetryFramesRemaining;
 
         // Plan v5.4 §15 「VContainer は Bootstrap 専用」境界規則のため、本クラスは [Inject]
         // を使わない。Bootstrap 側 wirer が <see cref="NdiPresentationContext"/> static フィールドに
         // 注入し、<see cref="TryPullFromContext"/> で取得する。</summary>
-        private void TryPullFromContext()
+        private bool TryPullFromContext()
         {
+            NdiPresentationContext.EnsureResolved();
             if (_health == null) _health = NdiPresentationContext.Health;
             if (_windowsRoot == null) _windowsRoot = NdiPresentationContext.WindowsRoot;
+            return _windowsRoot != null;
         }
 
         /// <summary>
@@ -86,6 +90,7 @@ namespace Rhizomode.UI
             _node = receiver;
             _windowState = windowState;
             _nodeId = nodeView.NodeId;
+            if (_windowsRoot == null) ScheduleContextRetry();
 
             _node.OnSourceNameChanged += HandleSourceNameChanged;
             _node.OnNextSourceRequested += HandleNextSourceRequested;
@@ -148,6 +153,7 @@ namespace Rhizomode.UI
 
         private void Update()
         {
+            RetryContextPullIfNeeded();
 #if KLAK_NDI
             if (_node == null) return;
             if (_receiver == null)
@@ -193,6 +199,7 @@ namespace Rhizomode.UI
             var prevClaim = _claimedSourceName;
             ReleaseClaim();
 
+            TryRefreshNdiSources();
             var next = PickNextSourceAfter(current);
             if (string.IsNullOrEmpty(next))
             {
@@ -256,6 +263,25 @@ namespace Rhizomode.UI
             _window.OnTransformChanged += HandleWindowGrabConfirmed;
         }
 
+        private void ScheduleContextRetry()
+        {
+            _contextRetryFramesRemaining = ContextRetryFrames;
+        }
+
+        private void RetryContextPullIfNeeded()
+        {
+            if (_contextRetryFramesRemaining <= 0) return;
+            _contextRetryFramesRemaining--;
+            if (!TryPullFromContext()) return;
+
+            CreateWindow();
+#if KLAK_NDI
+            BindReceiverTargetRenderer();
+#endif
+            _window?.SetRendererActive(true);
+            _contextRetryFramesRemaining = 0;
+        }
+
         private void HandleWindowGrabConfirmed(Vector3 pos, Vector3 euler, float scale)
         {
             _windowState?.SetWindowTransform(pos, euler, scale);
@@ -309,10 +335,26 @@ namespace Rhizomode.UI
 
         private void BindReceiverTargetRenderer()
         {
+            if (_receiver == null || _window == null || _window.Renderer == null) return;
+            TryClearTargetTexture();
             // targetRenderer = window の Renderer。preview Quad は廃止済。
             if (_receiver == null || _window == null || _window.Renderer == null) return;
             _receiver.targetRenderer = _window.Renderer;
             _receiver.targetMaterialProperty = MainTexProperty;
+        }
+
+        private void TryClearTargetTexture()
+        {
+            if (_receiver == null) return;
+            try
+            {
+                var prop = typeof(Klak.Ndi.NdiReceiver).GetProperty("targetTexture");
+                if (prop != null && prop.CanWrite) prop.SetValue(_receiver, null);
+            }
+            catch (Exception e)
+            {
+                Debug.LogWarning($"[NdiReceiverPresenter] targetTexture clear failed: {e.Message}");
+            }
         }
 
         private static Klak.Ndi.NdiResources? ResolveNdiResources()
@@ -336,7 +378,6 @@ namespace Rhizomode.UI
             _nextAutoPickAt = Time.unscaledTime + SourceAutoPickPollSec;
             var picked = PickFreeSource();
             if (string.IsNullOrEmpty(picked)) return;
-            Claim(picked);
             _node?.SetSourceName(picked);
         }
 
@@ -354,6 +395,7 @@ namespace Rhizomode.UI
         {
             try
             {
+                TryRefreshNdiSources();
                 foreach (var src in Klak.Ndi.NdiFinder.sourceNames)
                     if (src == sourceName) return true;
             }
@@ -368,6 +410,7 @@ namespace Rhizomode.UI
         {
             try
             {
+                TryRefreshNdiSources();
                 foreach (var src in Klak.Ndi.NdiFinder.sourceNames)
                 {
                     if (string.IsNullOrEmpty(src)) continue;
@@ -394,6 +437,7 @@ namespace Rhizomode.UI
             var ordered = new List<string>();
             try
             {
+                TryRefreshNdiSources();
                 foreach (var src in Klak.Ndi.NdiFinder.sourceNames)
                 {
                     if (string.IsNullOrEmpty(src)) continue;
@@ -426,6 +470,19 @@ namespace Rhizomode.UI
             }
             // 全候補が他 presenter に claim されている → 現値そのまま (no-op を呼ぶ側で扱う)
             return string.IsNullOrEmpty(current) ? ordered[0] : null;
+        }
+
+        private static void TryRefreshNdiSources()
+        {
+            try
+            {
+                var method = typeof(Klak.Ndi.NdiFinder).GetMethod("RefreshSources");
+                method?.Invoke(null, null);
+            }
+            catch (Exception e)
+            {
+                Debug.LogWarning($"[NdiReceiverPresenter] NdiFinder refresh failed: {e.Message}");
+            }
         }
 #endif
 

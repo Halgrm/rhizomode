@@ -44,6 +44,19 @@ namespace Rhizomode.UI.Tests
         }
 
         [Test]
+        public void CreateFor_DefaultWindow_UsesBaseMapMaterial()
+        {
+            var node = new NdiReceiverNode("ndi-1");
+
+            var window = _root!.CreateFor("ndi-1", node, (INdiViewWindowState)node);
+            var material = window.GetComponent<MeshRenderer>().sharedMaterial;
+
+            Assert.NotNull(material);
+            Assert.AreEqual("NdiWindow_FallbackMat", material.name);
+            Assert.IsTrue(material.HasProperty("_BaseMap"));
+        }
+
+        [Test]
         public void CreateFor_IsIdempotent_SameNodeIdReturnsExistingWindow()
         {
             var node = new NdiReceiverNode("ndi-1");

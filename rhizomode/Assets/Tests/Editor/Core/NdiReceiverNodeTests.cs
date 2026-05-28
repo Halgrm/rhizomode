@@ -86,6 +86,19 @@ namespace Rhizomode.Core.Tests
         }
 
         [Test]
+        public void RestoreParamsFromJson_RaisesSourceNameChanged()
+        {
+            var node = new NdiReceiverNode("n1");
+            string? received = null;
+            node.OnSourceNameChanged += s => received = s;
+
+            node.RestoreParamsFromJson("{\"sourceName\":\"DESKTOP-CSDL3PB (rhizomode)\"}");
+
+            Assert.AreEqual("DESKTOP-CSDL3PB (rhizomode)", node.SourceName);
+            Assert.AreEqual("DESKTOP-CSDL3PB (rhizomode)", received);
+        }
+
+        [Test]
         public void RestoreParamsFromJson_EmptyStringIsNoOp()
         {
             var node = new NdiReceiverNode("n1");
@@ -240,7 +253,7 @@ namespace Rhizomode.Core.Tests
         public void CascadeOffset_AdjacentSlotsDoNotOverlap()
         {
             // 隣接 slot 同士の距離が window collider width (1.0m) を超えていることを
-            // 全 slot 組合せで確認 (Plan v0.3 では SideSpacing = 1.2m)。
+            // 全 slot 組合せで確認。
             var fwd = Vector3.forward;
             var right = Vector3.right;
 
