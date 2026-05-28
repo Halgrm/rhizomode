@@ -8,6 +8,7 @@
         "Rhizomode.Modules.Runtime",
         "Rhizomode.Scene.Runtime",
         "Rhizomode.Presentation.Layering",
+        "Rhizomode.UI.Presentation",
         "Unity.VisualEffectGraph.Runtime",
         "Unity.RenderPipelines.Core.Runtime",
         "Unity.RenderPipelines.Universal.Runtime"
