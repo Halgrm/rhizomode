@@ -16,7 +16,10 @@ namespace Rhizomode.Editor.Character
         private const string CharacterPath = "Assets/Charactor/final low poly character  rigged.fbx";
         private const string MaterialDirectory = "Assets/Data/Materials";
         private const string MaterialPath = MaterialDirectory + "/AudioOutline.mat";
+        private const string RenderTexturePath = MaterialDirectory + "/CharacterCameraRT.renderTexture";
         private const string ShaderName = "Rhizomode/AudioOutlineUnlit";
+        private const int CharacterRtWidth = 1920;
+        private const int CharacterRtHeight = 1080;
         private const string MenuPath = "Rhizomode/Character/Setup Stage";
         private const string CameraOffsetName = "Camera Offset";
         private const string MainCameraName = "Main Camera";
@@ -37,9 +40,21 @@ namespace Rhizomode.Editor.Character
                 return;
             }
 
-            GameObject character = UnityEngine.Object.Instantiate(prefab);
-            character.name = prefab.name;
-            Undo.RegisterCreatedObjectUndo(character, "Create VR Character");
+            // Idempotent: if a character (with binder) already exists in the scene, reuse it
+            // instead of spawning a duplicate every time Setup is re-run.
+            VrCharacterBinder? existingBinder = UnityEngine.Object.FindFirstObjectByType<VrCharacterBinder>(
+                FindObjectsInactive.Include);
+            GameObject character;
+            if (existingBinder != null)
+            {
+                character = existingBinder.gameObject;
+            }
+            else
+            {
+                character = UnityEngine.Object.Instantiate(prefab);
+                character.name = prefab.name;
+                Undo.RegisterCreatedObjectUndo(character, "Create VR Character");
+            }
 
             SkinnedMeshRenderer? body = AssignRenderers(character, material, out MeshRenderer[] attachments);
             VrCharacterBinder binder = character.AddComponent<VrCharacterBinder>();
@@ -171,16 +186,51 @@ namespace Rhizomode.Editor.Character
 
         private static void CreateCharacterCamera(Transform target)
         {
-            GameObject cameraObject = new GameObject("Character Camera");
-            Undo.RegisterCreatedObjectUndo(cameraObject, "Create Character Camera");
+            // Reuse an existing camera if Setup is re-run (idempotent), otherwise create one.
+            GameObject? cameraObject = GameObject.Find("Character Camera");
+            if (cameraObject == null)
+            {
+                cameraObject = new GameObject("Character Camera");
+                Undo.RegisterCreatedObjectUndo(cameraObject, "Create Character Camera");
+            }
 
-            Camera camera = cameraObject.AddComponent<Camera>();
-            CharacterCameraController controller = cameraObject.AddComponent<CharacterCameraController>();
+            Camera camera = cameraObject.GetComponent<Camera>() ?? cameraObject.AddComponent<Camera>();
+
+            // CRITICAL: the 3rd-person camera must NOT take over the HMD stereo display.
+            // Without these two lines it renders into both eyes on top of the XR Main Camera
+            // (depth 0 > -1), replacing the head-tracked view. Render to an offscreen RT and
+            // opt out of VR stereo so the HMD viewpoint keeps tracking.
+            camera.stereoTargetEye = StereoTargetEyeMask.None;
+            camera.targetTexture = LoadOrCreateCharacterRenderTexture();
+            camera.tag = "Untagged";
+            camera.depth = -10;
+
+            CharacterCameraController controller =
+                cameraObject.GetComponent<CharacterCameraController>()
+                ?? cameraObject.AddComponent<CharacterCameraController>();
             SerializedObject serializedController = new SerializedObject(controller);
             serializedController.FindProperty("cam").objectReferenceValue = camera;
             serializedController.FindProperty("target").objectReferenceValue = target;
             serializedController.FindProperty("offset").vector3Value = new Vector3(0f, 1.6f, -2.5f);
             serializedController.ApplyModifiedPropertiesWithoutUndo();
+        }
+
+        private static RenderTexture LoadOrCreateCharacterRenderTexture()
+        {
+            EnsureMaterialDirectory();
+            RenderTexture? existing = AssetDatabase.LoadAssetAtPath<RenderTexture>(RenderTexturePath);
+            if (existing != null)
+            {
+                return existing;
+            }
+
+            RenderTexture rt = new RenderTexture(CharacterRtWidth, CharacterRtHeight, 24)
+            {
+                name = "CharacterCameraRT",
+            };
+            AssetDatabase.CreateAsset(rt, RenderTexturePath);
+            AssetDatabase.SaveAssets();
+            return rt;
         }
 
         private static SkinnedMeshRenderer? FindSkinnedRenderer(Transform root, string name)
