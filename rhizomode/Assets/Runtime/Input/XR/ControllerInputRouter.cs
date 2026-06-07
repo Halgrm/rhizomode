@@ -15,7 +15,7 @@ namespace Rhizomode.Input.XR
     /// コントローラー入力を読み取り、R3 Observableとして公開する。
     /// IControllerInputを実装し、UI層への入力配信を担う。
     /// </summary>
-    public class ControllerInputRouter : MonoBehaviour, IControllerInput, IControllerPose, ILeftHandRay, ILeftHandInput
+    public class ControllerInputRouter : MonoBehaviour, IControllerInput, IControllerPose, ILeftHandRay, ILeftHandInput, IPlayerMoveInput
     {
         [SerializeField] private InputActionAsset? inputActions;
         [SerializeField] private Transform? headTransform;

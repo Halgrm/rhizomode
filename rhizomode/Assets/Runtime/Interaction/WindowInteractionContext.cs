@@ -23,6 +23,7 @@ namespace Rhizomode.Interaction
         public static IControllerPose? ControllerPose { get; set; }
         public static ILeftHandInput? LeftInput { get; set; }
         public static ILeftHandRay? LeftRay { get; set; }
+        public static IPlayerMoveInput? MoveInput { get; set; }
         public static SharedRaycastService? SharedRaycast { get; set; }
         public static NdiWindowsRoot? WindowsRoot { get; set; }
 
@@ -33,6 +34,7 @@ namespace Rhizomode.Interaction
             ControllerPose = null;
             LeftInput = null;
             LeftRay = null;
+            MoveInput = null;
             SharedRaycast = null;
             WindowsRoot = null;
         }

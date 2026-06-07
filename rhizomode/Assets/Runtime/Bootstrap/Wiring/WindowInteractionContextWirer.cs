@@ -48,11 +48,13 @@ namespace Rhizomode.Bootstrap.Wiring
             IControllerPose? pose = (IControllerPose?)xr ?? desktop;
             ILeftHandInput? leftInput = (ILeftHandInput?)xr ?? desktop;
             ILeftHandRay? leftRay = (ILeftHandRay?)xr ?? desktop;
+            IPlayerMoveInput? moveInput = (IPlayerMoveInput?)xr ?? (desktop as IPlayerMoveInput);
 
             WindowInteractionContext.ControllerInput = input;
             WindowInteractionContext.ControllerPose = pose;
             WindowInteractionContext.LeftInput = leftInput;
             WindowInteractionContext.LeftRay = leftRay;
+            WindowInteractionContext.MoveInput = moveInput;
             WindowInteractionContext.SharedRaycast = TryResolve<SharedRaycastService>();
             WindowInteractionContext.WindowsRoot = TryResolve<NdiWindowsRoot>();
 

@@ -4,8 +4,11 @@
 /build2/
 /build3/
 /build4/
+/build5/
 /builds/
 /My project/
+/"My project (1)"/
+/a/
 # Stray dump file
 /=
 
@@ -26,3 +29,35 @@
 # Unity scene recovery
 /rhizomode/Assets/_Recovery/
 /rhizomode/Assets/_Recovery.meta
+
+# Unity asset files — not tracked (scenes, VFX, materials, config assets)
+/rhizomode/Assets/Scenes/
+/rhizomode/Assets/VFX/
+/rhizomode/Assets/Settings/
+/rhizomode/Assets/Data/Config/
+/rhizomode/Assets/Data/Animators/
+/rhizomode/Assets/Data/Animators.meta
+/rhizomode/Assets/Data/Materials/
+/rhizomode/Assets/Data/Materials.meta
+/rhizomode/Assets/Data/ModuleDefinitions/*.asset
+/rhizomode/Assets/Data/ModuleDefinitions/*.asset.meta
+/rhizomode/Assets/Runtime/UI/DefaultPanelSettings.asset
+/rhizomode/Assets/Runtime/UI/DefaultPanelSettings.asset.meta
+
+# Third-party asset store content
+/rhizomode/Assets/3Dynamite/
+/rhizomode/Assets/3Dynamite.meta
+/rhizomode/Assets/ALP_Assets/
+/rhizomode/Assets/ALP_Assets.meta
+/rhizomode/Assets/BeroarN/
+/rhizomode/Assets/BeroarN.meta
+/rhizomode/Assets/Charactor/
+/rhizomode/Assets/Charactor.meta
+
+# Unity package lock and embedded package assets
+/rhizomode/Packages/packages-lock.json
+/rhizomode/Packages/com.unity.visualeffectgraph/
+
+# ProjectSettings — machine-local / generated
+/rhizomode/ProjectSettings/EditorBuildSettings.asset
+/rhizomode/ProjectSettings/ProjectSettings.asset

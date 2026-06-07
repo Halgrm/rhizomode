@@ -1,12 +1,7 @@
-#ifndef RECTOR_AUDIO_SPECTRUM
-#define RECTOR_AUDIO_SPECTRUM
+StructuredBuffer<float> _RhizomodeAudioSpectrum;
+int _RhizomodeAudioSpectrumSize = 512;
 
-StructuredBuffer<float> _RectorAudioSpectrum;
-#define RECTOR_AUDIO_SPECTRUM_BUFFER_SIZE 512
-
-float RectorAudioSpectrum(in uint index)
+float RhizomodeAudioSpectrum(in uint index)
 {
-    return _RectorAudioSpectrum[index % RECTOR_AUDIO_SPECTRUM_BUFFER_SIZE];
+    return _RhizomodeAudioSpectrum[index % (uint)_RhizomodeAudioSpectrumSize];
 }
-
-#endif
