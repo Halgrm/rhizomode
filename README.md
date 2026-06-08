@@ -62,7 +62,6 @@ XR ──▶ UI ──▶ Nodes ──▶ Core
               ExternalInput ──▶ Core
 ```
 
-> 注: 上記は概念上の7アセンブリ構成です。v5.4 の大規模リファクタにより、現在の実装はこれを 48 asmdef（`SharedKernel` 最下層 + `Graph.*` 分割 + 各システムの `Contracts/Impl/GraphAdapter` 等）へさらに細分化しています。詳細は `CLAUDE.md` を参照してください。
 
 ---
 
