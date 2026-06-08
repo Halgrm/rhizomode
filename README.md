@@ -36,7 +36,6 @@
 | 言語 | C# 9（全ファイル `#nullable enable`） |
 | リアクティブ基盤 | R3（NuGetForUnity 経由） |
 | 入力 | Input System 1.18.0 |
-| ローンチ目標 | 2026-05-16 |
 
 ---
 
@@ -83,7 +82,6 @@ XR ──▶ UI ──▶ Nodes ──▶ Core
 | Float | 連続値。パラメータ制御全般 | ConstFloat は 0〜1、Remap で変換 |
 | Color | 色 | HSVホイール入力 |
 | Bool | トリガー / ゲート | VFX SendEvent、Activate / Deactivate、条件分岐 |
-| Vector3 | 後日追加予定 | object 経由なので I/F 変更不要 |
 
 ---
 
