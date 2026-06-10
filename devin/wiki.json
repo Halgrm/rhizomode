@@ -1,0 +1,270 @@
+{
+  "repo_notes": [
+    {
+      "author": "rhizomode maintainers",
+      "content": "rhizomode は VR ライブパフォーマンスツールです。アーティストが VR 空間内でノードグラフをリアルタイムに組み立てること自体が演出（Construction as Performance）になります。Unity 6 + URP 17.3.0、C# 9（全ファイル #nullable enable）、リアクティブ基盤は R3。最重要の設計思想は『映像は絶対に止めない（Defensive Runtime）』ことです。\n\n実装状況・アーキテクチャの最新かつ最も信頼できるソースは CLAUDE.md と AGENTS.md です。技術仕様の全体は docs/TECHNICAL_DESIGN.md（日本語）、コーディング規約は docs/CODING_GUIDELINES.md（日本語）。Wiki は必ずこれらと整合させてください。\n\n名称について: README.md には旧称『NodeXRVJTools』が残っていますが、現行名は『rhizomode』です。\n\nコードはすべて rhizomode/Assets/Runtime/ 配下にあります（Unity プロジェクトルートは nested な rhizomode/ ディレクトリ）。v5.4 リファクタで 48 個の asmdef に分割され、依存方向は一方向に強制（循環参照は構造的に不可能）。最下層が SharedKernel、その上に Graph.* が 8 分割、各システムは Contracts / Impl / GraphAdapter の 3 層。"
+    },
+    {
+      "author": "rhizomode maintainers",
+      "content": "【この Wiki の構成方針 — 最重要】\nカテゴリごとにファイルをバケツ分けする分類型ツリーにしないでください。代わりに『1 つの操作が VR 内で起きてから映像に反映されるまで、ファイルとファイルがどう繋がって値を受け渡すか』という実行時データフローの筋道に沿ってページを並べています。pages 配列の順序がそのままストーリーラインです。\n\n貫くデータフロー（これを全ページで意識し、各ページ冒頭で『どこから受け取り、どこへ渡すか』を明示すること）:\n\n  コントローラー入力 (ControllerInputRouter)\n    → レイ / Raycast 共有 (SharedRaycastService)\n    → WorldSpace UI へイベント注入 (WorldPanelRayBridge → UIToolkit)\n    → メニュー操作・ノード生成 (ScrollMenu → NodeSpawnService)\n    → 【全変異の単一窓口】IGraphCommand → GraphCommandDispatcher → GraphMutationApplier\n    → GraphState / NodeBase / Port / Edge を書き換え\n    → ノードの R3 Observable チェーンが発火 (Reactive Push)\n    → IPerformanceModule (VFX / Shader) が値を受けて描画\n    → ミラー出力 (RenderTexture → Spout / NDI)\n\n外部入力 (Audio FFT / OSC / MIDI / Ableton Link) は入力ノード経由でこのフローの上流に値を注入し、Persistence は GraphState をシリアライズ/復元し、Bootstrap(VContainer) がこれら全配線を組み立てる、という関係で周辺ページを位置づけてください。"
+    },
+    {
+      "author": "rhizomode maintainers",
+      "content": "中核となる設計パターン（Wiki 全体で繰り返し参照）:\n- Reactive Push モデル: ノードは Setup(GraphContext) 内で R3 Observable チェーンを構築。値が変わったときだけ下流が発火。Update ループを持つのは Time / LFO / Noise のみ。\n- インターフェース境界: モジュール通信は IPerformanceModule、ポートは IOutputPort / IInputPort。asmdef を越えて具象型に依存しない。\n- object 経由の型柔軟性: ポート内部値は object。型チェックは接続時に ParamType enum（Float / Color / Bool）で行う。\n- 全 graph 変異は IGraphCommand 経由（CommandOrigin 付き record、Undo Snapshot、GraphCommandScope による atomic transaction、CommandAuditLog によるロールバック）。これがフローの結節点なので最も丁寧に扱う。\n- モジュールライフサイクル分離: Factory はノードを作るだけ。プレハブ生成と IPerformanceModule 注入は InjectModuleIfNeeded / ReinjectModulesAfterLoad で別タイミング。\n- 残課題・繰り越し事項は docs/CODEX_DEFERRED_FINDINGS.md を参照。"
+    }
+  ],
+  "pages": [
+    {
+      "title": "Architecture Overview",
+      "purpose": "rhizomode 全体の俯瞰と、この Wiki の読み方の起点。『VR でノードグラフを組み立てること自体が演出』というコンセプト、レイヤー構成、そして本 Wiki が分類ではなく実行時データフローの筋道で並んでいることを説明し、後続ページの読み順を示す。",
+      "notes": [
+        {
+          "author": "rhizomode maintainers",
+          "content": "出典は README.md と CLAUDE.md。冒頭で『映像は絶対に止めない（Defensive Runtime）』が全設計を貫く非機能要件であることを強調し、続く End-to-End Data Flow ページへ誘導すること。"
+        }
+      ]
+    },
+    {
+      "title": "End-to-End Data Flow",
+      "purpose": "本 Wiki の背骨となるページ。VR でコントローラーを動かしてから映像が変わるまでの一本道（入力 → Raycast → WorldSpace UI → メニュー/ノード生成 → IGraphCommand → GraphState 変異 → R3 Observable 伝播 → IPerformanceModule 描画 → ミラー出力）を、登場する主要クラス・asmdef 名とともに 1 つのシーケンスとして示し、各段階を担う後続ページへリンクする。",
+      "parent": "Architecture Overview",
+      "notes": [
+        {
+          "author": "rhizomode maintainers",
+          "content": "repo_notes に記載したデータフロー図をそのまま中心に据え、各矢印（受け渡し）がどのファイル間で起きるかを表で対応付けること。外部入力・永続化・Bootstrap がこの本流のどこに接続するかも 1 枚で示す。これは読者が全体の筋道を掴む最重要ページ。"
+        }
+      ]
+    },
+    {
+      "title": "Assembly Topology & Dependency Direction",
+      "purpose": "データフローが一方向に流れることを構造的に保証する 48 asmdef の依存方向を説明する。SharedKernel を最下層に、Graph.* 8 分割、各システムの Contracts / Impl / GraphAdapter 3 層がどう参照し合うか、なぜ循環参照が不可能かを図解し、BoundaryValidator の役割に触れる。",
+      "parent": "Architecture Overview",
+      "notes": [
+        {
+          "author": "rhizomode maintainers",
+          "content": "*.asmdef の references を解析して依存グラフを作成。検証スクリプトは scripts/ 配下。各システムが Contracts に対してだけ依存し具象（Impl）に依存しない構造が、データフローの結合度を下げている点を強調。BoundaryValidator 残ルール（F-Vf-e.1）は docs/CODEX_DEFERRED_FINDINGS.md 参照。"
+        }
+      ]
+    },
+    {
+      "title": "Core Design Patterns & Conventions",
+      "purpose": "フロー全体に共通する設計の約束事をまとめる。Reactive Push、インターフェース境界、object + ParamType による型柔軟性、Defensive Runtime、IGraphCommand 統一変異、モジュールライフサイクル分離の 6 パターンと、コーディング規約・Breaking Change Rules を解説し、後続の各ページがこれらをどう実践しているかの基準を示す。",
+      "parent": "Architecture Overview",
+      "notes": [
+        {
+          "author": "rhizomode maintainers",
+          "content": "出典は docs/CODING_GUIDELINES.md と CLAUDE.md の Code Standards / Naming / Breaking Change Rules。シリアライズフィールド名・ポート名・インターフェースの変更禁止（append-only）はデータフローの後方互換に直結するので独立節で扱うこと。"
+        }
+      ]
+    },
+    {
+      "title": "Stage 1 — Controller Input & Raycasting",
+      "purpose": "データフローの起点。ControllerInputRouter が InputSystem を R3 Observable に変換し IRayProvider / IControllerInput として公開、SharedRaycastService が毎フレーム Physics.Raycast の結果を共有する流れを解説する。ここで生成された『レイ + 入力イベント』が次段の UI へどう渡るかを明示する。",
+      "parent": "End-to-End Data Flow",
+      "notes": [
+        {
+          "author": "rhizomode maintainers",
+          "content": "対象: Runtime/Input/（Contracts / Desktop / XR）, Runtime/XR/。下流は SharedRaycastService → WorldPanelRayBridge。デスクトップ入力と XR 入力の両対応構成にも触れる。"
+        }
+      ]
+    },
+    {
+      "title": "Stage 2 — World-Space UIToolkit Pipeline",
+      "purpose": "Stage 1 のレイ + 入力を UI イベントに変換する段。Unity 6 の UIToolkit が WorldSpace 未対応のため、WorldPanelHost 上の RenderTexture に描画し、WorldPanelRayBridge が reflection で PointerDown/Up/Hover を注入する仕組みを詳説する。RaycastHit を受け取り UI 操作へ橋渡しする関係を示す。",
+      "parent": "End-to-End Data Flow",
+      "notes": [
+        {
+          "author": "rhizomode maintainers",
+          "content": "対象: UI/Presentation の WorldPanelHost / WorldPanelRayBridge、UI/USS, UI/UXML。CLAUDE.md『VR UIパイプライン』節が一次情報。PanelSettings のテーマ付きクローン（Unity 6 要件）、MeshCollider 付き Quad の前面のみレイキャスト、非表示は enabled トグル（UIDocument 破壊防止）という why を残すこと。"
+        }
+      ]
+    },
+    {
+      "title": "Stage 3 — Menus & Node Spawning",
+      "purpose": "UI 操作を『ノードを増やす』意図に変える段。ScrollMenu（巻物式メニュー、左手操作）での選択が NodeSpawnService に渡り、NodeCatalog のメタデータと ParamTypeNodeMap を使って AddNodeCommand / ConnectPortsCommand を組み立て、次段の GraphCommandDispatcher へ投げるまでを解説する。モジュールノード生成時の ConstFloat/ConstColor 自動スポーン＆プリコネクトもここで扱う。",
+      "parent": "End-to-End Data Flow",
+      "notes": [
+        {
+          "author": "rhizomode maintainers",
+          "content": "対象: UI/Presentation の ScrollMenu 系、Interaction/GraphAdapter の NodeSpawnService、Runtime/NodeCatalog/、Graph/CatalogBridge/、UI/GraphAdapter（MenuNodeSpawnCoordinator）。NodeSpawnService が GraphCommandDispatcher 経由に統一された経緯（F-Vf-d.1）、SourceNodeDescriptor / SpawnedEdgeInfo（F-Vf-d.2）を反映。CommandOrigin.Interaction を発行する層であることを明示。"
+        }
+      ]
+    },
+    {
+      "title": "Stage 4 — Graph Commands & Mutation Hub",
+      "purpose": "全データフローの結節点。あらゆる graph 変異が IGraphCommand → GraphCommandDispatcher → GraphMutationApplier の単一経路を通ることを解説する。CommandOrigin 付き record、GraphCommandScope + CompositeCommand による atomic transaction、TryApply の失敗ロールバックを扱い、UI・Interaction・Persistence など全ての書き込み元がここに集約される関係を示す。",
+      "parent": "End-to-End Data Flow",
+      "notes": [
+        {
+          "author": "rhizomode maintainers",
+          "content": "対象: Graph/Mutation/。アーキテクチャの心臓部なので最も丁寧に。なぜ全変異を 1 経路に絞るのか（Undo・監査・原子性・Origin 追跡）という why を中心に。高頻度コマンド（MoveNode/SetNodeParam）の Snapshot allocation 最適化が post-launch backlog（GraphCommandDispatcher.cs:73-79）である点も記載。Undo/監査の詳細は別ページ『Snapshot, Undo & Command Audit』へ送る。"
+        }
+      ]
+    },
+    {
+      "title": "Stage 5 — Graph Model, Ports & Type System",
+      "purpose": "Stage 4 のコマンドが実際に書き換える対象。GraphState / GraphContext、NodeBase、OutputPort<T> / InputPort<T>、Edge、ParamType（Float/Color/Bool）の型システムと、ポートが object を内部値に持ち接続時に ParamType で型チェックする仕組みを解説する。次段の Reactive 伝播の土台となるデータ構造を示す。",
+      "parent": "End-to-End Data Flow",
+      "notes": [
+        {
+          "author": "rhizomode maintainers",
+          "content": "対象: Graph/Model/、Graph/Runtime/、Graph/Query/、Graph/Events/、SharedKernel。Emit-after-Dispose guard、重複エッジ・自己接続防止、NodeBase.IsInputPortEvent / PrimeInitialEmission（初期値発火）も扱う。GraphStateBehaviour rename が継続課題である点に触れてよい。"
+        }
+      ]
+    },
+    {
+      "title": "Interaction Handlers — Editing the Graph in VR",
+      "purpose": "Stage 1〜4 を別経路で駆動する、グラフ編集ジェスチャー群。EdgeDragHandler（2クリック・ステートマシンで接続）、EdgeCutHandler（レイ近接→Right-B で切断）、NodeDeleteHandler（Right-A）、NodeGrabHandler（Grip 移動）が、いずれも Stage 4 の IGraphCommand を発行して GraphState を変異させる関係を解説する。",
+      "parent": "End-to-End Data Flow",
+      "notes": [
+        {
+          "author": "rhizomode maintainers",
+          "content": "対象: Runtime/Interaction/（Contracts / GraphAdapter / 本体）。Stage 1 のレイと Stage 4 のコマンドの間を埋める横断的な編集経路として位置づける。メニューオープン中は無効化される仕組み（Week 6）、エッジの視覚（EdgeVisual）との連動も記載。"
+        }
+      ]
+    },
+    {
+      "title": "Stage 6 — Reactive Signal Flow & Node Lifecycle",
+      "purpose": "グラフが書き換わった後、値がどう伝播するか。各ノードが Setup(GraphContext) で R3 Observable チェーンを構築し、上流ポートの発火が下流ノードへプッシュされる Reactive Push モデルを解説する。ノードのライフサイクル（生成→Setup→接続→Dispose）と、Update ループを持つのが Time/LFO/Noise のみである理由を示す。",
+      "parent": "End-to-End Data Flow",
+      "notes": [
+        {
+          "author": "rhizomode maintainers",
+          "content": "対象: Graph/Model の NodeBase ライフサイクルと、Runtime/Nodes/ 全体の Setup 実装パターン。ここは『静的なグラフ構造（Stage 5）』が『動的な値の流れ』に変わる段。具体ノードの中身は次の 2 ページに送る。"
+        }
+      ]
+    },
+    {
+      "title": "Node Catalog & Standard Nodes",
+      "purpose": "Stage 6 で値を生成・変換する標準ノードの実装。NodeCatalog（Contracts/Runtime）によるノード型登録を入口に、Input（ConstFloat, ConstColor, TapTempo）, Math（Multiply, Add, Remap, Smooth）, Time（Time, Timer, Delay, LFO 4波形, Noise）, Utility（Threshold, Toggle, Color/Floats/HSV 変換）, Generators, Monitor 系を、入力ポート→処理→出力ポートの関係で解説する。",
+      "parent": "Stage 6 — Reactive Signal Flow & Node Lifecycle",
+      "notes": [
+        {
+          "author": "rhizomode maintainers",
+          "content": "対象: Runtime/NodeCatalog/ と Nodes/Input, Math, Time, Utility, Generators。Update ループを持つのは Time/LFO/Noise のみという原則を実コードで確認すること。"
+        }
+      ]
+    },
+    {
+      "title": "External-Input & Scene Nodes",
+      "purpose": "フローの上流に外部世界の値を注入するノード群。Audio（AudioTrigger, BeatDetector）, OscMidi（OscReceiver, MidiCC）, Ableton（Link 連携）, Scene（SceneObject）, Video が、それぞれ後述の外部サブシステムから値を受け取り Stage 6 の Observable へ橋渡しする関係を解説する。",
+      "parent": "Stage 6 — Reactive Signal Flow & Node Lifecycle",
+      "notes": [
+        {
+          "author": "rhizomode maintainers",
+          "content": "対象: Nodes/Audio, Nodes/OscMidi, Nodes/Ableton, Nodes/Scene, Nodes/Video。外部呼び出しは try-catch、NaN/null はデフォルト値にフォールバックする Defensive Runtime が最も効く層。値の供給元（Audio Analysis / OSC・MIDI・Ableton サブシステム）ページへリンク。"
+        }
+      ]
+    },
+    {
+      "title": "Stage 7 — Performance Modules & Rendering",
+      "purpose": "データフローの終端側。ノードの出力値を IPerformanceModule（VFXModule / ShaderModule / Ferrofluid）が受け取って実際の映像を描画する。VFX Graph 駆動、ShaderModule の MaterialPropertyBlock 利用（material 複製なし、LateUpdate バッチ化）、ModuleDefinition による動的ポート生成、Factory→InjectModuleIfNeeded/ReinjectModulesAfterLoad のライフサイクル分離を一気通貫で解説する。",
+      "parent": "End-to-End Data Flow",
+      "notes": [
+        {
+          "author": "rhizomode maintainers",
+          "content": "対象: Runtime/Modules/（Nodes / Runtime / Ferrofluid）、Assets/Data/ModuleDefinitions/、Assets/Shaders/, Assets/VFX/。VFXModuleNode/ShaderModuleNode が ModuleDefinition から動的にポートを生やし、ConstFloat/ConstColor が事前接続される関係を Stage 3 と結びつけること。パフォーマンス予算（VR 90fps / Single Pass Instanced）との関係も。なぜ生成と注入を分離するか（ロード時再構築・参照安定性）の why を残す。"
+        }
+      ]
+    },
+    {
+      "title": "Stage 8 — Mirror Output (Spout / NDI)",
+      "purpose": "描画結果を観客・外部へ送出する最終段。MirrorOutputController（VR 視点カメラ + Lerp ダンピング → RenderTexture）、SpoutSenderController、NdiSenderController を解説し、VR 本体は 90fps、ミラーは 60fps という別予算で動く関係を示す。",
+      "parent": "End-to-End Data Flow",
+      "notes": [
+        {
+          "author": "rhizomode maintainers",
+          "content": "対象: UI/Presentation の MirrorOutputController / SpoutSenderController / NdiSenderController。docs/NDI_USAGE.md と docs/plans/ndi-view-window.md を参照。"
+        }
+      ]
+    },
+    {
+      "title": "Audio Analysis Subsystem",
+      "purpose": "External-Input ノードに値を供給する音声解析基盤。AudioAnalyzer の FFT 解析・帯域レベル取得、AudioDeviceSelector（UIToolkit でのデバイス選択）、GraphAdapter が AudioTrigger / BeatDetector ノードへ値を渡す経路を、本流のどこに接続するかと合わせて解説する。",
+      "parent": "External-Input & Scene Nodes",
+      "notes": [
+        {
+          "author": "rhizomode maintainers",
+          "content": "対象: Runtime/Audio/（Analysis / Contracts / GraphAdapter）。Audio.GraphAdapter 境界は N3 で解消済（BoundaryValidator Rule 7b 有効化）。"
+        }
+      ]
+    },
+    {
+      "title": "OSC / MIDI / Ableton Link Subsystem",
+      "purpose": "External-Input ノードに外部コントロール値を供給する基盤。OscServer（OscJack）/ MidiServer（Minis、#if 条件コンパイル）と Ableton Link（テンポ・トランスポート同期）が、Transport → GraphAdapter → OscReceiver/MidiCC/Ableton ノードへ値を流す経路を解説する。",
+      "parent": "External-Input & Scene Nodes",
+      "notes": [
+        {
+          "author": "rhizomode maintainers",
+          "content": "対象: Runtime/OscMidi/（Contracts / Transport / GraphAdapter）, Runtime/Ableton/（Contracts / Session / Transport / GraphAdapter）。OscJack / Minis が #if で囲まれている点を明記。"
+        }
+      ]
+    },
+    {
+      "title": "Camera & Scene Subsystems",
+      "purpose": "本流に並走する 3D 空間・視点の管理。Camera（カメラ・パス機能、GraphAdapter 連携、ミラー出力カメラとの関係）と Scene（SceneObjectRegistrationService、SceneObject ノード連携、Environments）を、それぞれが GraphState とどう接続するかを軸に解説する。",
+      "parent": "End-to-End Data Flow",
+      "notes": [
+        {
+          "author": "rhizomode maintainers",
+          "content": "対象: Runtime/Camera/（本体 / Editor / GraphAdapter）, Runtime/Scene/（Contracts / GraphAdapter / Runtime）, Assets/Editor/Scene/, Assets/Data/Environments/。docs/SCENE_AUTHORING.md と docs/plans/env-scene-isolation.md を参照。カメラ永続化が post-launch Phase 4 backlog である点を記載。"
+        }
+      ]
+    },
+    {
+      "title": "Persistence — Save / Load & Module Re-injection",
+      "purpose": "GraphState をディスクと往復させる経路。JSON シリアライズ（GraphData / NodeData / EdgeData）、Persistence 層（Contracts / Json）、GraphSaveLoadManager のセーブ/ロード、ロード後に ReinjectModulesAfterLoad が IPerformanceModule を貼り直す流れを、Stage 4・Stage 7 との関係で解説する。保存ファイルは snake_case.json。",
+      "parent": "End-to-End Data Flow",
+      "notes": [
+        {
+          "author": "rhizomode maintainers",
+          "content": "対象: Graph/Serialization/、Runtime/Persistence/（Contracts / Json）、UI/GraphAdapter の GraphLoadCoordinator。フィールド名・ポート名のリネーム禁止（append-only）が後方互換に直結する点を明記。ロードもまた IGraphCommand 経由で復元される関係を示す。"
+        }
+      ]
+    },
+    {
+      "title": "Snapshot, Undo & Command Audit",
+      "purpose": "Stage 4 の信頼性を支える仕組み。Graph/Snapshot による状態スナップショット、GraphCommandScope の失敗時ロールバック、CommandAuditLog の SaveCheckpoint / RollbackToCheckpoint、CompositeCommand マーカーによる scope 境界の記録を解説し、Undo と監査がどう同期して巻き戻るかを示す。",
+      "parent": "End-to-End Data Flow",
+      "notes": [
+        {
+          "author": "rhizomode maintainers",
+          "content": "対象: Graph/Snapshot/ と Graph/Mutation の audit 関連。F-Vf-d.2 / d.3 の経緯（GraphCommandScope 追加、audit transactional 化）を反映。Stage 4 ページから本ページへ詳細を委譲する関係にすること。"
+        }
+      ]
+    },
+    {
+      "title": "Bootstrap & VContainer Wiring",
+      "purpose": "これまでの全フローを起動時に組み立てる配線層。RootLifetimeScope をシーン直接配置し、19 Installer が各サービス（Dispatcher、各 GraphAdapter、Input、UI、Modules…）を登録、EntryPoints（ITickable adapter）と Wiring が依存を解決する流れを解説する。どの Installer がフローのどの段を配線するかの対応を示す。",
+      "parent": "Architecture Overview",
+      "notes": [
+        {
+          "author": "rhizomode maintainers",
+          "content": "対象: Runtime/Bootstrap/（EntryPoints / Installers / Wiring）。旧 GameBootstrap.cs は削除済で VContainer へ全面置換（v5.4 V-final）。Bootstrap asmdef は『Installer / Wiring / ITickable adapter のみ』に純化（F-Vf-a.1）。各 Installer を本 Wiki の Stage と対応付けるのが最も価値が高い。"
+        }
+      ]
+    },
+    {
+      "title": "Observability & Diagnostics",
+      "purpose": "フロー全体の挙動を観測する横断層。Observability（Contracts / Runtime）のログ・診断基盤、CommandAuditLog との関係、Defensive Runtime で例外を捕捉した際のログ記録を解説する。",
+      "parent": "Architecture Overview",
+      "notes": [
+        {
+          "author": "rhizomode maintainers",
+          "content": "対象: Runtime/Observability/（Contracts / Runtime）。StatusPanelController（ノード数/エッジ数/BPM/FPS/Audio 表示）との連携にも触れてよい。"
+        }
+      ]
+    },
+    {
+      "title": "Testing Strategy",
+      "purpose": "フローの各結節点をどう検証するか。EditMode テストのみで Core 層（ポート接続・型バリデーション、Observable 信号フロー、シリアライズ往復、GraphCommandScope、NodeSpawnService、audit rollback）を対象とし、個々のノード挙動と VR インタラクションは手動確認とする方針を、各テスト asmdef の守備範囲とともに解説する。",
+      "parent": "Architecture Overview",
+      "notes": [
+        {
+          "author": "rhizomode maintainers",
+          "content": "対象: Assets/Tests/Editor/ の各 *.Tests.asmdef。F-Vf-d 系で追加された GraphCommandScopeTests / NodeSpawnServiceTests / audit rollback テストを、それぞれがフローのどの段を守っているかと対応付けること。PlayMode テスト不要の方針を明記。"
+        }
+      ]
+    }
+  ]
+}
