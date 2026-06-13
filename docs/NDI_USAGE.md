@@ -1,6 +1,6 @@
 # NDI Usage Guide
 
-rhizomode で他のマシン / アプリ (OBS NDI plugin / TouchDesigner / vMix / 別の Unity 等)
+XRNodeVJTools で他のマシン / アプリ (OBS NDI plugin / TouchDesigner / vMix / 別の Unity 等)
 から NDI ストリームを受信して VR 空間に表示する方法。
 
 ## アーキテクチャ (Plan v0.3 ベース)
@@ -21,7 +21,7 @@ NdiViewWindow (独立 GameObject)    ←  実際の NDI 映像を表示する Qu
 
 1. **NDI source を起動**: ネットワーク上のどこか (例えば OBS Studio の NDI plugin) で
    NDI 出力を有効にする。`Klak.Ndi.NdiFinder` が同 LAN 上の NDI source を自動検出する
-2. **rhizomode を Play / VR 起動**
+2. **XRNodeVJTools を Play / VR 起動**
 3. **左 X ボタン → ノードメニュー** → `NDI Receiver` を選択して spawn
 4. ノードが置かれた瞬間に、**HMD の正面 1.5m + cascade offset** に NDI 受信 window が出現
 5. SourceName が空のままなら presenter が `NdiFinder` から auto-pick して表示開始

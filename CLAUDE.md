@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**rhizomode** is a VR live-performance tool where the artist builds node graphs in real-time 3D space. Construction-as-performance: connecting nodes IS the show. Solo performer, PCVR (Quest Link via SteamVR), Unity 6 + URP. Launch target: 2026-05-16.
+**XRNodeVJTools** is a VR live-performance tool where the artist builds node graphs in real-time 3D space. Construction-as-performance: connecting nodes IS the show. Solo performer, PCVR (Quest Link via SteamVR), Unity 6 + URP. Launch target: 2026-05-16.
 
 Full specs: `docs/TECHNICAL_DESIGN.md` (Japanese), coding standards: `docs/CODING_GUIDELINES.md` (Japanese).
 

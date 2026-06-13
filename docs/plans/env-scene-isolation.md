@@ -8,7 +8,7 @@
 
 ## Goal
 
-任意の rhizomode 環境シーン (concrete / Forest / Dark / Ruins / …) が SampleScene の defaults を**漏れなく上書き**し、unload で**完全に reset** される仕組みを作る。
+任意の XRNodeVJTools 環境シーン (concrete / Forest / Dark / Ruins / …) が SampleScene の defaults を**漏れなく上書き**し、unload で**完全に reset** される仕組みを作る。
 
 「環境を切替えた瞬間にビジュアルが完全にその環境の設定に従う」「unload で SampleScene の元状態に戻る」を保証する。
 
@@ -229,7 +229,7 @@ Revert 順序: 逆順 (Camera → Volume → Env)。
 
 `docs/SCENE_AUTHORING.md` (新規) に明文化:
 
-> rhizomode の環境シーンは以下の component を含めること:
+> XRNodeVJTools の環境シーンは以下の component を含めること:
 > - **必須**: `SceneEnvironment` 1 個 (RenderSettings)
 > - **強く推奨**: `SceneVolumeOverride` 1 個 (これが無いと `SampleSceneProfile` の Bloom / Vignette / Tonemapping が残る)
 > - **推奨**: `SceneCameraOverride` 1 個 (skybox material 不在の場合に camera clear 色を制御)

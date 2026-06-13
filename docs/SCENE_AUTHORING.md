@@ -1,12 +1,12 @@
 # Environment Scene Authoring Contract
 
-rhizomode の環境シーン (concrete / Dark / Forest / Experience / Nature / Ruins / 等) を作る時の component 配置契約。
+XRNodeVJTools の環境シーン (concrete / Dark / Forest / Experience / Nature / Ruins / 等) を作る時の component 配置契約。
 
 ## 全体像
 
 ```
 SampleScene.unity                  ← base / bootstrap (常時ロード)
-  ├─ XR Origin, RootLifetimeScope, Game Manager, …  (全 rhizomode infra)
+  ├─ XR Origin, RootLifetimeScope, Game Manager, …  (全 XRNodeVJTools infra)
   ├─ Global Volume (SampleSceneProfile)            ← Bloom / Tonemapping / Vignette
   ├─ Directional Light + EnvOverridableDirectionalLight marker
   ├─ Main Camera (HMD) + EnvOverridableCamera marker

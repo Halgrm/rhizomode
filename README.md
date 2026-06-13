@@ -1,4 +1,4 @@
-# NodeXRVJTools
+# XRNodeVJTools
 
 > **構築プロセスそのものが演出（Construction as Performance）**
 > VR空間内でノードグラフをライブビルドし、リアルタイム3D演出を構築・制御するソロパフォーマンスツール。
@@ -7,9 +7,9 @@
 
 ## 概要
 
-**NodeXRVJTools** は、VRヘッドセットを被ったパフォーマー自身が、ライブの最中に3D空間へ手でノードを並べ、ポート同士を繋ぎ、エフェクトのグラフを「ゼロから組み立てていく」ことそのものを演出として観客に見せる——という一点に賭けたパフォーマンスツールです。
+**XRNodeVJTools** は、VRヘッドセットを被ったパフォーマー自身が、ライブの最中に3D空間へ手でノードを並べ、ポート同士を繋ぎ、エフェクトのグラフを「ゼロから組み立てていく」ことそのものを演出として観客に見せる——という一点に賭けたパフォーマンスツールです。
 
-一般的なVJツールが「あらかじめ用意したシーンを切り替える」のに対し、NodeXRVJTools では **ノードを繋ぐ瞬間が、映像に命が吹き込まれる瞬間** になります。AudioTrigger をビートに繋ぐ、LFO を色に繋ぐ、Threshold でゲートを作る——その配線作業のすべてがステージ上で起きる、いわば「即興のパッチング」です。
+一般的なVJツールが「あらかじめ用意したシーンを切り替える」のに対し、XRNodeVJTools では **ノードを繋ぐ瞬間が、映像に命が吹き込まれる瞬間** になります。AudioTrigger をビートに繋ぐ、LFO を色に繋ぐ、Threshold でゲートを作る——その配線作業のすべてがステージ上で起きる、いわば「即興のパッチング」です。
 
 そのため設計の軸はただひとつ、**映像は絶対に止めない**こと。本番中にノードを抜き差ししても、外部入力が壊れた値を送ってきても、グラフが途中状態でも、レンダリングが破綻しないように全体が組まれています。
 
@@ -127,7 +127,7 @@ UIToolkit Panel (WorldPanelHost 上の RenderTexture)
 
 ```
 .
-├─ NodeXRVJTools/        Unity プロジェクト本体（Assets / Packages / ProjectSettings）
+├─ rhizomode/        Unity プロジェクト本体（内部コードネーム。Assets / Packages / ProjectSettings）
 ├─ docs/             技術設計・コーディング規約・各種監査ドキュメント
 ├─ scripts/          asmdef 境界検証・構造図生成スクリプト
 ├─ CLAUDE.md         Claude Code 向けプロジェクトガイド（実装状況の最新ソース）
@@ -149,7 +149,7 @@ UIToolkit Panel (WorldPanelHost 上の RenderTexture)
 |---|---|
 | `docs/TECHNICAL_DESIGN.md` | 技術設計の全仕様（日本語） |
 | `docs/CODING_GUIDELINES.md` | コーディング規約（日本語） |
-| `docs/NodeXRVJTools_structure_brief.md` | 構造説明用のデザインブリーフ |
+| `docs/XRNodeVJTools_structure_brief.md` | 構造説明用のデザインブリーフ |
 | `docs/SCENE_AUTHORING.md` | シーンオーサリング手順 |
 | `docs/NDI_USAGE.md` | NDI 出力の使い方 |
 | `CLAUDE.md` | 実装状況・アーキテクチャの最新まとめ |
