@@ -1,6 +1,6 @@
 """
-rhizomode プロジェクト構造解説 PDF 生成スクリプト
-出力: docs/rhizomode_structure.pdf
+XRNodeVJTools プロジェクト構造解説 PDF 生成スクリプト
+出力: docs/XRNodeVJTools_structure.pdf
 """
 from pathlib import Path
 
@@ -117,7 +117,7 @@ def table(data, col_widths, header=True):
 def build_story(styles):
     s = []
 
-    s.append(p("rhizomode", styles["title"]))
+    s.append(p("XRNodeVJTools", styles["title"]))
     s.append(p("VRライブパフォーマンス・ノードグラフツール — プロジェクト構造解説",
                styles["subtitle"]))
     s.append(p("ローンチ目標: 2026-05-16  /  Unity 6 + URP  /  PCVR (Quest Link)",
@@ -125,7 +125,7 @@ def build_story(styles):
 
     s.append(p("1. プロジェクト概要", styles["h1"]))
     s.append(p(
-        "rhizomodeは、VR空間内でノードグラフをライブビルドし、"
+        "XRNodeVJToolsは、VR空間内でノードグラフをライブビルドし、"
         "リアルタイム3D演出を構築・制御するソロパフォーマンスツール。"
         "<b>「構築プロセスそのものが演出」</b>というコンセプトで、"
         "ノードを繋ぐ行為自体を観客に見せる。",
@@ -362,7 +362,7 @@ def build_story(styles):
 
 def main():
     here = Path(__file__).resolve().parent.parent
-    out = here / "docs" / "rhizomode_structure.pdf"
+    out = here / "docs" / "XRNodeVJTools_structure.pdf"
     out.parent.mkdir(parents=True, exist_ok=True)
 
     doc = SimpleDocTemplate(
@@ -370,8 +370,8 @@ def main():
         pagesize=A4,
         leftMargin=18 * mm, rightMargin=18 * mm,
         topMargin=18 * mm, bottomMargin=16 * mm,
-        title="rhizomode — Project Structure",
-        author="rhizomode",
+        title="XRNodeVJTools — Project Structure",
+        author="XRNodeVJTools",
     )
     styles = build_styles()
     doc.build(build_story(styles))

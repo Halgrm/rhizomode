@@ -1,4 +1,4 @@
-# rhizomode — Coding Guidelines
+# XRNodeVJTools — Coding Guidelines
 
 ## 基本方針
 

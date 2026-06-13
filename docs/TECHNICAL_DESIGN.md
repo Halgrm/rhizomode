@@ -1,8 +1,8 @@
-# rhizomode — Technical Design Document
+# XRNodeVJTools — Technical Design Document
 
 ## 0. Overview
 
-**rhizomode** は、VR空間内でノードグラフをライブビルドし、リアルタイム3D演出を構築・制御するパフォーマンスツール。
+**XRNodeVJTools** は、VR空間内でノードグラフをライブビルドし、リアルタイム3D演出を構築・制御するパフォーマンスツール。
 
 - **コンセプト**: 構築プロセス自体が演出。ノードを繋ぐことで演出に命が通る瞬間を観客と共有する。
 - **ユーザー**: 自分専用
